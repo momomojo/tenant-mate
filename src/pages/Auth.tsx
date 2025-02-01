@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Home } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
@@ -69,6 +69,22 @@ const Auth = () => {
     };
   }, [navigate]);
 
+  const handleAuthError = (error: any) => {
+    if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
+      toast({
+        variant: "destructive",
+        title: "Email Not Verified",
+        description: "Please check your email and click the verification link before signing in.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
@@ -87,7 +103,7 @@ const Auth = () => {
         if (error) throw error;
         toast({
           title: "Success!",
-          description: "Please check your email to verify your account.",
+          description: "Please check your email to verify your account before signing in.",
         });
         setMode("signin");
       } else {
@@ -98,11 +114,7 @@ const Auth = () => {
         if (error) throw error;
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
+      handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
