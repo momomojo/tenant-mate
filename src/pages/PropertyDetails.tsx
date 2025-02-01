@@ -4,72 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { ArrowLeft, Building2, Plus, Users } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-
-interface TenantProfile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-}
-
-interface AddUnitForm {
-  unit_number: string;
-  monthly_rent: number;
-}
-
-interface ManageUnitForm {
-  unit_number: string;
-  monthly_rent: number;
-  status: string;
-}
-
-interface AssignTenantForm {
-  tenant_id: string;
-  lease_start_date: Date;
-  lease_end_date: Date;
-}
+import { AddUnitDialog } from "@/components/property/AddUnitDialog";
+import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
+import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
+import { PropertyOverview } from "@/components/property/PropertyOverview";
+import { UnitsTable } from "@/components/property/UnitsTable";
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isAddingUnit, setIsAddingUnit] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
   const [isAssigningTenant, setIsAssigningTenant] = useState(false);
-  const [selectedLeaseStartDate, setSelectedLeaseStartDate] = useState<Date>();
-  const [selectedLeaseEndDate, setSelectedLeaseEndDate] = useState<Date>();
 
   const { data: property, isLoading: isLoadingProperty, refetch } = useQuery({
     queryKey: ["property", id],
@@ -109,33 +58,11 @@ const PropertyDetails = () => {
         .order("first_name");
 
       if (error) throw error;
-      return data as TenantProfile[];
+      return data;
     },
   });
 
-  const {
-    register: registerAdd,
-    handleSubmit: handleSubmitAdd,
-    reset: resetAdd,
-    formState: { isSubmitting: isSubmittingAdd },
-  } = useForm<AddUnitForm>();
-
-  const {
-    register: registerManage,
-    handleSubmit: handleSubmitManage,
-    reset: resetManage,
-    setValue,
-    formState: { isSubmitting: isSubmittingManage },
-  } = useForm<ManageUnitForm>();
-
-  const {
-    handleSubmit: handleSubmitAssign,
-    reset: resetAssign,
-    setValue: setAssignValue,
-    formState: { isSubmitting: isSubmittingAssign },
-  } = useForm<AssignTenantForm>();
-
-  const formatTenantLabel = (tenant: TenantProfile): string => {
+  const formatTenantLabel = (tenant: any): string => {
     if (!tenant) return "-";
     const name = [tenant.first_name, tenant.last_name]
       .filter(Boolean)
@@ -144,218 +71,12 @@ const PropertyDetails = () => {
     return name || tenant.email || "-";
   };
 
-  const onSubmitAdd = async (data: AddUnitForm) => {
-    try {
-      const { error } = await supabase.from("units").insert({
-        property_id: id,
-        unit_number: data.unit_number,
-        monthly_rent: data.monthly_rent,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Unit added successfully",
-      });
-
-      resetAdd();
-      setIsAddingUnit(false);
-      refetch();
-    } catch (error) {
-      console.error("Error adding unit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add unit. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const onSubmitManage = async (data: ManageUnitForm) => {
-    try {
-      const { error } = await supabase
-        .from("units")
-        .update({
-          unit_number: data.unit_number,
-          monthly_rent: data.monthly_rent,
-          status: data.status,
-        })
-        .eq("id", selectedUnit.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Unit updated successfully",
-      });
-
-      resetManage();
-      setIsManagingUnit(false);
-      setSelectedUnit(null);
-      refetch();
-    } catch (error) {
-      console.error("Error updating unit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update unit. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAssignTenant = async (data: AssignTenantForm) => {
-    try {
-      if (!selectedLeaseStartDate || !selectedLeaseEndDate) {
-        toast({
-          title: "Error",
-          description: "Please select both lease start and end dates",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // First, get the current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Auth error:", userError);
-        toast({
-          title: "Error",
-          description: "Authentication error. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "No authenticated user found",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Then, verify the user's role
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Profile error:", profileError);
-        toast({
-          title: "Error",
-          description: "Failed to verify user role",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (userProfile?.role !== 'property_manager' && userProfile?.role !== 'admin') {
-        toast({
-          title: "Error",
-          description: "You don't have permission to assign tenants",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Create tenant unit assignment
-      const { error: assignError } = await supabase
-        .from("tenant_units")
-        .insert({
-          tenant_id: data.tenant_id,
-          unit_id: selectedUnit.id,
-          lease_start_date: format(selectedLeaseStartDate, 'yyyy-MM-dd'),
-          lease_end_date: format(selectedLeaseEndDate, 'yyyy-MM-dd'),
-          status: 'active'
-        });
-
-      if (assignError) {
-        console.error("Assignment error:", assignError);
-        throw assignError;
-      }
-
-      // Update unit status
-      const { error: unitError } = await supabase
-        .from("units")
-        .update({ status: "occupied" })
-        .eq("id", selectedUnit.id);
-
-      if (unitError) {
-        console.error("Unit update error:", unitError);
-        throw unitError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Tenant assigned successfully",
-      });
-
-      setIsAssigningTenant(false);
-      setSelectedUnit(null);
-      setSelectedLeaseStartDate(undefined);
-      setSelectedLeaseEndDate(undefined);
-      resetAssign();
-      refetch();
-    } catch (error) {
-      console.error("Error assigning tenant:", error);
-      toast({
-        title: "Error",
-        description: "Failed to assign tenant. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleManageUnit = async (unit: any) => {
+  const handleManageUnit = (unit: any) => {
     setSelectedUnit(unit);
-    setValue("unit_number", unit.unit_number);
-    setValue("monthly_rent", unit.monthly_rent);
-    setValue("status", unit.status || "vacant");
     setIsManagingUnit(true);
   };
 
-  const handleEndLease = async (tenantUnitId: string) => {
-    try {
-      // First update the tenant_unit status to 'inactive'
-      const { error: tenantUnitError } = await supabase
-        .from("tenant_units")
-        .update({ status: "inactive" })
-        .eq("id", tenantUnitId);
-
-      if (tenantUnitError) throw tenantUnitError;
-
-      // Then update the unit status to vacant
-      const { error: unitError } = await supabase
-        .from("units")
-        .update({ status: "vacant" })
-        .eq("id", selectedUnit.id);
-
-      if (unitError) throw unitError;
-
-      toast({
-        title: "Success",
-        description: "Lease ended successfully",
-      });
-
-      setIsManagingUnit(false);
-      setSelectedUnit(null);
-      refetch();
-    } catch (error) {
-      console.error("Error ending lease:", error);
-      toast({
-        title: "Error",
-        description: "Failed to end lease. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAssignTenantDialog = (unit: any) => {
+  const handleAssignTenant = (unit: any) => {
     setSelectedUnit(unit);
     setIsAssigningTenant(true);
   };
@@ -366,7 +87,9 @@ const PropertyDetails = () => {
         <div className="flex min-h-screen w-full bg-[#1A1F2C]">
           <AppSidebar />
           <main className="flex-1 p-8">
-            <div className="text-center text-gray-400">Loading property details...</div>
+            <div className="text-center text-gray-400">
+              Loading property details...
+            </div>
           </main>
         </div>
       </SidebarProvider>
@@ -410,312 +133,45 @@ const PropertyDetails = () => {
               </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="bg-[#403E43] border-none">
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium text-white">
-                    Units Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-[#9b87f5]" />
-                    <span className="text-sm text-gray-300">
-                      {property.units?.length || 0} Total Units
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Users className="h-4 w-4 text-[#9b87f5]" />
-                    <span className="text-sm text-gray-300">
-                      {property.units?.filter((unit) => unit.status === "occupied")
-                        .length || 0}{" "}
-                      Occupied Units
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <PropertyOverview property={property} />
 
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Units</h2>
-              <Dialog open={isAddingUnit} onOpenChange={setIsAddingUnit}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Unit
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Unit</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmitAdd(onSubmitAdd)} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="unit_number">Unit Number</Label>
-                      <Input
-                        id="unit_number"
-                        placeholder="Enter unit number"
-                        {...registerAdd("unit_number", { required: true })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="monthly_rent">Monthly Rent</Label>
-                      <Input
-                        id="monthly_rent"
-                        type="number"
-                        placeholder="Enter monthly rent"
-                        {...registerAdd("monthly_rent", {
-                          required: true,
-                          valueAsNumber: true,
-                        })}
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isSubmittingAdd}
-                    >
-                      {isSubmittingAdd ? "Adding..." : "Add Unit"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <AddUnitDialog propertyId={id!} onUnitAdded={refetch} />
             </div>
 
             <Card className="bg-[#403E43] border-none">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-gray-300">Unit Number</TableHead>
-                    <TableHead className="text-gray-300">Status</TableHead>
-                    <TableHead className="text-gray-300">Monthly Rent</TableHead>
-                    <TableHead className="text-gray-300">Current Tenant</TableHead>
-                    <TableHead className="text-gray-300">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {property.units?.map((unit) => {
-                    const activeTenantUnit = unit.tenant_units?.find(
-                      (tu) => tu.status === "active"
-                    );
-                    const currentTenant = activeTenantUnit?.tenant;
-                    return (
-                      <TableRow key={unit.id}>
-                        <TableCell className="text-white">
-                          {unit.unit_number}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                              unit.status === "occupied"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {unit.status || "vacant"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          ${unit.monthly_rent}
-                        </TableCell>
-                        <TableCell className="text-white">
-                          {formatTenantLabel(currentTenant)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleManageUnit(unit)}
-                            >
-                              Manage
-                            </Button>
-                            {!currentTenant && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAssignTenantDialog(unit)}
-                              >
-                                Assign Tenant
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <UnitsTable
+                units={property.units}
+                onManageUnit={handleManageUnit}
+                onAssignTenant={handleAssignTenant}
+                formatTenantLabel={formatTenantLabel}
+              />
             </Card>
 
-            <Dialog open={isManagingUnit} onOpenChange={setIsManagingUnit}>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Manage Unit</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmitManage(onSubmitManage)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="manage_unit_number">Unit Number</Label>
-                    <Input
-                      id="manage_unit_number"
-                      placeholder="Enter unit number"
-                      {...registerManage("unit_number", { required: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="manage_monthly_rent">Monthly Rent</Label>
-                    <Input
-                      id="manage_monthly_rent"
-                      type="number"
-                      placeholder="Enter monthly rent"
-                      {...registerManage("monthly_rent", {
-                        required: true,
-                        valueAsNumber: true,
-                      })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="manage_status">Status</Label>
-                    <Select 
-                      onValueChange={(value) => setValue("status", value)}
-                      defaultValue={selectedUnit?.status || "vacant"}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vacant">Vacant</SelectItem>
-                        <SelectItem value="occupied">Occupied</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Show current tenant information if unit is occupied */}
-                  {selectedUnit?.tenant_units?.find(tu => tu.status === 'active') && (
-                    <div className="space-y-2 border-t pt-4">
-                      <Label>Current Tenant</Label>
-                      <div className="text-sm text-gray-500">
-                        {formatTenantLabel(selectedUnit.tenant_units.find(tu => tu.status === 'active')?.tenant)}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => handleEndLease(selectedUnit.tenant_units.find(tu => tu.status === 'active')?.id)}
-                        className="mt-2"
-                      >
-                        End Lease
-                      </Button>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsManagingUnit(false);
-                        setSelectedUnit(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmittingManage}
-                    >
-                      {isSubmittingManage ? "Updating..." : "Update Unit"}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isAssigningTenant} onOpenChange={setIsAssigningTenant}>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Assign Tenant to Unit {selectedUnit?.unit_number}</DialogTitle>
-                  <DialogDescription>
-                    Select a tenant and set the lease period to assign them to this unit.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const tenant_id = formData.get('tenant_id') as string;
-                  handleAssignTenant({ tenant_id, lease_start_date: selectedLeaseStartDate!, lease_end_date: selectedLeaseEndDate! });
-                }} 
-                className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="tenant_id">Select Tenant</Label>
-                    <Select name="tenant_id" required>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a tenant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tenants?.map((tenant) => (
-                          <SelectItem 
-                            key={tenant.id} 
-                            value={tenant.id}
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {formatTenantLabel(tenant)}
-                              </span>
-                              {tenant.email && (
-                                <span className="text-xs text-gray-500">
-                                  {tenant.email}
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Lease Start Date</Label>
-                    <div className="border rounded-md p-2">
-                      <CalendarComponent
-                        mode="single"
-                        selected={selectedLeaseStartDate}
-                        onSelect={setSelectedLeaseStartDate}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Lease End Date</Label>
-                    <div className="border rounded-md p-2">
-                      <CalendarComponent
-                        mode="single"
-                        selected={selectedLeaseEndDate}
-                        onSelect={setSelectedLeaseEndDate}
-                        disabled={(date) => !selectedLeaseStartDate || date <= selectedLeaseStartDate}
-                        initialFocus
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsAssigningTenant(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={!selectedLeaseStartDate || !selectedLeaseEndDate}
-                    >
-                      Assign Tenant
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            {selectedUnit && (
+              <>
+                <ManageUnitDialog
+                  unit={selectedUnit}
+                  isOpen={isManagingUnit}
+                  onClose={() => {
+                    setIsManagingUnit(false);
+                    setSelectedUnit(null);
+                  }}
+                  onUnitUpdated={refetch}
+                />
+                <AssignTenantDialog
+                  unit={selectedUnit}
+                  tenants={tenants || []}
+                  isOpen={isAssigningTenant}
+                  onClose={() => {
+                    setIsAssigningTenant(false);
+                    setSelectedUnit(null);
+                  }}
+                  onTenantAssigned={refetch}
+                />
+              </>
+            )}
           </div>
         </main>
       </div>
