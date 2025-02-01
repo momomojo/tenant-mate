@@ -31,10 +31,17 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, Building2, Plus, Users } from "lucide-react";
 import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AddUnitForm {
   unit_number: string;
   monthly_rent: number;
+}
+
+interface ManageUnitForm {
+  unit_number: string;
+  monthly_rent: number;
+  status: string;
 }
 
 const PropertyDetails = () => {
@@ -42,8 +49,10 @@ const PropertyDetails = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAddingUnit, setIsAddingUnit] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<any>(null);
+  const [isManagingUnit, setIsManagingUnit] = useState(false);
 
-  const { data: property, isLoading: isLoadingProperty } = useQuery({
+  const { data: property, isLoading: isLoadingProperty, refetch } = useQuery({
     queryKey: ["property", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -72,13 +81,21 @@ const PropertyDetails = () => {
   });
 
   const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
+    register: registerAdd,
+    handleSubmit: handleSubmitAdd,
+    reset: resetAdd,
+    formState: { isSubmitting: isSubmittingAdd },
   } = useForm<AddUnitForm>();
 
-  const onSubmit = async (data: AddUnitForm) => {
+  const {
+    register: registerManage,
+    handleSubmit: handleSubmitManage,
+    reset: resetManage,
+    setValue,
+    formState: { isSubmitting: isSubmittingManage },
+  } = useForm<ManageUnitForm>();
+
+  const onSubmitAdd = async (data: AddUnitForm) => {
     try {
       const { error } = await supabase.from("units").insert({
         property_id: id,
@@ -93,8 +110,9 @@ const PropertyDetails = () => {
         description: "Unit added successfully",
       });
 
-      reset();
+      resetAdd();
       setIsAddingUnit(false);
+      refetch();
     } catch (error) {
       console.error("Error adding unit:", error);
       toast({
@@ -103,6 +121,46 @@ const PropertyDetails = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const onSubmitManage = async (data: ManageUnitForm) => {
+    try {
+      const { error } = await supabase
+        .from("units")
+        .update({
+          unit_number: data.unit_number,
+          monthly_rent: data.monthly_rent,
+          status: data.status,
+        })
+        .eq("id", selectedUnit.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Unit updated successfully",
+      });
+
+      resetManage();
+      setIsManagingUnit(false);
+      setSelectedUnit(null);
+      refetch();
+    } catch (error) {
+      console.error("Error updating unit:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update unit. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleManageUnit = (unit: any) => {
+    setSelectedUnit(unit);
+    setValue("unit_number", unit.unit_number);
+    setValue("monthly_rent", unit.monthly_rent);
+    setValue("status", unit.status || "vacant");
+    setIsManagingUnit(true);
   };
 
   if (isLoadingProperty) {
@@ -194,13 +252,13 @@ const PropertyDetails = () => {
                   <DialogHeader>
                     <DialogTitle>Add New Unit</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  <form onSubmit={handleSubmitAdd(onSubmitAdd)} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="unit_number">Unit Number</Label>
                       <Input
                         id="unit_number"
                         placeholder="Enter unit number"
-                        {...register("unit_number", { required: true })}
+                        {...registerAdd("unit_number", { required: true })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -209,7 +267,7 @@ const PropertyDetails = () => {
                         id="monthly_rent"
                         type="number"
                         placeholder="Enter monthly rent"
-                        {...register("monthly_rent", {
+                        {...registerAdd("monthly_rent", {
                           required: true,
                           valueAsNumber: true,
                         })}
@@ -218,9 +276,9 @@ const PropertyDetails = () => {
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={isSubmitting}
+                      disabled={isSubmittingAdd}
                     >
-                      {isSubmitting ? "Adding..." : "Add Unit"}
+                      {isSubmittingAdd ? "Adding..." : "Add Unit"}
                     </Button>
                   </form>
                 </DialogContent>
@@ -254,7 +312,7 @@ const PropertyDetails = () => {
                                 : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
-                            {unit.status}
+                            {unit.status || "vacant"}
                           </span>
                         </TableCell>
                         <TableCell className="text-white">
@@ -266,7 +324,11 @@ const PropertyDetails = () => {
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleManageUnit(unit)}
+                          >
                             Manage
                           </Button>
                         </TableCell>
@@ -276,6 +338,59 @@ const PropertyDetails = () => {
                 </TableBody>
               </Table>
             </Card>
+
+            <Dialog open={isManagingUnit} onOpenChange={setIsManagingUnit}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Manage Unit</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmitManage(onSubmitManage)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="manage_unit_number">Unit Number</Label>
+                    <Input
+                      id="manage_unit_number"
+                      placeholder="Enter unit number"
+                      {...registerManage("unit_number", { required: true })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="manage_monthly_rent">Monthly Rent</Label>
+                    <Input
+                      id="manage_monthly_rent"
+                      type="number"
+                      placeholder="Enter monthly rent"
+                      {...registerManage("monthly_rent", {
+                        required: true,
+                        valueAsNumber: true,
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="manage_status">Status</Label>
+                    <Select 
+                      onValueChange={(value) => setValue("status", value)}
+                      defaultValue={selectedUnit?.status || "vacant"}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vacant">Vacant</SelectItem>
+                        <SelectItem value="occupied">Occupied</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmittingManage}
+                  >
+                    {isSubmittingManage ? "Updating..." : "Update Unit"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </main>
       </div>
