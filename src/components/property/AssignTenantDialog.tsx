@@ -77,6 +77,11 @@ export function AssignTenantDialog({
     }
   };
 
+  const handleCalendarClick = (e: React.MouseEvent) => {
+    // Prevent the click from bubbling up to the Popover
+    e.stopPropagation();
+  };
+
   const handleAssignTenant = async () => {
     try {
       if (!selectedTenantId || !selectedLeaseStartDate || !selectedLeaseEndDate) {
@@ -190,7 +195,11 @@ export function AssignTenantDialog({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent 
+                className="w-auto p-0" 
+                align="start"
+                onClick={handleCalendarClick}
+              >
                 <Calendar
                   mode="single"
                   selected={selectedLeaseStartDate}
@@ -220,7 +229,11 @@ export function AssignTenantDialog({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent 
+                className="w-auto p-0" 
+                align="start"
+                onClick={handleCalendarClick}
+              >
                 <Calendar
                   mode="single"
                   selected={selectedLeaseEndDate}
