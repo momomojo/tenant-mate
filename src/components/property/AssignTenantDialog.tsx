@@ -50,6 +50,8 @@ export function AssignTenantDialog({
   const [selectedTenantId, setSelectedTenantId] = useState<string>();
   const [selectedLeaseStartDate, setSelectedLeaseStartDate] = useState<Date>();
   const [selectedLeaseEndDate, setSelectedLeaseEndDate] = useState<Date>();
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   const { reset } = useForm();
 
   const formatTenantLabel = (tenant: TenantProfile): string => {
@@ -72,7 +74,6 @@ export function AssignTenantDialog({
         return;
       }
 
-      // Check if tenant already has an active lease for this unit
       const { data: existingLease, error: checkError } = await supabase
         .from("tenant_units")
         .select("*")
@@ -92,7 +93,6 @@ export function AssignTenantDialog({
         return;
       }
 
-      // Create tenant unit assignment
       const { error: assignError } = await supabase.from("tenant_units").insert({
         tenant_id: selectedTenantId,
         unit_id: unit.id,
@@ -103,7 +103,6 @@ export function AssignTenantDialog({
 
       if (assignError) throw assignError;
 
-      // Update unit status
       const { error: updateError } = await supabase
         .from("units")
         .update({ status: "occupied" })
@@ -160,7 +159,7 @@ export function AssignTenantDialog({
 
           <div className="space-y-2">
             <Label>Lease Start Date</Label>
-            <Popover>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -177,11 +176,14 @@ export function AssignTenantDialog({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={selectedLeaseStartDate}
-                  onSelect={setSelectedLeaseStartDate}
+                  onSelect={(date) => {
+                    setSelectedLeaseStartDate(date);
+                    setStartDateOpen(false);
+                  }}
                   initialFocus
                 />
               </PopoverContent>
@@ -190,7 +192,7 @@ export function AssignTenantDialog({
 
           <div className="space-y-2">
             <Label>Lease End Date</Label>
-            <Popover>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -207,11 +209,14 @@ export function AssignTenantDialog({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={selectedLeaseEndDate}
-                  onSelect={setSelectedLeaseEndDate}
+                  onSelect={(date) => {
+                    setSelectedLeaseEndDate(date);
+                    setEndDateOpen(false);
+                  }}
                   initialFocus
                 />
               </PopoverContent>
