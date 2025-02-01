@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { ArrowLeft, Building2, Plus, Users, Calendar, Key } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -133,6 +133,17 @@ const PropertyDetails = () => {
     setValue: setAssignValue,
     formState: { isSubmitting: isSubmittingAssign },
   } = useForm<AssignTenantForm>();
+
+  const formatTenantLabel = (tenant: any) => {
+    const name = [tenant.first_name, tenant.last_name]
+      .filter(Boolean)
+      .join(' ');
+    
+    if (name) {
+      return `${name} (${tenant.email})`;
+    }
+    return tenant.email;
+  };
 
   const onSubmitAdd = async (data: AddUnitForm) => {
     try {
@@ -523,8 +534,12 @@ const PropertyDetails = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {tenants?.map((tenant) => (
-                            <SelectItem key={tenant.id} value={tenant.id}>
-                              {tenant.first_name} {tenant.last_name} ({tenant.email})
+                            <SelectItem 
+                              key={tenant.id} 
+                              value={tenant.id}
+                              className="flex items-center gap-2"
+                            >
+                              {formatTenantLabel(tenant)}
                             </SelectItem>
                           ))}
                         </SelectContent>
