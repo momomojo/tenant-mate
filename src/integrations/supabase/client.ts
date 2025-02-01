@@ -18,8 +18,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 // Add session refresh handler
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') {
     // Delete cached data when user signs out
     localStorage.removeItem('supabase.auth.token');
   }
