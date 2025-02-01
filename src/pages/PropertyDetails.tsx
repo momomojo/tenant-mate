@@ -526,13 +526,7 @@ const PropertyDetails = () => {
                     ) : (
                       <Select name="tenant_id" required>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a tenant">
-                            {({ value }: { value?: string }) => {
-                              if (!value || !tenants) return "Select a tenant";
-                              const tenant = tenants.find(t => t.id === value);
-                              return tenant ? formatTenantLabel(tenant) : "Select a tenant";
-                            }}
-                          </SelectValue>
+                          <SelectValue placeholder="Select a tenant" />
                         </SelectTrigger>
                         <SelectContent>
                           {tenants?.map((tenant) => (
