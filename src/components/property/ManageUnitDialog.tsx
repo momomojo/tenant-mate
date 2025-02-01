@@ -64,7 +64,7 @@ export function ManageUnitDialog({
     try {
       const { error: tenantUnitError } = await supabase
         .from("tenant_units")
-        .update({ status: "inactive" })
+        .update({ status: "ended" }) // Changed from 'inactive' to 'ended'
         .eq("id", tenantUnitId);
 
       if (tenantUnitError) throw tenantUnitError;
