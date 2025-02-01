@@ -181,8 +181,11 @@ export function AssignTenantDialog({
                   mode="single"
                   selected={selectedLeaseStartDate}
                   onSelect={(date) => {
-                    setSelectedLeaseStartDate(date);
-                    setStartDateOpen(false);
+                    if (date) {
+                      setSelectedLeaseStartDate(date);
+                      // Only close after successful selection
+                      setTimeout(() => setStartDateOpen(false), 0);
+                    }
                   }}
                   initialFocus
                 />
@@ -214,8 +217,11 @@ export function AssignTenantDialog({
                   mode="single"
                   selected={selectedLeaseEndDate}
                   onSelect={(date) => {
-                    setSelectedLeaseEndDate(date);
-                    setEndDateOpen(false);
+                    if (date) {
+                      setSelectedLeaseEndDate(date);
+                      // Only close after successful selection
+                      setTimeout(() => setEndDateOpen(false), 0);
+                    }
                   }}
                   initialFocus
                 />
