@@ -17,10 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -50,8 +47,6 @@ export function AssignTenantDialog({
   const [selectedTenantId, setSelectedTenantId] = useState<string>();
   const [selectedLeaseStartDate, setSelectedLeaseStartDate] = useState<Date>();
   const [selectedLeaseEndDate, setSelectedLeaseEndDate] = useState<Date>();
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
   const { reset } = useForm();
 
   const formatTenantLabel = (tenant: TenantProfile): string => {
@@ -61,25 +56,6 @@ export function AssignTenantDialog({
       .join(" ")
       .trim();
     return name || tenant.email || "-";
-  };
-
-  const handleStartDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedLeaseStartDate(date);
-      setStartDateOpen(false);
-    }
-  };
-
-  const handleEndDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedLeaseEndDate(date);
-      setEndDateOpen(false);
-    }
-  };
-
-  const stopPropagation = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
   };
 
   const handleAssignTenant = async () => {
@@ -149,7 +125,7 @@ export function AssignTenantDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]" onClick={stopPropagation}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Assign Tenant to Unit</DialogTitle>
           <DialogDescription>
@@ -178,95 +154,42 @@ export function AssignTenantDialog({
 
           <div className="space-y-2">
             <Label>Lease Start Date</Label>
-            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedLeaseStartDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedLeaseStartDate ? (
-                    format(selectedLeaseStartDate, "PPP")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent 
-                className="w-auto p-0 z-[100]" 
-                align="start"
-                onInteractOutside={(e) => {
-                  e.preventDefault();
-                  setStartDateOpen(false);
-                }}
-              >
-                <div 
-                  className="calendar-wrapper" 
-                  onClick={stopPropagation}
-                  style={{ position: 'relative', zIndex: 100 }}
-                >
-                  <Calendar
-                    mode="single"
-                    selected={selectedLeaseStartDate}
-                    onSelect={handleStartDateSelect}
-                    initialFocus
-                    disabled={(date) =>
-                      date < new Date(new Date().setHours(0, 0, 0, 0))
-                    }
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
+            <div className="border rounded-md p-2">
+              <Calendar
+                mode="single"
+                selected={selectedLeaseStartDate}
+                onSelect={setSelectedLeaseStartDate}
+                disabled={(date) =>
+                  date < new Date(new Date().setHours(0, 0, 0, 0))
+                }
+                className="rounded-md border"
+              />
+            </div>
+            {selectedLeaseStartDate && (
+              <p className="text-sm text-muted-foreground">
+                Selected: {format(selectedLeaseStartDate, "PPP")}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>Lease End Date</Label>
-            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedLeaseEndDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedLeaseEndDate ? (
-                    format(selectedLeaseEndDate, "PPP")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent 
-                className="w-auto p-0 z-[100]" 
-                align="start"
-                onInteractOutside={(e) => {
-                  e.preventDefault();
-                  setEndDateOpen(false);
-                }}
-              >
-                <div 
-                  className="calendar-wrapper" 
-                  onClick={stopPropagation}
-                  style={{ position: 'relative', zIndex: 100 }}
-                >
-                  <Calendar
-                    mode="single"
-                    selected={selectedLeaseEndDate}
-                    onSelect={handleEndDateSelect}
-                    initialFocus
-                    disabled={(date) =>
-                      !selectedLeaseStartDate ||
-                      date <= selectedLeaseStartDate
-                    }
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
+            <div className="border rounded-md p-2">
+              <Calendar
+                mode="single"
+                selected={selectedLeaseEndDate}
+                onSelect={setSelectedLeaseEndDate}
+                disabled={(date) =>
+                  !selectedLeaseStartDate || date <= selectedLeaseStartDate
+                }
+                className="rounded-md border"
+              />
+            </div>
+            {selectedLeaseEndDate && (
+              <p className="text-sm text-muted-foreground">
+                Selected: {format(selectedLeaseEndDate, "PPP")}
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2">
