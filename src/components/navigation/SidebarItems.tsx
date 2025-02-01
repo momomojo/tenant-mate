@@ -91,6 +91,7 @@ export const useMenuItems = () => {
     },
   ];
 
+  // Add console log to debug filtered items
   const filteredItems = allMenuItems.filter(item => 
     !item.roles || (userRole && item.roles.includes(userRole))
   );
