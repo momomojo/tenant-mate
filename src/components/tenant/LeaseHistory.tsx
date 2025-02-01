@@ -36,6 +36,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
         .from("deleted_tenant_units")
         .select(`
           id,
+          unit_id,
           lease_start_date,
           lease_end_date,
           status,
@@ -51,7 +52,8 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
             )
           )
         `)
-        .eq("tenant_id", tenantId);
+        .eq("tenant_id", tenantId)
+        .order('deleted_at', { ascending: false });
 
       if (error) {
         console.error("Error fetching deleted leases:", error);
@@ -168,7 +170,6 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
       return (
         <div className="text-center py-8 text-muted-foreground">
           No {isDeleted ? "deleted" : "active"} lease records found
-          {isDeleted && <p className="text-sm mt-2">Tenant ID: {tenantId}</p>}
         </div>
       );
     }
