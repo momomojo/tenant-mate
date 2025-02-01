@@ -214,6 +214,27 @@ const PropertyDetails = () => {
         return;
       }
 
+      // First, verify the user's role
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', supabase.auth.getUser()?.id)
+        .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (userProfile?.role !== 'property_manager' && userProfile?.role !== 'admin') {
+        toast({
+          title: "Error",
+          description: "You don't have permission to assign tenants",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update unit status
       const { error: unitError } = await supabase
         .from("units")
         .update({ status: "occupied" })
@@ -221,6 +242,7 @@ const PropertyDetails = () => {
 
       if (unitError) throw unitError;
 
+      // Create tenant unit assignment
       const { error: assignError } = await supabase
         .from("tenant_units")
         .insert({
