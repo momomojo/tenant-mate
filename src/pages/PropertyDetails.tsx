@@ -98,9 +98,15 @@ const PropertyDetails = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("role", "tenant");
+        .eq("role", "tenant")
+        .order("first_name");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching tenants:", error);
+        throw error;
+      }
+
+      console.log("Fetched tenants:", data); // Debug log
       return data;
     },
   });
@@ -508,13 +514,13 @@ const PropertyDetails = () => {
                   <div className="space-y-2">
                     <Label htmlFor="tenant_id">Select Tenant</Label>
                     <Select name="tenant_id" required>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a tenant" />
                       </SelectTrigger>
                       <SelectContent>
                         {tenants?.map((tenant) => (
                           <SelectItem key={tenant.id} value={tenant.id}>
-                            {tenant.first_name} {tenant.last_name}
+                            {tenant.first_name} {tenant.last_name} ({tenant.email})
                           </SelectItem>
                         ))}
                       </SelectContent>
