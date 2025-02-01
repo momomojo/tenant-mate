@@ -214,11 +214,27 @@ const PropertyDetails = () => {
         return;
       }
 
-      // First, verify the user's role
+      // First, get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "No authenticated user found",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Then, verify the user's role
       const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', supabase.auth.getUser()?.id)
+        .eq('id', user.id)
         .single();
 
       if (profileError) {
