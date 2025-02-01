@@ -136,11 +136,12 @@ const PropertyDetails = () => {
   } = useForm<AssignTenantForm>();
 
   const formatTenantLabel = (tenant: TenantProfile): string => {
+    if (!tenant) return "-";
     const name = [tenant.first_name, tenant.last_name]
       .filter(Boolean)
       .join(" ")
       .trim();
-    return name || tenant.email || "Unknown Tenant";
+    return name || tenant.email || "-";
   };
 
   const onSubmitAdd = async (data: AddUnitForm) => {
@@ -458,7 +459,10 @@ const PropertyDetails = () => {
                 </TableHeader>
                 <TableBody>
                   {property.units?.map((unit) => {
-                    const currentTenant = unit.tenant_units?.[0]?.tenant;
+                    const activeTenantUnit = unit.tenant_units?.find(
+                      (tu) => tu.status === "active"
+                    );
+                    const currentTenant = activeTenantUnit?.tenant;
                     return (
                       <TableRow key={unit.id}>
                         <TableCell className="text-white">
@@ -479,9 +483,7 @@ const PropertyDetails = () => {
                           ${unit.monthly_rent}
                         </TableCell>
                         <TableCell className="text-white">
-                          {currentTenant
-                            ? `${currentTenant.first_name} ${currentTenant.last_name}`
-                            : "-"}
+                          {formatTenantLabel(currentTenant)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
