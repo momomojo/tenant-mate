@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Search, Users } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ interface AddPropertyForm {
 }
 
 const Properties = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingProperty, setIsAddingProperty] = useState(false);
   const { toast } = useToast();
@@ -174,7 +176,8 @@ const Properties = () => {
                   return (
                     <Card
                       key={property.id}
-                      className="bg-[#403E43] border-none hover:bg-[#4A484D] transition-colors"
+                      className="bg-[#403E43] border-none hover:bg-[#4A484D] transition-colors cursor-pointer"
+                      onClick={() => navigate(`/properties/${property.id}`)}
                     >
                       <CardHeader>
                         <CardTitle className="text-lg font-medium text-white">
