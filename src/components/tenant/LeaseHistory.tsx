@@ -31,6 +31,15 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     queryKey: ["deletedLeases", tenantId],
     queryFn: async () => {
       console.log("Fetching deleted leases for tenant:", tenantId);
+      
+      // First, let's check if we can get ANY records from the table
+      const { data: allDeleted, error: countError } = await supabase
+        .from("deleted_tenant_units")
+        .select("*");
+      
+      console.log("All deleted records in table:", allDeleted);
+
+      // Now let's get the specific records for this tenant
       const { data, error } = await supabase
         .from("deleted_tenant_units")
         .select(`
@@ -50,15 +59,14 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
             )
           )
         `)
-        .eq("tenant_id", tenantId)
-        .order("deleted_at", { ascending: false });
+        .eq("tenant_id", tenantId);
 
       if (error) {
         console.error("Error fetching deleted leases:", error);
         throw error;
       }
 
-      console.log("Deleted leases data:", data);
+      console.log("Deleted leases for tenant:", data);
       return data;
     },
   });
@@ -97,12 +105,16 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
 
   const deleteLeaseMutation = useMutation({
     mutationFn: async (leaseId: string) => {
+      console.log("Deleting lease:", leaseId);
       const { error } = await supabase
         .from("tenant_units")
         .delete()
         .eq("id", leaseId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error in delete mutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Lease deleted successfully");
@@ -145,6 +157,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
       return (
         <div className="text-center py-8 text-muted-foreground">
           No {isDeleted ? "deleted" : "active"} lease records found
+          {isDeleted && <p className="text-sm mt-2">Tenant ID: {tenantId}</p>}
         </div>
       );
     }
