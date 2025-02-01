@@ -78,6 +78,7 @@ export function AssignTenantDialog({
   };
 
   const handleCalendarClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
   };
 
@@ -199,12 +200,14 @@ export function AssignTenantDialog({
                 align="start"
                 onClick={handleCalendarClick}
               >
-                <Calendar
-                  mode="single"
-                  selected={selectedLeaseStartDate}
-                  onSelect={handleStartDateSelect}
-                  initialFocus
-                />
+                <div onClick={handleCalendarClick}>
+                  <Calendar
+                    mode="single"
+                    selected={selectedLeaseStartDate}
+                    onSelect={handleStartDateSelect}
+                    initialFocus
+                  />
+                </div>
               </PopoverContent>
             </Popover>
           </div>
@@ -233,12 +236,14 @@ export function AssignTenantDialog({
                 align="start"
                 onClick={handleCalendarClick}
               >
-                <Calendar
-                  mode="single"
-                  selected={selectedLeaseEndDate}
-                  onSelect={handleEndDateSelect}
-                  initialFocus
-                />
+                <div onClick={handleCalendarClick}>
+                  <Calendar
+                    mode="single"
+                    selected={selectedLeaseEndDate}
+                    onSelect={handleEndDateSelect}
+                    initialFocus
+                  />
+                </div>
               </PopoverContent>
             </Popover>
           </div>
