@@ -78,7 +78,6 @@ export function AssignTenantDialog({
   };
 
   const handleCalendarClick = (e: React.MouseEvent) => {
-    // Prevent the click from bubbling up to the Popover
     e.stopPropagation();
   };
 
