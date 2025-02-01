@@ -1,6 +1,7 @@
 import { Building2, Home, Users, Wrench, FileText, BarChart, Settings2, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface MenuItem {
   title: string;
@@ -10,28 +11,47 @@ interface MenuItem {
 }
 
 const fetchUserRole = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("No user found");
-  
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("No user found");
+      throw new Error("No user found");
+    }
+    
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
 
-  if (error) {
-    console.error("Error fetching user role:", error);
-    throw error;
+    if (error) {
+      console.error("Error fetching user role:", error);
+      throw error;
+    }
+
+    console.log("Fetched user role:", profile?.role);
+    return profile?.role;
+  } catch (error) {
+    console.error("Error in fetchUserRole:", error);
+    // Attempt to refresh the session
+    const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !session) {
+      toast.error("Session expired. Please login again.");
+      // Redirect to auth page
+      window.location.href = "/auth";
+      throw error;
+    }
+    // Retry the fetch after refresh
+    return fetchUserRole();
   }
-
-  console.log("Fetched user role:", profile?.role);
-  return profile?.role;
 };
 
 export const useMenuItems = () => {
   const { data: userRole, isError, error } = useQuery({
     queryKey: ["userRole"],
     queryFn: fetchUserRole,
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   console.log("Current user role:", userRole);
@@ -91,7 +111,6 @@ export const useMenuItems = () => {
     },
   ];
 
-  // Add console log to debug filtered items
   const filteredItems = allMenuItems.filter(item => 
     !item.roles || (userRole && item.roles.includes(userRole))
   );
