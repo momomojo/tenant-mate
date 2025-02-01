@@ -25,7 +25,13 @@ export function ManageUnitDialog({
   onUnitUpdated,
 }: ManageUnitDialogProps) {
   const { toast } = useToast();
-  const { handleSubmit, formState: { isSubmitting } } = useForm<UnitFormData>();
+  const { handleSubmit, formState: { isSubmitting }, control } = useForm<UnitFormData>({
+    defaultValues: {
+      unit_number: unit?.unit_number || "",
+      monthly_rent: unit?.monthly_rent || 0,
+      status: unit?.status || "vacant",
+    },
+  });
 
   const formatTenantLabel = (tenant: any): string => {
     if (!tenant) return "-";
@@ -110,26 +116,28 @@ export function ManageUnitDialog({
           <DialogTitle>Manage Unit</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <UnitForm
-            unit={unit}
-            onSubmit={onSubmit}
-            isSubmitting={isSubmitting}
-          />
-          {activeTenantUnit && (
-            <CurrentTenant
-              tenant={activeTenantUnit.tenant}
-              onEndLease={() => handleEndLease(activeTenantUnit.id)}
-              formatTenantLabel={formatTenantLabel}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <UnitForm
+              unit={unit}
+              control={control}
+              isSubmitting={isSubmitting}
             />
-          )}
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Updating..." : "Update Unit"}
-            </Button>
-          </div>
+            {activeTenantUnit && (
+              <CurrentTenant
+                tenant={activeTenantUnit.tenant}
+                onEndLease={() => handleEndLease(activeTenantUnit.id)}
+                formatTenantLabel={formatTenantLabel}
+              />
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Updating..." : "Update Unit"}
+              </Button>
+            </div>
+          </form>
         </div>
       </DialogContent>
     </Dialog>
