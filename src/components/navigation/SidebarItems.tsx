@@ -13,20 +13,32 @@ const fetchUserRole = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("No user found");
   
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
-    
+
+  if (error) {
+    console.error("Error fetching user role:", error);
+    throw error;
+  }
+
+  console.log("Fetched user role:", profile?.role);
   return profile?.role;
 };
 
 export const useMenuItems = () => {
-  const { data: userRole } = useQuery({
+  const { data: userRole, isError, error } = useQuery({
     queryKey: ["userRole"],
     queryFn: fetchUserRole,
   });
+
+  console.log("Current user role:", userRole);
+
+  if (isError) {
+    console.error("Error in useMenuItems:", error);
+  }
 
   const allMenuItems: MenuItem[] = [
     { 
@@ -79,7 +91,10 @@ export const useMenuItems = () => {
     },
   ];
 
-  return allMenuItems.filter(item => 
+  const filteredItems = allMenuItems.filter(item => 
     !item.roles || (userRole && item.roles.includes(userRole))
   );
+
+  console.log("Filtered menu items:", filteredItems);
+  return filteredItems;
 };
