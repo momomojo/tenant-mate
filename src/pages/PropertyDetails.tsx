@@ -218,7 +218,13 @@ const PropertyDetails = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError) {
-        throw userError;
+        console.error("Auth error:", userError);
+        toast({
+          title: "Error",
+          description: "Authentication error. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
 
       if (!user) {
@@ -238,7 +244,13 @@ const PropertyDetails = () => {
         .single();
 
       if (profileError) {
-        throw profileError;
+        console.error("Profile error:", profileError);
+        toast({
+          title: "Error",
+          description: "Failed to verify user role",
+          variant: "destructive",
+        });
+        return;
       }
 
       if (userProfile?.role !== 'property_manager' && userProfile?.role !== 'admin') {
@@ -249,14 +261,6 @@ const PropertyDetails = () => {
         });
         return;
       }
-
-      // Update unit status
-      const { error: unitError } = await supabase
-        .from("units")
-        .update({ status: "occupied" })
-        .eq("id", selectedUnit.id);
-
-      if (unitError) throw unitError;
 
       // Create tenant unit assignment
       const { error: assignError } = await supabase
@@ -269,7 +273,21 @@ const PropertyDetails = () => {
           status: 'active'
         });
 
-      if (assignError) throw assignError;
+      if (assignError) {
+        console.error("Assignment error:", assignError);
+        throw assignError;
+      }
+
+      // Update unit status
+      const { error: unitError } = await supabase
+        .from("units")
+        .update({ status: "occupied" })
+        .eq("id", selectedUnit.id);
+
+      if (unitError) {
+        console.error("Unit update error:", unitError);
+        throw unitError;
+      }
 
       toast({
         title: "Success",
@@ -280,6 +298,7 @@ const PropertyDetails = () => {
       setSelectedUnit(null);
       setSelectedLeaseStartDate(undefined);
       setSelectedLeaseEndDate(undefined);
+      resetAssign();
       refetch();
     } catch (error) {
       console.error("Error assigning tenant:", error);
