@@ -36,6 +36,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
+interface TenantProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
 interface AddUnitForm {
   unit_number: string;
   monthly_rent: number;
@@ -92,23 +99,17 @@ const PropertyDetails = () => {
     },
   });
 
-  const { data: tenants, isError: isTenantsError, error: tenantsError } = useQuery({
+  const { data: tenants } = useQuery({
     queryKey: ["tenants"],
     queryFn: async () => {
-      console.log("Fetching tenants...");
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, first_name, last_name, email")
         .eq("role", "tenant")
         .order("first_name");
 
-      if (error) {
-        console.error("Error fetching tenants:", error);
-        throw error;
-      }
-
-      console.log("Fetched tenants:", data);
-      return data;
+      if (error) throw error;
+      return data as TenantProfile[];
     },
   });
 
@@ -134,12 +135,12 @@ const PropertyDetails = () => {
     formState: { isSubmitting: isSubmittingAssign },
   } = useForm<AssignTenantForm>();
 
-  const formatTenantLabel = (tenant: any) => {
-    console.log("Formatting tenant:", tenant); // Debug log
+  const formatTenantLabel = (tenant: TenantProfile): string => {
     const name = [tenant.first_name, tenant.last_name]
       .filter(Boolean)
-      .join(' ');
-    return name || tenant.email;
+      .join(" ")
+      .trim();
+    return name || tenant.email || "Unknown Tenant";
   };
 
   const onSubmitAdd = async (data: AddUnitForm) => {
@@ -522,32 +523,32 @@ const PropertyDetails = () => {
                 className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="tenant_id">Select Tenant</Label>
-                    {isTenantsError ? (
-                      <div className="text-red-500">Error loading tenants: {tenantsError.message}</div>
-                    ) : (
-                      <Select name="tenant_id" required>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a tenant" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tenants?.map((tenant) => {
-                            console.log("Rendering tenant:", tenant); // Debug log
-                            return (
-                              <SelectItem 
-                                key={tenant.id} 
-                                value={tenant.id}
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{formatTenantLabel(tenant)}</span>
-                                  <span className="text-xs text-gray-500">{tenant.email}</span>
-                                </div>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <Select name="tenant_id" required>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a tenant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tenants?.map((tenant) => (
+                          <SelectItem 
+                            key={tenant.id} 
+                            value={tenant.id}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {formatTenantLabel(tenant)}
+                              </span>
+                              {tenant.email && (
+                                <span className="text-xs text-gray-500">
+                                  {tenant.email}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label>Lease Start Date</Label>
                     <div className="border rounded-md p-2">
