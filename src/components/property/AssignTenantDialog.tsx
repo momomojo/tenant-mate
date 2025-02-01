@@ -46,7 +46,7 @@ export function AssignTenantDialog({
   const { toast } = useToast();
   const [selectedLeaseStartDate, setSelectedLeaseStartDate] = useState<Date>();
   const [selectedLeaseEndDate, setSelectedLeaseEndDate] = useState<Date>();
-  const { handleSubmit, reset } = useForm();
+  const { reset } = useForm();
 
   const formatTenantLabel = (tenant: TenantProfile): string => {
     if (!tenant) return "-";
@@ -69,6 +69,26 @@ export function AssignTenantDialog({
       }
 
       const tenant_id = formData.get("tenant_id") as string;
+
+      // Check if tenant already has an active lease for this unit
+      const { data: existingLease, error: checkError } = await supabase
+        .from("tenant_units")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .eq("unit_id", unit.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingLease) {
+        toast({
+          title: "Error",
+          description: "This tenant already has an active lease for this unit",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Create tenant unit assignment
       const { error: assignError } = await supabase.from("tenant_units").insert({
@@ -118,11 +138,14 @@ export function AssignTenantDialog({
             Select a tenant and set the lease period to assign them to this unit.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          handleAssignTenant(formData);
-        }} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleAssignTenant(formData);
+          }}
+          className="space-y-6"
+        >
           <div className="space-y-2">
             <Label htmlFor="tenant_id">Select Tenant</Label>
             <Select name="tenant_id" required>
