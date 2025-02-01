@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, History, ArchiveRestore } from "lucide-react";
+import { Calendar, History, ArchiveRestore, Trash2, RefreshCw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface LeaseHistoryProps {
   leases: Array<{
@@ -92,6 +93,46 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     },
   });
 
+  const deleteLeaseMutation = useMutation({
+    mutationFn: async (leaseId: string) => {
+      const { error } = await supabase
+        .from("tenant_units")
+        .delete()
+        .eq("id", leaseId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lease deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["deletedLeases"] });
+    },
+    onError: (error) => {
+      console.error("Error deleting lease:", error);
+      toast.error("Failed to delete lease");
+    },
+  });
+
+  const resetLeaseHistoryMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .rpc("reset_tenant_lease_history", {
+          tenant_id_param: tenantId,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lease history reset successfully");
+      queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["deletedLeases"] });
+    },
+    onError: (error) => {
+      console.error("Error resetting lease history:", error);
+      toast.error("Failed to reset lease history");
+    },
+  });
+
   const renderLeaseTimeline = (
     leaseData: any[],
     isDeleted: boolean = false
@@ -122,7 +163,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
               >
                 {lease.status}
               </Badge>
-              {isDeleted && (
+              {isDeleted ? (
                 <>
                   <Badge variant="destructive">Deleted</Badge>
                   <p className="text-sm text-muted-foreground">
@@ -141,6 +182,17 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
                     Restore Lease
                   </Button>
                 </>
+              ) : (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => deleteLeaseMutation.mutate(lease.id)}
+                  disabled={deleteLeaseMutation.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Lease
+                </Button>
               )}
             </div>
           </div>
@@ -152,10 +204,37 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Lease History
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Lease History
+          </CardTitle>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reset History
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset Lease History</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will permanently delete all lease history for this tenant, including both active and deleted leases. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => resetLeaseHistoryMutation.mutate()}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Reset History
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="active" className="w-full">

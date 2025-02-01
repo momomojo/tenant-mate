@@ -348,6 +348,12 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      reset_tenant_lease_history: {
+        Args: {
+          tenant_id_param: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: "admin" | "property_manager" | "tenant"
