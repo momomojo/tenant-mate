@@ -84,7 +84,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     },
     onSuccess: () => {
       toast.success("Lease restored successfully");
-      queryClient.invalidateQueries({ queryKey: ["deletedLeases"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedLeases", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
     },
     onError: (error) => {
@@ -104,8 +104,9 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     },
     onSuccess: () => {
       toast.success("Lease deleted successfully");
+      // Update both queries to ensure both active and deleted leases are refreshed
       queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
-      queryClient.invalidateQueries({ queryKey: ["deletedLeases"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedLeases", tenantId] });
     },
     onError: (error) => {
       console.error("Error deleting lease:", error);
@@ -124,8 +125,9 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     },
     onSuccess: () => {
       toast.success("Lease history reset successfully");
+      // Update both queries after reset
       queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
-      queryClient.invalidateQueries({ queryKey: ["deletedLeases"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedLeases", tenantId] });
     },
     onError: (error) => {
       console.error("Error resetting lease history:", error);
