@@ -138,11 +138,7 @@ const PropertyDetails = () => {
     const name = [tenant.first_name, tenant.last_name]
       .filter(Boolean)
       .join(' ');
-    
-    if (name) {
-      return `${name} (${tenant.email})`;
-    }
-    return tenant.email;
+    return name || tenant.email;
   };
 
   const onSubmitAdd = async (data: AddUnitForm) => {
@@ -530,7 +526,13 @@ const PropertyDetails = () => {
                     ) : (
                       <Select name="tenant_id" required>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a tenant" />
+                          <SelectValue placeholder="Select a tenant">
+                            {({ value }: { value?: string }) => {
+                              if (!value || !tenants) return "Select a tenant";
+                              const tenant = tenants.find(t => t.id === value);
+                              return tenant ? formatTenantLabel(tenant) : "Select a tenant";
+                            }}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {tenants?.map((tenant) => (
@@ -539,7 +541,10 @@ const PropertyDetails = () => {
                               value={tenant.id}
                               className="flex items-center gap-2"
                             >
-                              {formatTenantLabel(tenant)}
+                              <div className="flex flex-col">
+                                <span className="font-medium">{formatTenantLabel(tenant)}</span>
+                                <span className="text-xs text-gray-500">{tenant.email}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
