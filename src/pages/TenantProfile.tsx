@@ -14,6 +14,8 @@ const TenantProfile = () => {
   const { data: tenant, isLoading: isLoadingTenant } = useQuery({
     queryKey: ["tenant", id],
     queryFn: async () => {
+      if (!id) throw new Error("No tenant ID provided");
+
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -71,6 +73,7 @@ const TenantProfile = () => {
         maintenance,
       };
     },
+    enabled: !!id,
   });
 
   if (isLoadingTenant) {

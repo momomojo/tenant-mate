@@ -1,24 +1,29 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Properties from "./pages/Properties";
-import PropertyDetails from "./pages/PropertyDetails";
-import Tenants from "./pages/Tenants";
-import TenantProfile from "./pages/TenantProfile";
-import NotFound from "./pages/NotFound";
+import { Toaster } from "@/components/ui/toaster";
+import { Routes, Route } from "react-router-dom";
+import Auth from "@/pages/Auth";
+import Dashboard from "@/pages/Dashboard";
+import Properties from "@/pages/Properties";
+import PropertyDetails from "@/pages/PropertyDetails";
+import Tenants from "@/pages/Tenants";
+import TenantProfile from "@/pages/TenantProfile";
+import NotFound from "@/pages/NotFound";
+import Index from "@/pages/Index";
 
-const queryClient = new QueryClient();
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -30,9 +35,10 @@ const App = () => (
           <Route path="/tenants/:id" element={<TenantProfile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <Toaster />
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;
