@@ -77,7 +77,7 @@ export function AssignTenantDialog({
     }
   };
 
-  const handleCalendarClick = (e: React.MouseEvent) => {
+  const stopPropagation = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
@@ -149,7 +149,7 @@ export function AssignTenantDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" onClick={stopPropagation}>
         <DialogHeader>
           <DialogTitle>Assign Tenant to Unit</DialogTitle>
           <DialogDescription>
@@ -198,14 +198,16 @@ export function AssignTenantDialog({
               <PopoverContent 
                 className="w-auto p-0" 
                 align="start"
-                onClick={handleCalendarClick}
               >
-                <div onClick={handleCalendarClick}>
+                <div className="calendar-wrapper" onClick={stopPropagation}>
                   <Calendar
                     mode="single"
                     selected={selectedLeaseStartDate}
                     onSelect={handleStartDateSelect}
                     initialFocus
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
                   />
                 </div>
               </PopoverContent>
@@ -234,14 +236,17 @@ export function AssignTenantDialog({
               <PopoverContent 
                 className="w-auto p-0" 
                 align="start"
-                onClick={handleCalendarClick}
               >
-                <div onClick={handleCalendarClick}>
+                <div className="calendar-wrapper" onClick={stopPropagation}>
                   <Calendar
                     mode="single"
                     selected={selectedLeaseEndDate}
                     onSelect={handleEndDateSelect}
                     initialFocus
+                    disabled={(date) =>
+                      !selectedLeaseStartDate ||
+                      date <= selectedLeaseStartDate
+                    }
                   />
                 </div>
               </PopoverContent>
