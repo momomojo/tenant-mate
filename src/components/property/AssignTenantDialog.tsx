@@ -196,10 +196,18 @@ export function AssignTenantDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent 
-                className="w-auto p-0" 
+                className="w-auto p-0 z-[100]" 
                 align="start"
+                onInteractOutside={(e) => {
+                  e.preventDefault();
+                  setStartDateOpen(false);
+                }}
               >
-                <div className="calendar-wrapper" onClick={stopPropagation}>
+                <div 
+                  className="calendar-wrapper" 
+                  onClick={stopPropagation}
+                  style={{ position: 'relative', zIndex: 100 }}
+                >
                   <Calendar
                     mode="single"
                     selected={selectedLeaseStartDate}
@@ -234,10 +242,18 @@ export function AssignTenantDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent 
-                className="w-auto p-0" 
+                className="w-auto p-0 z-[100]" 
                 align="start"
+                onInteractOutside={(e) => {
+                  e.preventDefault();
+                  setEndDateOpen(false);
+                }}
               >
-                <div className="calendar-wrapper" onClick={stopPropagation}>
+                <div 
+                  className="calendar-wrapper" 
+                  onClick={stopPropagation}
+                  style={{ position: 'relative', zIndex: 100 }}
+                >
                   <Calendar
                     mode="single"
                     selected={selectedLeaseEndDate}
