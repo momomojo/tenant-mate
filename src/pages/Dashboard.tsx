@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Home, Percent, DollarSign, Users, Wrench } from "lucide-react";
+import { Building2, Home, Percent, DollarSign, Users, Wrench, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
