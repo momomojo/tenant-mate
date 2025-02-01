@@ -27,11 +27,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, Building2, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface AddUnitForm {
   unit_number: string;
@@ -44,6 +46,12 @@ interface ManageUnitForm {
   status: string;
 }
 
+interface AssignTenantForm {
+  tenant_id: string;
+  lease_start_date: Date;
+  lease_end_date: Date;
+}
+
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -51,6 +59,7 @@ const PropertyDetails = () => {
   const [isAddingUnit, setIsAddingUnit] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
+  const [isAssigningTenant, setIsAssigningTenant] = useState(false);
 
   const { data: property, isLoading: isLoadingProperty, refetch } = useQuery({
     queryKey: ["property", id],
@@ -80,6 +89,19 @@ const PropertyDetails = () => {
     },
   });
 
+  const { data: tenants } = useQuery({
+    queryKey: ["tenants"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("role", "tenant");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const {
     register: registerAdd,
     handleSubmit: handleSubmitAdd,
@@ -94,6 +116,13 @@ const PropertyDetails = () => {
     setValue,
     formState: { isSubmitting: isSubmittingManage },
   } = useForm<ManageUnitForm>();
+
+  const {
+    handleSubmit: handleSubmitAssign,
+    reset: resetAssign,
+    setValue: setAssignValue,
+    formState: { isSubmitting: isSubmittingAssign },
+  } = useForm<AssignTenantForm>();
 
   const onSubmitAdd = async (data: AddUnitForm) => {
     try {
@@ -155,12 +184,59 @@ const PropertyDetails = () => {
     }
   };
 
+  const onSubmitAssignTenant = async (data: AssignTenantForm) => {
+    try {
+      // First update the unit status
+      const { error: unitError } = await supabase
+        .from("units")
+        .update({ status: "occupied" })
+        .eq("id", selectedUnit.id);
+
+      if (unitError) throw unitError;
+
+      // Then create the tenant unit assignment
+      const { error: assignError } = await supabase
+        .from("tenant_units")
+        .insert({
+          tenant_id: data.tenant_id,
+          unit_id: selectedUnit.id,
+          lease_start_date: format(data.lease_start_date, 'yyyy-MM-dd'),
+          lease_end_date: format(data.lease_end_date, 'yyyy-MM-dd'),
+          status: 'active'
+        });
+
+      if (assignError) throw assignError;
+
+      toast({
+        title: "Success",
+        description: "Tenant assigned successfully",
+      });
+
+      resetAssign();
+      setIsAssigningTenant(false);
+      setSelectedUnit(null);
+      refetch();
+    } catch (error) {
+      console.error("Error assigning tenant:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign tenant. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleManageUnit = (unit: any) => {
     setSelectedUnit(unit);
     setValue("unit_number", unit.unit_number);
     setValue("monthly_rent", unit.monthly_rent);
     setValue("status", unit.status || "vacant");
     setIsManagingUnit(true);
+  };
+
+  const handleAssignTenant = (unit: any) => {
+    setSelectedUnit(unit);
+    setIsAssigningTenant(true);
   };
 
   if (isLoadingProperty) {
@@ -324,13 +400,24 @@ const PropertyDetails = () => {
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleManageUnit(unit)}
-                          >
-                            Manage
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleManageUnit(unit)}
+                            >
+                              Manage
+                            </Button>
+                            {!currentTenant && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAssignTenant(unit)}
+                              >
+                                Assign Tenant
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -387,6 +474,56 @@ const PropertyDetails = () => {
                     disabled={isSubmittingManage}
                   >
                     {isSubmittingManage ? "Updating..." : "Update Unit"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAssigningTenant} onOpenChange={setIsAssigningTenant}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Assign Tenant to Unit {selectedUnit?.unit_number}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmitAssign(onSubmitAssignTenant)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tenant">Select Tenant</Label>
+                    <Select onValueChange={(value) => setAssignValue("tenant_id", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a tenant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tenants?.map((tenant) => (
+                          <SelectItem key={tenant.id} value={tenant.id}>
+                            {tenant.first_name} {tenant.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Lease Start Date</Label>
+                    <Calendar
+                      mode="single"
+                      selected={undefined}
+                      onSelect={(date) => date && setAssignValue("lease_start_date", date)}
+                      className="rounded-md border"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Lease End Date</Label>
+                    <Calendar
+                      mode="single"
+                      selected={undefined}
+                      onSelect={(date) => date && setAssignValue("lease_end_date", date)}
+                      className="rounded-md border"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmittingAssign}
+                  >
+                    {isSubmittingAssign ? "Assigning..." : "Assign Tenant"}
                   </Button>
                 </form>
               </DialogContent>
