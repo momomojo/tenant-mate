@@ -135,6 +135,7 @@ const PropertyDetails = () => {
   } = useForm<AssignTenantForm>();
 
   const formatTenantLabel = (tenant: any) => {
+    console.log("Formatting tenant:", tenant); // Debug log
     const name = [tenant.first_name, tenant.last_name]
       .filter(Boolean)
       .join(' ');
@@ -529,17 +530,20 @@ const PropertyDetails = () => {
                           <SelectValue placeholder="Select a tenant" />
                         </SelectTrigger>
                         <SelectContent>
-                          {tenants?.map((tenant) => (
-                            <SelectItem 
-                              key={tenant.id} 
-                              value={tenant.id}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium">{formatTenantLabel(tenant)}</span>
-                                <span className="text-xs text-gray-500">{tenant.email}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {tenants?.map((tenant) => {
+                            console.log("Rendering tenant:", tenant); // Debug log
+                            return (
+                              <SelectItem 
+                                key={tenant.id} 
+                                value={tenant.id}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{formatTenantLabel(tenant)}</span>
+                                  <span className="text-xs text-gray-500">{tenant.email}</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     )}
