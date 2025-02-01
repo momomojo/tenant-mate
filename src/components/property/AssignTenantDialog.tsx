@@ -63,6 +63,20 @@ export function AssignTenantDialog({
     return name || tenant.email || "-";
   };
 
+  const handleStartDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedLeaseStartDate(date);
+      setStartDateOpen(false);
+    }
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedLeaseEndDate(date);
+      setEndDateOpen(false);
+    }
+  };
+
   const handleAssignTenant = async () => {
     try {
       if (!selectedTenantId || !selectedLeaseStartDate || !selectedLeaseEndDate) {
@@ -180,13 +194,7 @@ export function AssignTenantDialog({
                 <Calendar
                   mode="single"
                   selected={selectedLeaseStartDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedLeaseStartDate(date);
-                      // Only close after successful selection
-                      setTimeout(() => setStartDateOpen(false), 0);
-                    }
-                  }}
+                  onSelect={handleStartDateSelect}
                   initialFocus
                 />
               </PopoverContent>
@@ -216,13 +224,7 @@ export function AssignTenantDialog({
                 <Calendar
                   mode="single"
                   selected={selectedLeaseEndDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedLeaseEndDate(date);
-                      // Only close after successful selection
-                      setTimeout(() => setEndDateOpen(false), 0);
-                    }
-                  }}
+                  onSelect={handleEndDateSelect}
                   initialFocus
                 />
               </PopoverContent>
