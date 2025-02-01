@@ -533,7 +533,6 @@ const PropertyDetails = () => {
                             <SelectItem 
                               key={tenant.id} 
                               value={tenant.id}
-                              className="flex items-center gap-2"
                             >
                               <div className="flex flex-col">
                                 <span className="font-medium">{formatTenantLabel(tenant)}</span>
