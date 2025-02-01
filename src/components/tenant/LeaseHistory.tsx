@@ -30,6 +30,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
   const { data: deletedLeases, isLoading: isLoadingDeleted } = useQuery({
     queryKey: ["deletedLeases", tenantId],
     queryFn: async () => {
+      console.log("Fetching deleted leases for tenant:", tenantId);
       const { data, error } = await supabase
         .from("deleted_tenant_units")
         .select(`
@@ -57,6 +58,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
         throw error;
       }
 
+      console.log("Deleted leases data:", data);
       return data;
     },
   });
@@ -138,70 +140,80 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
   const renderLeaseTimeline = (
     leaseData: any[],
     isDeleted: boolean = false
-  ) => (
-    <div className="relative space-y-6">
-      {leaseData?.map((lease, index) => (
-        <div
-          key={lease.id}
-          className="flex items-start gap-4 pb-6 last:pb-0"
-        >
-          {index < leaseData.length - 1 && (
-            <div className="absolute left-2 top-8 bottom-0 w-0.5 bg-border" />
-          )}
-          <div className="relative z-10 mt-1 rounded-full bg-background p-1 ring-2 ring-border">
-            <div className="h-2 w-2 rounded-full bg-primary" />
-          </div>
-          <div className="flex-1">
-            <h4 className="text-lg font-medium text-white">
-              {lease.unit.property.name} - Unit {lease.unit.unit_number}
-            </h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {new Date(lease.lease_start_date).toLocaleDateString()} -{" "}
-              {new Date(lease.lease_end_date).toLocaleDateString()}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Badge
-                variant={lease.status === "active" ? "default" : "secondary"}
-              >
-                {lease.status}
-              </Badge>
-              {isDeleted ? (
-                <>
-                  <Badge variant="destructive">Deleted</Badge>
-                  <p className="text-sm text-muted-foreground">
-                    Deleted by: {lease.deleted_by.first_name}{" "}
-                    {lease.deleted_by.last_name} on{" "}
-                    {new Date(lease.deleted_at).toLocaleDateString()}
-                  </p>
+  ) => {
+    if (!leaseData || leaseData.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          No {isDeleted ? "deleted" : "active"} lease records found
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative space-y-6">
+        {leaseData.map((lease, index) => (
+          <div
+            key={lease.id}
+            className="flex items-start gap-4 pb-6 last:pb-0"
+          >
+            {index < leaseData.length - 1 && (
+              <div className="absolute left-2 top-8 bottom-0 w-0.5 bg-border" />
+            )}
+            <div className="relative z-10 mt-1 rounded-full bg-background p-1 ring-2 ring-border">
+              <div className="h-2 w-2 rounded-full bg-primary" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-lg font-medium text-white">
+                {lease.unit.property.name} - Unit {lease.unit.unit_number}
+              </h4>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {new Date(lease.lease_start_date).toLocaleDateString()} -{" "}
+                {new Date(lease.lease_end_date).toLocaleDateString()}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge
+                  variant={lease.status === "active" ? "default" : "secondary"}
+                >
+                  {lease.status}
+                </Badge>
+                {isDeleted ? (
+                  <>
+                    <Badge variant="destructive">Deleted</Badge>
+                    <p className="text-sm text-muted-foreground">
+                      Deleted by: {lease.deleted_by.first_name}{" "}
+                      {lease.deleted_by.last_name} on{" "}
+                      {new Date(lease.deleted_at).toLocaleDateString()}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => restoreLeaseMutation.mutate(lease)}
+                      disabled={restoreLeaseMutation.isPending}
+                    >
+                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                      Restore Lease
+                    </Button>
+                  </>
+                ) : (
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
                     className="mt-2"
-                    onClick={() => restoreLeaseMutation.mutate(lease)}
-                    disabled={restoreLeaseMutation.isPending}
+                    onClick={() => deleteLeaseMutation.mutate(lease.id)}
+                    disabled={deleteLeaseMutation.isPending}
                   >
-                    <ArchiveRestore className="mr-2 h-4 w-4" />
-                    Restore Lease
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Lease
                   </Button>
-                </>
-              ) : (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => deleteLeaseMutation.mutate(lease.id)}
-                  disabled={deleteLeaseMutation.isPending}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Lease
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
+        ))}
+      </div>
+    );
+  };
 
   return (
     <Card>
