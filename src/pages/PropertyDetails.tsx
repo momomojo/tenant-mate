@@ -21,6 +21,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -29,10 +30,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { ArrowLeft, Building2, Plus, Users } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Users, Calendar, Key } from "lucide-react";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
 interface AddUnitForm {
@@ -60,6 +61,8 @@ const PropertyDetails = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
   const [isAssigningTenant, setIsAssigningTenant] = useState(false);
+  const [selectedLeaseStartDate, setSelectedLeaseStartDate] = useState<Date>();
+  const [selectedLeaseEndDate, setSelectedLeaseEndDate] = useState<Date>();
 
   const { data: property, isLoading: isLoadingProperty, refetch } = useQuery({
     queryKey: ["property", id],
@@ -184,9 +187,17 @@ const PropertyDetails = () => {
     }
   };
 
-  const onSubmitAssignTenant = async (data: AssignTenantForm) => {
+  const handleAssignTenant = async (data: AssignTenantForm) => {
     try {
-      // First update the unit status
+      if (!selectedLeaseStartDate || !selectedLeaseEndDate) {
+        toast({
+          title: "Error",
+          description: "Please select both lease start and end dates",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error: unitError } = await supabase
         .from("units")
         .update({ status: "occupied" })
@@ -194,14 +205,13 @@ const PropertyDetails = () => {
 
       if (unitError) throw unitError;
 
-      // Then create the tenant unit assignment
       const { error: assignError } = await supabase
         .from("tenant_units")
         .insert({
           tenant_id: data.tenant_id,
           unit_id: selectedUnit.id,
-          lease_start_date: format(data.lease_start_date, 'yyyy-MM-dd'),
-          lease_end_date: format(data.lease_end_date, 'yyyy-MM-dd'),
+          lease_start_date: format(selectedLeaseStartDate, 'yyyy-MM-dd'),
+          lease_end_date: format(selectedLeaseEndDate, 'yyyy-MM-dd'),
           status: 'active'
         });
 
@@ -212,9 +222,10 @@ const PropertyDetails = () => {
         description: "Tenant assigned successfully",
       });
 
-      resetAssign();
       setIsAssigningTenant(false);
       setSelectedUnit(null);
+      setSelectedLeaseStartDate(undefined);
+      setSelectedLeaseEndDate(undefined);
       refetch();
     } catch (error) {
       console.error("Error assigning tenant:", error);
@@ -234,7 +245,7 @@ const PropertyDetails = () => {
     setIsManagingUnit(true);
   };
 
-  const handleAssignTenant = (unit: any) => {
+  const handleAssignTenantDialog = (unit: any) => {
     setSelectedUnit(unit);
     setIsAssigningTenant(true);
   };
@@ -412,7 +423,7 @@ const PropertyDetails = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleAssignTenant(unit)}
+                                onClick={() => handleAssignTenantDialog(unit)}
                               >
                                 Assign Tenant
                               </Button>
@@ -480,14 +491,23 @@ const PropertyDetails = () => {
             </Dialog>
 
             <Dialog open={isAssigningTenant} onOpenChange={setIsAssigningTenant}>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>Assign Tenant to Unit {selectedUnit?.unit_number}</DialogTitle>
+                  <DialogDescription>
+                    Select a tenant and set the lease period to assign them to this unit.
+                  </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmitAssign(onSubmitAssignTenant)} className="space-y-4">
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const tenant_id = formData.get('tenant_id') as string;
+                  handleAssignTenant({ tenant_id, lease_start_date: selectedLeaseStartDate!, lease_end_date: selectedLeaseEndDate! });
+                }} 
+                className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="tenant">Select Tenant</Label>
-                    <Select onValueChange={(value) => setAssignValue("tenant_id", value)}>
+                    <Label htmlFor="tenant_id">Select Tenant</Label>
+                    <Select name="tenant_id" required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a tenant" />
                       </SelectTrigger>
@@ -502,29 +522,43 @@ const PropertyDetails = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>Lease Start Date</Label>
-                    <Calendar
-                      mode="single"
-                      selected={undefined}
-                      onSelect={(date) => date && setAssignValue("lease_start_date", date)}
-                      className="rounded-md border"
-                    />
+                    <div className="border rounded-md p-2">
+                      <CalendarComponent
+                        mode="single"
+                        selected={selectedLeaseStartDate}
+                        onSelect={setSelectedLeaseStartDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Lease End Date</Label>
-                    <Calendar
-                      mode="single"
-                      selected={undefined}
-                      onSelect={(date) => date && setAssignValue("lease_end_date", date)}
-                      className="rounded-md border"
-                    />
+                    <div className="border rounded-md p-2">
+                      <CalendarComponent
+                        mode="single"
+                        selected={selectedLeaseEndDate}
+                        onSelect={setSelectedLeaseEndDate}
+                        disabled={(date) => !selectedLeaseStartDate || date <= selectedLeaseStartDate}
+                        initialFocus
+                      />
+                    </div>
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isSubmittingAssign}
-                  >
-                    {isSubmittingAssign ? "Assigning..." : "Assign Tenant"}
-                  </Button>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsAssigningTenant(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!selectedLeaseStartDate || !selectedLeaseEndDate}
+                    >
+                      Assign Tenant
+                    </Button>
+                  </div>
                 </form>
               </DialogContent>
             </Dialog>
