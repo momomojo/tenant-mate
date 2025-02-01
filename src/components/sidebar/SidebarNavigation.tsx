@@ -5,10 +5,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { menuItems } from "../navigation/SidebarItems";
+import { useMenuItems } from "../navigation/SidebarItems";
 
 export const SidebarNavigation = () => {
   const navigate = useNavigate();
+  const menuItems = useMenuItems();
 
   return (
     <SidebarContent>
