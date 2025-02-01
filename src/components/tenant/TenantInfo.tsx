@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Mail, Phone, User } from "lucide-react";
 
 interface TenantInfoProps {
   tenant: {
@@ -16,15 +17,25 @@ export function TenantInfo({ tenant }: TenantInfoProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tenant Information</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <User className="h-5 w-5" />
+          Tenant Information
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex items-start space-x-4">
-        <Avatar className="h-16 w-16">
-          <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+        <Avatar className="h-20 w-20">
+          <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+            {initials}
+          </AvatarFallback>
         </Avatar>
-        <div className="space-y-1">
-          <h3 className="text-xl font-semibold text-white">{fullName}</h3>
-          <p className="text-sm text-gray-400">{tenant.email}</p>
+        <div className="space-y-3">
+          <h3 className="text-2xl font-semibold text-white">{fullName}</h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="h-4 w-4" />
+              <span>{tenant.email}</span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

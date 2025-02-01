@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DollarSign } from "lucide-react";
 
 interface PaymentHistoryProps {
   payments: Array<{
@@ -18,23 +19,26 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Payment History</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          Payment History
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {payments.map((payment) => (
             <div
               key={payment.id}
-              className="flex items-center justify-between border-b border-gray-700 pb-4 last:border-0"
+              className="flex items-center justify-between rounded-lg border p-4"
             >
               <div>
                 <h4 className="font-medium text-white">
                   Unit {payment.unit.unit_number}
                 </h4>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   {new Date(payment.payment_date).toLocaleDateString()}
                 </p>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Method: {payment.payment_method || "N/A"}
                 </p>
               </div>

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Wrench } from "lucide-react";
 
 interface MaintenanceHistoryProps {
   requests: Array<{
@@ -19,14 +20,17 @@ export function MaintenanceHistory({ requests }: MaintenanceHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Maintenance History</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Wrench className="h-5 w-5" />
+          Maintenance History
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {requests.map((request) => (
             <div
               key={request.id}
-              className="border-b border-gray-700 pb-4 last:border-0"
+              className="rounded-lg border p-4 space-y-2"
             >
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-white">{request.title}</h4>
@@ -41,11 +45,11 @@ export function MaintenanceHistory({ requests }: MaintenanceHistoryProps) {
                   </Badge>
                 </div>
               </div>
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Unit {request.unit.unit_number}
               </p>
-              <p className="mt-2 text-sm text-gray-300">{request.description}</p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="text-sm text-gray-300">{request.description}</p>
+              <p className="text-xs text-muted-foreground">
                 Submitted on{" "}
                 {new Date(request.created_at).toLocaleDateString()}
               </p>
