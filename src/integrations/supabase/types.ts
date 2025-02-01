@@ -9,6 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      deleted_tenant_units: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          lease_end_date: string
+          lease_start_date: string
+          original_id: string | null
+          status: string | null
+          tenant_id: string | null
+          unit_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id: string
+          lease_end_date: string
+          lease_start_date: string
+          original_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          unit_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          lease_end_date?: string
+          lease_start_date?: string
+          original_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          unit_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deleted_tenant_units_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deleted_tenant_units_original_id_fkey"
+            columns: ["original_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deleted_tenant_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deleted_tenant_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_requests: {
         Row: {
           created_at: string
@@ -267,6 +338,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_deleted_tenant_units: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_user_role: {
         Args: {
           user_id: string

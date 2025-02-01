@@ -106,7 +106,7 @@ const TenantProfile = () => {
         <main className="flex-1 p-8">
           <div className="mx-auto max-w-5xl space-y-6">
             <TenantInfo tenant={tenant.profile} />
-            <LeaseHistory leases={tenant.leases} />
+            <LeaseHistory leases={tenant.leases} tenantId={id!} />
             <PaymentHistory payments={tenant.payments} />
             <MaintenanceHistory requests={tenant.maintenance} />
           </div>
