@@ -311,12 +311,48 @@ const PropertyDetails = () => {
     }
   };
 
-  const handleManageUnit = (unit: any) => {
+  const handleManageUnit = async (unit: any) => {
     setSelectedUnit(unit);
     setValue("unit_number", unit.unit_number);
     setValue("monthly_rent", unit.monthly_rent);
     setValue("status", unit.status || "vacant");
     setIsManagingUnit(true);
+  };
+
+  const handleEndLease = async (tenantUnitId: string) => {
+    try {
+      // First update the tenant_unit status to 'inactive'
+      const { error: tenantUnitError } = await supabase
+        .from("tenant_units")
+        .update({ status: "inactive" })
+        .eq("id", tenantUnitId);
+
+      if (tenantUnitError) throw tenantUnitError;
+
+      // Then update the unit status to vacant
+      const { error: unitError } = await supabase
+        .from("units")
+        .update({ status: "vacant" })
+        .eq("id", selectedUnit.id);
+
+      if (unitError) throw unitError;
+
+      toast({
+        title: "Success",
+        description: "Lease ended successfully",
+      });
+
+      setIsManagingUnit(false);
+      setSelectedUnit(null);
+      refetch();
+    } catch (error) {
+      console.error("Error ending lease:", error);
+      toast({
+        title: "Error",
+        description: "Failed to end lease. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAssignTenantDialog = (unit: any) => {
@@ -513,7 +549,7 @@ const PropertyDetails = () => {
             </Card>
 
             <Dialog open={isManagingUnit} onOpenChange={setIsManagingUnit}>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>Manage Unit</DialogTitle>
                 </DialogHeader>
@@ -554,13 +590,43 @@ const PropertyDetails = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isSubmittingManage}
-                  >
-                    {isSubmittingManage ? "Updating..." : "Update Unit"}
-                  </Button>
+
+                  {/* Show current tenant information if unit is occupied */}
+                  {selectedUnit?.tenant_units?.find(tu => tu.status === 'active') && (
+                    <div className="space-y-2 border-t pt-4">
+                      <Label>Current Tenant</Label>
+                      <div className="text-sm text-gray-500">
+                        {formatTenantLabel(selectedUnit.tenant_units.find(tu => tu.status === 'active')?.tenant)}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => handleEndLease(selectedUnit.tenant_units.find(tu => tu.status === 'active')?.id)}
+                        className="mt-2"
+                      >
+                        End Lease
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsManagingUnit(false);
+                        setSelectedUnit(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmittingManage}
+                    >
+                      {isSubmittingManage ? "Updating..." : "Update Unit"}
+                    </Button>
+                  </div>
                 </form>
               </DialogContent>
             </Dialog>
