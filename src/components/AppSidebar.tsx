@@ -22,7 +22,7 @@ export function AppSidebar() {
   return (
     <Sidebar variant="sidebar">
       <div className="p-4">
-        <h1 className="text-xl font-bold text-white">PropertyPro</h1>
+        <h1 className="text-xl font-bold text-sidebar-foreground">PropertyPro</h1>
       </div>
       <SidebarContent>
         <SidebarMenu>
@@ -30,7 +30,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 onClick={() => navigate(item.path)}
-                className="w-full text-gray-400 hover:bg-gray-800 hover:text-white"
+                className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.title}</span>
@@ -42,7 +42,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <button
           onClick={handleLogout}
-          className="w-full rounded-md bg-[#9b87f5] py-3 text-center text-white hover:bg-[#8a74f4] transition-colors duration-200"
+          className="w-full rounded-md bg-sidebar-primary py-3 text-center text-sidebar-primary-foreground hover:bg-sidebar-primary/90 transition-colors duration-200"
         >
           <div className="flex items-center justify-center gap-2">
             <LogOut className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { Building2, Home, Users, Wrench, FileText, BarChart, Settings, Settings2 } from "lucide-react";
+import { Building2, Home, Users, Wrench, FileText, BarChart, Settings2 } from "lucide-react";
 
 export const menuItems = [
   { title: "Dashboard", icon: Home, path: "/dashboard" },
@@ -7,6 +7,5 @@ export const menuItems = [
   { title: "Maintenance", icon: Wrench, path: "/maintenance" },
   { title: "Documents", icon: FileText, path: "/documents" },
   { title: "Reports", icon: BarChart, path: "/reports" },
-  { title: "Settings", icon: Settings, path: "/settings" },
   { title: "Admin Settings", icon: Settings2, path: "/admin-settings" },
 ];
