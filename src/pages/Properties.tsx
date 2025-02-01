@@ -7,11 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { useForm } from "react-hook-form";
+import { Label } from "@/components/ui/label";
+
+interface AddPropertyForm {
+  name: string;
+  address: string;
+}
 
 const Properties = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddingProperty, setIsAddingProperty] = useState(false);
+  const { toast } = useToast();
 
-  const { data: properties, isLoading } = useQuery({
+  const { data: properties, isLoading, refetch } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,9 +53,45 @@ const Properties = () => {
     },
   });
 
-  const filteredProperties = properties?.filter((property) =>
-    property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    property.address.toLowerCase().includes(searchQuery.toLowerCase())
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<AddPropertyForm>();
+
+  const onSubmit = async (data: AddPropertyForm) => {
+    try {
+      const { error } = await supabase.from("properties").insert({
+        name: data.name,
+        address: data.address,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Property added successfully",
+      });
+
+      reset();
+      setIsAddingProperty(false);
+      refetch();
+    } catch (error) {
+      console.error("Error adding property:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add property. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredProperties = properties?.filter(
+    (property) =>
+      property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      property.address.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -49,7 +102,9 @@ const Properties = () => {
           <div className="flex flex-col gap-8">
             <div>
               <h1 className="text-2xl font-semibold text-white">Properties</h1>
-              <p className="text-sm text-gray-400">Manage your properties and units</p>
+              <p className="text-sm text-gray-400">
+                Manage your properties and units
+              </p>
             </div>
 
             <div className="flex items-center gap-4">
@@ -62,10 +117,44 @@ const Properties = () => {
                   className="pl-10"
                 />
               </div>
-              <Button>
-                <Building2 className="mr-2 h-4 w-4" />
-                Add Property
-              </Button>
+              <Dialog open={isAddingProperty} onOpenChange={setIsAddingProperty}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Building2 className="mr-2 h-4 w-4" />
+                    Add Property
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Property</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Property Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="Enter property name"
+                        {...register("name", { required: true })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        placeholder="Enter property address"
+                        {...register("address", { required: true })}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Adding..." : "Add Property"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
 
             {isLoading ? (
@@ -74,15 +163,19 @@ const Properties = () => {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProperties?.map((property) => {
                   const totalUnits = property.units?.length || 0;
-                  const occupiedUnits = property.units?.filter(
-                    (unit) => unit.status === "occupied"
-                  ).length || 0;
-                  const occupancyRate = totalUnits > 0 
-                    ? Math.round((occupiedUnits / totalUnits) * 100) 
-                    : 0;
+                  const occupiedUnits =
+                    property.units?.filter((unit) => unit.status === "occupied")
+                      .length || 0;
+                  const occupancyRate =
+                    totalUnits > 0
+                      ? Math.round((occupiedUnits / totalUnits) * 100)
+                      : 0;
 
                   return (
-                    <Card key={property.id} className="bg-[#403E43] border-none hover:bg-[#4A484D] transition-colors">
+                    <Card
+                      key={property.id}
+                      className="bg-[#403E43] border-none hover:bg-[#4A484D] transition-colors"
+                    >
                       <CardHeader>
                         <CardTitle className="text-lg font-medium text-white">
                           {property.name}
