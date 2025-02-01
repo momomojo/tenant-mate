@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, History } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Calendar, History, ArchiveRestore } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 interface LeaseHistoryProps {
   leases: Array<{
@@ -22,6 +24,8 @@ interface LeaseHistoryProps {
 }
 
 export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
+  const queryClient = useQueryClient();
+
   const { data: deletedLeases, isLoading: isLoadingDeleted } = useQuery({
     queryKey: ["deletedLeases", tenantId],
     queryFn: async () => {
@@ -53,6 +57,38 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
       }
 
       return data;
+    },
+  });
+
+  const restoreLeaseMutation = useMutation({
+    mutationFn: async (lease: any) => {
+      const { error: insertError } = await supabase
+        .from("tenant_units")
+        .insert({
+          tenant_id: tenantId,
+          unit_id: lease.unit_id,
+          lease_start_date: lease.lease_start_date,
+          lease_end_date: lease.lease_end_date,
+          status: lease.status,
+        });
+
+      if (insertError) throw insertError;
+
+      const { error: deleteError } = await supabase
+        .from("deleted_tenant_units")
+        .delete()
+        .eq("id", lease.id);
+
+      if (deleteError) throw deleteError;
+    },
+    onSuccess: () => {
+      toast.success("Lease restored successfully");
+      queryClient.invalidateQueries({ queryKey: ["deletedLeases"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
+    },
+    onError: (error) => {
+      console.error("Error restoring lease:", error);
+      toast.error("Failed to restore lease");
     },
   });
 
@@ -94,6 +130,16 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
                     {lease.deleted_by.last_name} on{" "}
                     {new Date(lease.deleted_at).toLocaleDateString()}
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => restoreLeaseMutation.mutate(lease)}
+                    disabled={restoreLeaseMutation.isPending}
+                  >
+                    <ArchiveRestore className="mr-2 h-4 w-4" />
+                    Restore Lease
+                  </Button>
                 </>
               )}
             </div>
