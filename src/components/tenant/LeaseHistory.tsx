@@ -32,14 +32,6 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     queryFn: async () => {
       console.log("Fetching deleted leases for tenant:", tenantId);
       
-      // First, let's check if we can get ANY records from the table
-      const { data: allDeleted, error: countError } = await supabase
-        .from("deleted_tenant_units")
-        .select("*");
-      
-      console.log("All deleted records in table:", allDeleted);
-
-      // Now let's get the specific records for this tenant
       const { data, error } = await supabase
         .from("deleted_tenant_units")
         .select(`
@@ -66,13 +58,14 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
         throw error;
       }
 
-      console.log("Deleted leases for tenant:", data);
+      console.log("Fetched deleted leases:", data);
       return data;
     },
   });
 
   const restoreLeaseMutation = useMutation({
     mutationFn: async (lease: any) => {
+      console.log("Attempting to restore lease:", lease);
       const { error: insertError } = await supabase
         .from("tenant_units")
         .insert({
@@ -105,16 +98,34 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
 
   const deleteLeaseMutation = useMutation({
     mutationFn: async (leaseId: string) => {
-      console.log("Deleting lease:", leaseId);
-      const { error } = await supabase
+      console.log("Attempting to delete lease:", leaseId);
+      
+      // First get the lease details before deletion
+      const { data: leaseToDelete, error: fetchError } = await supabase
+        .from("tenant_units")
+        .select("*")
+        .eq("id", leaseId)
+        .single();
+        
+      if (fetchError) {
+        console.error("Error fetching lease to delete:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("Lease to be deleted:", leaseToDelete);
+      
+      // Now delete the lease - this should trigger the database trigger
+      const { error: deleteError } = await supabase
         .from("tenant_units")
         .delete()
         .eq("id", leaseId);
 
-      if (error) {
-        console.error("Error in delete mutation:", error);
-        throw error;
+      if (deleteError) {
+        console.error("Error in delete mutation:", deleteError);
+        throw deleteError;
       }
+      
+      console.log("Lease deleted successfully");
     },
     onSuccess: () => {
       toast.success("Lease deleted successfully");
