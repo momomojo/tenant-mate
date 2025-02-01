@@ -92,9 +92,10 @@ const PropertyDetails = () => {
     },
   });
 
-  const { data: tenants } = useQuery({
+  const { data: tenants, isError: isTenantsError, error: tenantsError } = useQuery({
     queryKey: ["tenants"],
     queryFn: async () => {
+      console.log("Fetching tenants...");
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -106,7 +107,7 @@ const PropertyDetails = () => {
         throw error;
       }
 
-      console.log("Fetched tenants:", data); // Debug log
+      console.log("Fetched tenants:", data);
       return data;
     },
   });
@@ -513,18 +514,22 @@ const PropertyDetails = () => {
                 className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="tenant_id">Select Tenant</Label>
-                    <Select name="tenant_id" required>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a tenant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tenants?.map((tenant) => (
-                          <SelectItem key={tenant.id} value={tenant.id}>
-                            {tenant.first_name} {tenant.last_name} ({tenant.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isTenantsError ? (
+                      <div className="text-red-500">Error loading tenants: {tenantsError.message}</div>
+                    ) : (
+                      <Select name="tenant_id" required>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a tenant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tenants?.map((tenant) => (
+                            <SelectItem key={tenant.id} value={tenant.id}>
+                              {tenant.first_name} {tenant.last_name} ({tenant.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Lease Start Date</Label>
