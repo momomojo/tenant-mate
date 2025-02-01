@@ -5,24 +5,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useForm } from "react-hook-form";
-
-interface ManageUnitForm {
-  unit_number: string;
-  monthly_rent: number;
-  status: string;
-}
+import { UnitForm, UnitFormData } from "./UnitForm";
+import { CurrentTenant } from "./CurrentTenant";
 
 interface ManageUnitDialogProps {
   unit: any;
@@ -38,18 +25,7 @@ export function ManageUnitDialog({
   onUnitUpdated,
 }: ManageUnitDialogProps) {
   const { toast } = useToast();
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { isSubmitting },
-  } = useForm<ManageUnitForm>({
-    defaultValues: {
-      unit_number: unit?.unit_number,
-      monthly_rent: unit?.monthly_rent,
-      status: unit?.status || "vacant",
-    },
-  });
+  const { handleSubmit, formState: { isSubmitting } } = useForm<UnitFormData>();
 
   const formatTenantLabel = (tenant: any): string => {
     if (!tenant) return "-";
@@ -64,7 +40,7 @@ export function ManageUnitDialog({
     try {
       const { error: tenantUnitError } = await supabase
         .from("tenant_units")
-        .update({ status: "ended" }) // Changed from 'inactive' to 'ended'
+        .update({ status: "ended" })
         .eq("id", tenantUnitId);
 
       if (tenantUnitError) throw tenantUnitError;
@@ -93,7 +69,7 @@ export function ManageUnitDialog({
     }
   };
 
-  const onSubmit = async (data: ManageUnitForm) => {
+  const onSubmit = async (data: UnitFormData) => {
     try {
       const { error } = await supabase
         .from("units")
@@ -123,74 +99,29 @@ export function ManageUnitDialog({
     }
   };
 
+  const activeTenantUnit = unit?.tenant_units?.find(
+    (tu: any) => tu.status === "active"
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Manage Unit</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="unit_number">Unit Number</Label>
-            <Input
-              id="unit_number"
-              placeholder="Enter unit number"
-              {...register("unit_number", { required: true })}
+        <div className="space-y-4">
+          <UnitForm
+            unit={unit}
+            onSubmit={onSubmit}
+            isSubmitting={isSubmitting}
+          />
+          {activeTenantUnit && (
+            <CurrentTenant
+              tenant={activeTenantUnit.tenant}
+              onEndLease={() => handleEndLease(activeTenantUnit.id)}
+              formatTenantLabel={formatTenantLabel}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="monthly_rent">Monthly Rent</Label>
-            <Input
-              id="monthly_rent"
-              type="number"
-              placeholder="Enter monthly rent"
-              {...register("monthly_rent", {
-                required: true,
-                valueAsNumber: true,
-              })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select
-              onValueChange={(value) => setValue("status", value)}
-              defaultValue={unit?.status || "vacant"}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="vacant">Vacant</SelectItem>
-                <SelectItem value="occupied">Occupied</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {unit?.tenant_units?.find((tu: any) => tu.status === "active") && (
-            <div className="space-y-2 border-t pt-4">
-              <Label>Current Tenant</Label>
-              <div className="text-sm text-gray-500">
-                {formatTenantLabel(
-                  unit.tenant_units.find((tu: any) => tu.status === "active")
-                    ?.tenant
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() =>
-                  handleEndLease(
-                    unit.tenant_units.find((tu: any) => tu.status === "active").id
-                  )
-                }
-                className="mt-2"
-              >
-                End Lease
-              </Button>
-            </div>
           )}
-
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
@@ -199,7 +130,7 @@ export function ManageUnitDialog({
               {isSubmitting ? "Updating..." : "Update Unit"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
