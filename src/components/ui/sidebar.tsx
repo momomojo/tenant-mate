@@ -9,6 +9,7 @@ import { SIDEBAR_WIDTH, SIDEBAR_WIDTH_MOBILE, SIDEBAR_WIDTH_ICON } from "./sideb
 import {
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuButton,
   SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -149,6 +150,7 @@ export {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuButton,
   SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubItem,

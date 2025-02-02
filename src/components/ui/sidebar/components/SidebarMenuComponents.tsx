@@ -26,6 +26,25 @@ export const sidebarMenuButtonVariants = cva(
   }
 );
 
+export const SidebarMenuButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<"button"> & {
+    asChild?: boolean;
+    isActive?: boolean;
+  }
+>(({ className, asChild = false, isActive, ...props }, ref) => {
+  const Comp = asChild ? Slot : "button";
+  return (
+    <Comp
+      ref={ref}
+      className={cn(sidebarMenuButtonVariants(), className)}
+      data-active={isActive}
+      {...props}
+    />
+  );
+});
+SidebarMenuButton.displayName = "SidebarMenuButton";
+
 export const SidebarMenu = React.forwardRef<
   HTMLUListElement,
   React.ComponentProps<"ul">
