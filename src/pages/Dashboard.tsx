@@ -6,22 +6,29 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  const { data: userRole } = useQuery({
+  const { data: userRole, isError, error } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
       
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
         
+      if (error) {
+        console.error("Error fetching user role:", error);
+        throw error;
+      }
+
+      console.log("Fetched user role:", profile?.role);
       return profile?.role;
     },
   });
@@ -39,7 +46,14 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
+  if (isError) {
+    console.error("Error loading dashboard:", error);
+    toast.error("Error loading dashboard. Please try again.");
+  }
+
   const getStatsByRole = () => {
+    console.log("Getting stats for role:", userRole);
+    
     switch (userRole) {
       case "property_manager":
         return [
@@ -147,6 +161,7 @@ const Dashboard = () => {
           },
         ];
       default:
+        console.log("No matching role found:", userRole);
         return [];
     }
   };
