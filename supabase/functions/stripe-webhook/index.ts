@@ -50,92 +50,53 @@ serve(async (req) => {
       return new Response(`Webhook Error: ${err.message}`, { status: 400 });
     }
 
-    console.log('Processing event type:', event.type);
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
+    console.log('Processing event type:', event.type);
+
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        console.log('Checkout session completed:', session.id);
-        const paymentId = session.metadata?.payment_id;
-
-        if (paymentId) {
-          // Update rent_payments status
-          await supabaseClient
-            .from('rent_payments')
-            .update({ 
-              status: 'paid',
-              payment_method: session.payment_method_types?.[0] || 'card'
-            })
-            .eq('id', paymentId);
-
-          // Update payment_transactions status
-          await supabaseClient
-            .from('payment_transactions')
-            .update({ 
-              status: 'completed',
-              stripe_payment_intent_id: session.payment_intent,
-              payment_method: session.payment_method_types?.[0] || 'card'
-            })
-            .eq('rent_payment_id', paymentId);
-        }
-        break;
-      }
-
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log('Payment failed:', paymentIntent.id);
-        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id);
-        const paymentId = session.metadata?.payment_id;
-
-        if (paymentId) {
-          // Update rent_payments status
-          await supabaseClient
-            .from('rent_payments')
-            .update({ status: 'failed' })
-            .eq('id', paymentId);
-
-          // Update payment_transactions status
-          await supabaseClient
-            .from('payment_transactions')
-            .update({ 
-              status: 'failed',
-              stripe_payment_intent_id: paymentIntent.id
-            })
-            .eq('rent_payment_id', paymentId);
-        }
-        break;
-      }
-
       case 'account.updated': {
         const account = event.data.object as Stripe.Account;
-        console.log('Stripe account updated:', account.id);
+        console.log('Account updated:', account.id);
         
         // Update the profile's Stripe account status
-        await supabaseClient
+        const { data, error } = await supabaseClient
           .from('profiles')
           .update({ 
             stripe_connect_account_id: account.id,
           })
           .eq('stripe_connect_account_id', account.id);
+
+        if (error) {
+          console.error('Error updating profile:', error);
+          throw error;
+        }
+
+        console.log('Profile updated successfully:', data);
         break;
       }
 
       case 'account.application.deauthorized': {
         const account = event.data.object as Stripe.Account;
-        console.log('Stripe account deauthorized:', account.id);
+        console.log('Account deauthorized:', account.id);
         
         // Remove the Stripe account ID from the profile
-        await supabaseClient
+        const { data, error } = await supabaseClient
           .from('profiles')
           .update({ 
             stripe_connect_account_id: null 
           })
           .eq('stripe_connect_account_id', account.id);
+
+        if (error) {
+          console.error('Error updating profile:', error);
+          throw error;
+        }
+
+        console.log('Profile updated successfully:', data);
         break;
       }
 
