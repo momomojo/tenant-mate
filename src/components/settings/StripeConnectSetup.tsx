@@ -33,12 +33,21 @@ export const StripeConnectSetup = () => {
 
   const setupStripeConnect = async () => {
     try {
+      toast.loading("Setting up Stripe Connect...");
+      
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from edge function:', error);
+        throw error;
+      }
       
+      if (!data?.url) {
+        throw new Error('No redirect URL received from Stripe');
+      }
+
       // Redirect to Stripe Connect onboarding
       window.location.href = data.url;
     } catch (error) {
@@ -113,8 +122,11 @@ export const StripeConnectSetup = () => {
               {requirements.map((req, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
                   onClick={setupStripeConnect}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && setupStripeConnect()}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
