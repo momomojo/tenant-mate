@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
-import { loadConnectAndInitialize } from "@stripe/connect-js";
+import { StripeConnect } from "@stripe/connect-js";
 import { ConnectAccountOnboarding, ConnectComponentsProvider } from "@stripe/react-connect-js";
 
 interface RequirementItem {
@@ -53,9 +53,9 @@ export const StripeConnectSetup = () => {
 
       const fetchClientSecret = async () => data.client_secret;
 
-      const stripeConnect = await loadConnectAndInitialize({
+      const stripeConnect = await StripeConnect.initialize({
         publishableKey: 'YOUR_STRIPE_PUBLISHABLE_KEY', // Replace with your key
-        fetchClientSecret,
+        clientSecret: data.client_secret,
         appearance: {
           variables: {
             colorPrimary: '#0F172A',
