@@ -48,7 +48,6 @@ export const StripeConnectSetup = () => {
     },
   });
 
-  // Fetch account status on mount and after OAuth return
   useEffect(() => {
     const fetchAccountStatus = async () => {
       if (!profile?.stripe_connect_account_id) return;
@@ -69,21 +68,16 @@ export const StripeConnectSetup = () => {
     fetchAccountStatus();
   }, [profile?.stripe_connect_account_id]);
 
-  // Handle OAuth return
   useEffect(() => {
     const handleOAuthReturn = async () => {
       if (!code || !state) return;
 
-      console.log("Handling OAuth return with code:", code, "and state:", state);
-      
       try {
         setIsLoading(true);
         const { data, error } = await supabase.functions.invoke('handle-connect-oauth', {
           method: 'POST',
           body: { code, state },
         });
-
-        console.log("OAuth handler response:", data, error);
 
         if (error) throw error;
 
@@ -110,8 +104,6 @@ export const StripeConnectSetup = () => {
         method: 'POST',
       });
 
-      console.log("Create connect account response:", data, error);
-
       if (error) throw error;
       
       if (data?.oauth_url) {
@@ -129,16 +121,17 @@ export const StripeConnectSetup = () => {
     }
   };
 
-  const getRequirementsList = () => {
+  const getUniqueRequirements = () => {
     if (!accountStatus?.requirements) return [];
 
-    const allRequirements = [
+    // Combine and deduplicate requirements
+    const allRequirements = new Set([
       ...accountStatus.requirements.currently_due,
       ...accountStatus.requirements.eventually_due,
       ...accountStatus.requirements.past_due,
-    ];
+    ]);
 
-    return allRequirements.map(req => ({
+    return Array.from(allRequirements).map(req => ({
       title: req.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
       description: `Complete this requirement to enable payments`,
       dueDate: new Date(accountStatus.requirements.current_deadline * 1000).toLocaleDateString(),
@@ -146,11 +139,16 @@ export const StripeConnectSetup = () => {
     }));
   };
 
+  const openStripeDashboard = () => {
+    if (!profile?.stripe_connect_account_id) return;
+    window.open(`https://dashboard.stripe.com/connect/accounts/${profile.stripe_connect_account_id}`, '_blank');
+  };
+
   if (profileLoading) return null;
 
   if (profile?.role !== 'property_manager') return null;
 
-  const requirements = getRequirementsList();
+  const requirements = getUniqueRequirements();
   const hasRequirements = requirements.length > 0;
 
   return (
@@ -182,10 +180,10 @@ export const StripeConnectSetup = () => {
                   <div
                     key={index}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                    onClick={setupStripeConnect}
+                    onClick={openStripeDashboard}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && setupStripeConnect()}
+                    onKeyDown={(e) => e.key === 'Enter' && openStripeDashboard()}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -208,15 +206,26 @@ export const StripeConnectSetup = () => {
               </div>
             )}
 
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={setupStripeConnect}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Setting up...' : 'Complete Account Setup'}
-              <ExternalLink className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={openStripeDashboard}
+              >
+                Open Stripe Dashboard
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={setupStripeConnect}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Setting up...' : 'Complete Account Setup'}
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <Button 
