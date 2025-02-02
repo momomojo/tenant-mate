@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ export const StripeConnectSetup = () => {
   const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
   const [onboardingExited, setOnboardingExited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
@@ -91,6 +92,18 @@ export const StripeConnectSetup = () => {
     }
   };
 
+  const handleOnboardingExit = async () => {
+    console.log('Onboarding exited');
+    setOnboardingExited(true);
+    setStripeConnectInstance(null);
+    
+    // Refresh the profile data to get the updated stripe_connect_account_id
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
+    
+    // Show success message
+    toast.success("Stripe account setup completed successfully!");
+  };
+
   const requirements: RequirementItem[] = [
     {
       title: "Accept terms of service",
@@ -129,13 +142,6 @@ export const StripeConnectSetup = () => {
       status: "pending"
     }
   ];
-
-  const handleOnboardingExit = () => {
-    console.log('Onboarding exited');
-    setOnboardingExited(true);
-    setStripeConnectInstance(null);
-    window.location.reload();
-  };
 
   if (profileLoading) return null;
 
