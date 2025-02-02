@@ -13,38 +13,29 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Received OAuth callback request");
     const { code, state } = await req.json();
-    console.log('Received OAuth return with code:', code, 'and state:', state);
 
     if (!code || !state) {
-      console.error('Missing code or state parameter');
-      throw new Error('Missing code or state parameter');
+      throw new Error('Missing required parameters');
     }
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     });
 
-    console.log('Exchanging code for access token...');
-    // Exchange the authorization code for an access token
+    // Exchange the authorization code for an account
     const response = await stripe.oauth.token({
       grant_type: 'authorization_code',
       code,
     });
 
-    console.log('OAuth token exchange response:', response);
-
     const connectedAccountId = response.stripe_user_id;
     if (!connectedAccountId) {
-      console.error('No connected account ID received');
       throw new Error('No connected account ID received');
     }
 
-    console.log('Retrieving connected account details...');
     // Get the connected account details
     const account = await stripe.accounts.retrieve(connectedAccountId);
-    console.log('Retrieved account details:', account);
 
     // Update the user's profile with the connected account ID
     const supabaseClient = createClient(
@@ -52,7 +43,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
-    console.log('Updating profile with connected account ID:', connectedAccountId);
     const { error: updateError } = await supabaseClient
       .from('profiles')
       .update({ 
@@ -61,13 +51,10 @@ serve(async (req) => {
       .eq('id', state);
 
     if (updateError) {
-      console.error('Error updating profile:', updateError);
       throw updateError;
     }
 
-    console.log('Successfully updated profile');
-
-    // Return the account status and requirements
+    // Return the account status
     return new Response(
       JSON.stringify({
         accountId: connectedAccountId,

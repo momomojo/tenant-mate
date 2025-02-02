@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -27,21 +26,59 @@ serve(async (req) => {
       throw new Error('No user found');
     }
 
+    // Get user profile to pre-fill information
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('stripe_connect_account_id')
+      .select('*')
       .eq('id', user.id)
       .single();
 
+    if (!profile) {
+      throw new Error('No profile found');
+    }
+
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16',
+    });
+
+    // Create a Stripe Connect account with pre-filled information
+    const account = await stripe.accounts.create({
+      type: 'express',
+      country: 'US',
+      email: profile.email,
+      business_type: 'individual',
+      individual: {
+        email: profile.email,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+      },
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
+
+    // Update profile with the new account ID
+    await supabaseClient
+      .from('profiles')
+      .update({ stripe_connect_account_id: account.id })
+      .eq('id', user.id);
+
     // Get the origin and return URL from the request
     const origin = req.headers.get('origin') || '';
-    const returnUrl = `${origin}/dashboard`;
+    const returnUrl = `${origin}/settings`;
 
-    // Return the OAuth URL for redirect
+    // Create an account link for onboarding
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: `${returnUrl}?refresh=true`,
+      return_url: returnUrl,
+      type: 'account_onboarding',
+      collect: 'eventually_due',
+    });
+
     return new Response(
-      JSON.stringify({
-        oauth_url: `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_RhO6GvtqzKJc2vtig3KfKRfGddXbJwWm&scope=read_write&state=${user.id}&redirect_uri=${encodeURIComponent(returnUrl)}`
-      }),
+      JSON.stringify({ url: accountLink.url }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
