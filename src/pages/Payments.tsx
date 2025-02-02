@@ -22,8 +22,8 @@ const Payments = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
-  // Get user role
-  const { data: userRole } = useQuery({
+  // Get user role and active unit
+  const { data: userInfo } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -35,7 +35,26 @@ const Payments = () => {
         .eq("id", user.id)
         .single();
 
-      return profile?.role;
+      // If user is a tenant, get their active unit
+      let activeUnit = null;
+      if (profile?.role === 'tenant') {
+        const { data: tenantUnit } = await supabase
+          .from('tenant_units')
+          .select(`
+            unit_id,
+            unit:units (id, unit_number, monthly_rent)
+          `)
+          .eq('tenant_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        activeUnit = tenantUnit?.unit;
+      }
+
+      return {
+        role: profile?.role,
+        activeUnit
+      };
     },
   });
 
@@ -70,11 +89,10 @@ const Payments = () => {
         `);
 
       // Apply role-based filters
-      if (userRole === 'tenant') {
+      if (userInfo?.role === 'tenant') {
         query = query.eq("tenant_id", user.id);
       }
 
-      // Apply status filter
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
@@ -102,33 +120,12 @@ const Payments = () => {
     },
   });
 
-  const { data: activeUnit, isLoading: isLoadingUnit } = useQuery({
-    queryKey: ["active-unit"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
-
-      const { data, error } = await supabase
-        .from("tenant_units")
-        .select(`
-          unit_id,
-          unit:units(id, unit_number, monthly_rent)
-        `)
-        .eq("tenant_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const filteredPayments = payments?.filter(payment => 
     payment.unit.unit_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoadingPayments || isLoadingUnit) {
+  if (isLoadingPayments) {
     return <div>Loading...</div>;
   }
 
@@ -155,6 +152,14 @@ const Payments = () => {
             </Alert>
           )}
 
+          {/* Show payment form only for tenants with active units */}
+          {userInfo?.role === 'tenant' && userInfo.activeUnit && (
+            <PaymentForm
+              unitId={userInfo.activeUnit.id}
+              amount={userInfo.activeUnit.monthly_rent}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -163,13 +168,6 @@ const Payments = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {userRole === 'tenant' && activeUnit && (
-                <PaymentForm
-                  unitId={activeUnit.unit_id}
-                  amount={activeUnit.unit.monthly_rent}
-                />
-              )}
-
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap gap-4">
                   <div className="flex-1 min-w-[200px] relative">
