@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSearchParams } from "react-router-dom";
+import { StripeOnboardingForm } from "./StripeOnboardingForm";
 
 interface StripeRequirement {
   current_deadline: number;
@@ -26,7 +27,7 @@ interface AccountStatus {
 export const StripeConnectSetup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null);
-  const queryClient = useQueryClient();
+  const [showOnboardingForm, setShowOnboardingForm] = useState(false);
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -95,13 +96,14 @@ export const StripeConnectSetup = () => {
     handleOAuthReturn();
   }, [code, state, refetchProfile]);
 
-  const setupStripeConnect = async () => {
+  const setupStripeConnect = async (onboardingData?: any) => {
     try {
       setIsLoading(true);
       toast.loading("Setting up Stripe Connect...");
       
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
+        body: { onboardingData },
       });
 
       if (error) throw error;
@@ -150,6 +152,13 @@ export const StripeConnectSetup = () => {
 
   const requirements = getUniqueRequirements();
   const hasRequirements = requirements.length > 0;
+
+  if (showOnboardingForm && !profile.stripe_connect_account_id) {
+    return <StripeOnboardingForm onComplete={(data) => {
+      setShowOnboardingForm(false);
+      setupStripeConnect(data);
+    }} />;
+  }
 
   return (
     <Card>
@@ -219,7 +228,7 @@ export const StripeConnectSetup = () => {
               <Button 
                 variant="outline" 
                 className="w-full" 
-                onClick={setupStripeConnect}
+                onClick={() => setupStripeConnect()}
                 disabled={isLoading}
               >
                 {isLoading ? 'Setting up...' : 'Complete Account Setup'}
@@ -228,13 +237,15 @@ export const StripeConnectSetup = () => {
             </div>
           </div>
         ) : (
-          <Button 
-            onClick={setupStripeConnect}
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? 'Connecting...' : 'Connect Stripe Account'}
-          </Button>
+          <div className="space-y-4">
+            <Button 
+              onClick={() => setShowOnboardingForm(true)}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? 'Connecting...' : 'Start Stripe Connect Setup'}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

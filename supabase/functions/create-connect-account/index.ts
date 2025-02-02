@@ -15,6 +15,8 @@ serve(async (req) => {
   try {
     console.log('Starting create-connect-account function');
     
+    const { onboardingData } = await req.json();
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -53,8 +55,8 @@ serve(async (req) => {
         .insert({
           id: user.id,
           email: user.email,
-          first_name: user.user_metadata?.first_name || '',
-          last_name: user.user_metadata?.last_name || '',
+          first_name: onboardingData?.firstName || user.user_metadata?.first_name || '',
+          last_name: onboardingData?.lastName || user.user_metadata?.last_name || '',
           role: 'property_manager'
         })
         .select()
@@ -79,28 +81,56 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    // Parse date of birth
+    const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
+
     // Create a Stripe Connect account with pre-filled information
     const account = await stripe.accounts.create({
       type: 'express',
       country: 'US',
-      email: userProfile.email,
+      email: onboardingData.email || userProfile.email,
       business_type: 'individual',
       individual: {
-        email: userProfile.email,
-        first_name: userProfile.first_name,
-        last_name: userProfile.last_name,
+        email: onboardingData.email || userProfile.email,
+        first_name: onboardingData.firstName || userProfile.first_name,
+        last_name: onboardingData.lastName || userProfile.last_name,
+        phone: onboardingData.phone,
+        address: {
+          line1: onboardingData.addressLine1,
+          city: onboardingData.city,
+          state: onboardingData.state,
+          postal_code: onboardingData.postalCode,
+        },
+        dob: {
+          day,
+          month,
+          year,
+        },
+        ssn_last_4: onboardingData.ssnLast4,
+      },
+      business_profile: {
+        mcc: '6513', // Real Estate Agents and Managers
+        product_description: 'Property rental payments',
+        url: 'https://example.com', // Replace with your platform's URL
       },
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
       },
       settings: {
+        payments: {
+          statement_descriptor: onboardingData.statementDescriptor,
+        },
         payouts: {
           schedule: {
             interval: 'manual'
           }
         }
-      }
+      },
+      tos_acceptance: {
+        date: Math.floor(Date.now() / 1000),
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip'),
+      },
     });
 
     console.log('Stripe account created:', account.id);
