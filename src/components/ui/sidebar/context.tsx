@@ -1,5 +1,15 @@
 import * as React from "react";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import type { SidebarContext as SidebarContextType } from "./types";
+import { 
+  SIDEBAR_COOKIE_NAME, 
+  SIDEBAR_COOKIE_MAX_AGE, 
+  SIDEBAR_WIDTH, 
+  SIDEBAR_WIDTH_ICON,
+  SIDEBAR_KEYBOARD_SHORTCUT 
+} from "./constants";
 
 const SidebarContext = React.createContext<SidebarContextType | null>(null);
 
