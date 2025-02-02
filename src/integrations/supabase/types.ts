@@ -131,6 +131,88 @@ export type Database = {
           },
         ]
       }
+      payment_configs: {
+        Row: {
+          created_at: string
+          due_day_of_month: number | null
+          grace_period_days: number | null
+          id: string
+          late_fee_percentage: number | null
+          property_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          due_day_of_month?: number | null
+          grace_period_days?: number | null
+          id?: string
+          late_fee_percentage?: number | null
+          property_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          due_day_of_month?: number | null
+          grace_period_days?: number | null
+          id?: string
+          late_fee_percentage?: number | null
+          property_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_configs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string | null
+          rent_payment_id: string | null
+          status: Database["public"]["Enums"]["payment_status"] | null
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          payment_method?: string | null
+          rent_payment_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string | null
+          rent_payment_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_rent_payment_id_fkey"
+            columns: ["rent_payment_id"]
+            isOneToOne: false
+            referencedRelation: "rent_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -414,8 +496,34 @@ export type Database = {
           },
         ]
       }
+      payment_reports: {
+        Row: {
+          amount: number | null
+          due_date: string | null
+          payment_method: string | null
+          payment_status: string | null
+          property_name: string | null
+          tenant_email: string | null
+          tenant_name: string | null
+          transaction_date: string | null
+          transaction_id: string | null
+          transaction_status:
+            | Database["public"]["Enums"]["payment_status"]
+            | null
+          unit_number: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_late_fee: {
+        Args: {
+          payment_amount: number
+          due_date: string
+          property_id: string
+        }
+        Returns: number
+      }
       cleanup_deleted_tenant_units: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -426,6 +534,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      process_automatic_payments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       reset_tenant_lease_history: {
         Args: {
           tenant_id_param: string
@@ -434,6 +546,12 @@ export type Database = {
       }
     }
     Enums: {
+      payment_status:
+        | "pending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "refunded"
       user_role: "admin" | "property_manager" | "tenant"
     }
     CompositeTypes: {
