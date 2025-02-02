@@ -172,14 +172,16 @@ const Payments = () => {
 
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap gap-4">
-                  <div className="flex-1 min-w-[200px]">
-                    <Input
-                      placeholder="Search payments..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full"
-                      icon={<Search className="h-4 w-4" />}
-                    />
+                  <div className="flex-1 min-w-[200px] relative">
+                    <div className="relative">
+                      <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search payments..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 w-full"
+                      />
+                    </div>
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
