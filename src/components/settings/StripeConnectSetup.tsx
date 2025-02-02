@@ -55,12 +55,17 @@ export const StripeConnectSetup = () => {
         throw new Error('Missing required Stripe Connect credentials');
       }
 
+      // If OAuth flow is preferred, redirect to Stripe's OAuth URL
+      if (data.oauth_url) {
+        window.location.href = data.oauth_url;
+        return;
+      }
+
       console.log('Initializing Stripe Connect with:', {
         clientSecret: data.client_secret,
         publishableKey: data.publishable_key
       });
 
-      // Import dynamically to avoid build issues
       const connectModule = await import('@stripe/connect-js');
       
       const stripeConnect = await connectModule.loadConnect().then((connect) => 
@@ -149,6 +154,10 @@ export const StripeConnectSetup = () => {
           <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
             <ConnectAccountOnboarding
               onExit={handleOnboardingExit}
+              collectionOptions={{
+                fields: 'eventually_due',
+                futureRequirements: 'include',
+              }}
             />
           </ConnectComponentsProvider>
         ) : profile.stripe_connect_account_id ? (

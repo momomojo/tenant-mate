@@ -13,52 +13,36 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user } } = await supabaseClient.auth.getUser(token);
 
-    if (userError || !user) {
-      console.error('User verification error:', userError);
-      throw new Error('Not authenticated');
+    if (!user) {
+      throw new Error('No user found');
     }
-
-    console.log('User verified:', user.id);
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     });
 
-    let account;
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // First, check if the user already has a Connect account
+    const { data: profile } = await supabaseClient
       .from('profiles')
       .select('stripe_connect_account_id')
       .eq('id', user.id)
       .single();
 
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      throw new Error('Failed to fetch user profile');
-    }
+    let accountId = profile?.stripe_connect_account_id;
 
-    if (profile?.stripe_connect_account_id) {
-      console.log('Found existing Connect account:', profile.stripe_connect_account_id);
-      account = await stripe.accounts.retrieve(profile.stripe_connect_account_id);
-    } else {
-      console.log('Creating new Connect account...');
-      account = await stripe.accounts.create({
-        type: 'express',
-        email: user.email,
+    // If no account exists, create one
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'standard',
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true },
@@ -82,20 +66,18 @@ serve(async (req) => {
         }
       });
 
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ stripe_connect_account_id: account.id })
-        .eq('id', user.id);
+      accountId = account.id;
 
-      if (updateError) {
-        console.error('Error saving Connect account ID:', updateError);
-        throw new Error('Failed to save Connect account ID');
-      }
+      // Update the user's profile with the Connect account ID
+      await supabaseClient
+        .from('profiles')
+        .update({ stripe_connect_account_id: accountId })
+        .eq('id', user.id);
     }
 
-    console.log('Creating account session...');
+    // Create an account session for embedded onboarding
     const accountSession = await stripe.accountSessions.create({
-      account: account.id,
+      account: accountId,
       components: {
         account_onboarding: {
           enabled: true,
@@ -109,24 +91,25 @@ serve(async (req) => {
       },
     });
 
-    console.log('Account session created successfully');
+    // Return both the account session details and OAuth URL
     return new Response(
       JSON.stringify({
         client_secret: accountSession.client_secret,
-        publishable_key: Deno.env.get('STRIPE_PUBLISHABLE_KEY')
+        publishable_key: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
+        oauth_url: `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_RhO6GvtqzKJc2vtig3KfKRfGddXbJwWm&scope=read_write&state=${user.id}`
       }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
     );
   } catch (error) {
-    console.error('Error in create-connect-account:', error);
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }
