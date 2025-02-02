@@ -40,7 +40,7 @@ export const StripeConnectSetup = () => {
 
   // Poll for profile updates when connecting account
   useEffect(() => {
-    let intervalId: number;
+    let intervalId: NodeJS.Timeout;
     
     if (code) {
       // Initial refetch
