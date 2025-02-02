@@ -40,15 +40,22 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         .select('*')
         .eq('unit_id', unitId)
         .eq('tenant_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (assignmentError) {
-        console.error('Error fetching lease:', assignmentError);
+        console.error('Error fetching assignment:', assignmentError);
+        setStripeConnectError("Error fetching payment information. Please try again later.");
+        return;
+      }
+
+      if (!assignment) {
+        console.error('No assignment found for this unit and tenant');
+        setStripeConnectError("You don't have permission to make payments for this unit.");
         return;
       }
 
       // Check if property manager has Stripe Connect set up
-      if (!assignment?.stripe_connect_account_id) {
+      if (!assignment.stripe_connect_account_id) {
         setStripeConnectError("Your property manager hasn't set up payments yet. Please contact them to enable online payments.");
         return;
       }
@@ -58,18 +65,21 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         .from('units')
         .select('monthly_rent')
         .eq('id', unitId)
-        .single();
+        .maybeSingle();
 
       if (unitError) {
         console.error('Error fetching unit:', unitError);
+        setStripeConnectError("Error fetching rent amount. Please try again later.");
         return;
       }
 
-      if (unit?.monthly_rent) {
-        setMonthlyRent(unit.monthly_rent);
-      } else {
-        setMonthlyRent(defaultAmount || 0);
+      if (!unit) {
+        console.error('No unit found');
+        setStripeConnectError("Unit information not found.");
+        return;
       }
+
+      setMonthlyRent(unit.monthly_rent || defaultAmount || 0);
     } catch (error) {
       console.error('Error fetching monthly rent:', error);
       toast.error('Failed to fetch monthly rent amount');
@@ -201,7 +211,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
       } else {
-        toast.error("Failed to initiate payment");
+        toast.error("Failed to initiate payment. Please try again later.");
       }
     } finally {
       setIsLoading(false);

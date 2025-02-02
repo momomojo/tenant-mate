@@ -46,16 +46,20 @@ serve(async (req) => {
       .select('*')
       .eq('unit_id', unit_id)
       .eq('tenant_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (assignmentError || !assignment) {
-      console.error('Error fetching property manager:', assignmentError);
-      throw new Error('Failed to fetch property manager details');
+    if (assignmentError) {
+      console.error('Error fetching assignment:', assignmentError);
+      throw new Error('Failed to fetch payment details');
+    }
+
+    if (!assignment) {
+      throw new Error('No payment information found for this unit');
     }
 
     const stripeConnectAccountId = assignment.stripe_connect_account_id;
     if (!stripeConnectAccountId) {
-      throw new Error('Property manager has not set up Stripe Connect');
+      throw new Error('Property manager has not set up payments yet');
     }
 
     // Initialize Stripe
