@@ -75,6 +75,7 @@ serve(async (req) => {
           transfers: { requested: true },
         },
       })
+      
       accountId = account.id
 
       // Update profile with new Connect account ID
@@ -92,16 +93,16 @@ serve(async (req) => {
 
     // Create an account link
     console.log('Creating account link...')
+    const origin = req.headers.get('origin') || 'http://localhost:5173'
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${req.headers.get('origin')}/settings?refresh=true`,
-      return_url: `${req.headers.get('origin')}/settings?success=true`,
+      refresh_url: `${origin}/settings?refresh=true`,
+      return_url: `${origin}/settings?success=true`,
       type: 'account_onboarding',
     })
 
     console.log('Account link created:', accountLink.url)
 
-    // Prepare the response data
     const responseData = { url: accountLink.url }
     const responseBody = JSON.stringify(responseData)
     
