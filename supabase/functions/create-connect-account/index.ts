@@ -13,7 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -25,7 +24,6 @@ serve(async (req) => {
       }
     );
 
-    // Get the user from the auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
@@ -37,12 +35,10 @@ serve(async (req) => {
 
     console.log('User verified:', user.id);
 
-    // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     });
 
-    // Get or create Stripe Connect account
     let account;
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -63,12 +59,15 @@ serve(async (req) => {
       account = await stripe.accounts.create({
         type: 'express',
         email: user.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
         metadata: {
           user_id: user.id
         }
       });
 
-      // Save the Connect account ID to the user's profile
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({ stripe_connect_account_id: account.id })
@@ -86,12 +85,14 @@ serve(async (req) => {
       components: {
         account_onboarding: {
           enabled: true,
-          payouts_enabled: true
+          features: {
+            external_account_collection: true,
+          },
         },
         payments: {
-          enabled: true
-        }
-      }
+          enabled: true,
+        },
+      },
     });
 
     console.log('Account session created successfully');
