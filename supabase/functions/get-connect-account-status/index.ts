@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,7 +23,16 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    console.log('Fetching Stripe account status for:', account_id);
+    
     const account = await stripe.accounts.retrieve(account_id);
+    
+    console.log('Account status retrieved:', {
+      requirements: account.requirements,
+      payoutsEnabled: account.payouts_enabled,
+      detailsSubmitted: account.details_submitted,
+      chargesEnabled: account.charges_enabled,
+    });
 
     return new Response(
       JSON.stringify({
