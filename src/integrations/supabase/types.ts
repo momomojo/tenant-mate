@@ -383,7 +383,37 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      document_access_view: {
+        Row: {
+          created_at: string | null
+          document_type: string | null
+          file_path: string | null
+          filename: string | null
+          id: string | null
+          property_id: string | null
+          property_name: string | null
+          uploaded_by: string | null
+          uploader_first_name: string | null
+          uploader_last_name: string | null
+          uploader_role: Database["public"]["Enums"]["user_role"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       cleanup_deleted_tenant_units: {
