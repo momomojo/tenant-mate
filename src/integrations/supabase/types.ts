@@ -331,6 +331,8 @@ export type Database = {
           amount: number
           created_at: string
           id: string
+          invoice_date: string | null
+          invoice_number: number
           payment_date: string
           payment_method: string | null
           status: string | null
@@ -342,6 +344,8 @@ export type Database = {
           amount: number
           created_at?: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: number
           payment_date?: string
           payment_method?: string | null
           status?: string | null
@@ -353,6 +357,8 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: number
           payment_date?: string
           payment_method?: string | null
           status?: string | null
