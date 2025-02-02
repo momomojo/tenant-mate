@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { PaymentAlerts } from "@/components/dashboard/PaymentAlerts";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -252,6 +253,8 @@ const Dashboard = () => {
                 <StatCard key={stat.title} {...stat} />
               ))}
             </div>
+
+            {userRole === "tenant" && <PaymentAlerts />}
           </div>
         </main>
       </div>
