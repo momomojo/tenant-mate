@@ -1,4 +1,4 @@
 project_id = "jjwrzarqegbswrndjpup"
 
-[functions.create-checkout-session]
+[functions.create-connect-account]
 verify_jwt = true
