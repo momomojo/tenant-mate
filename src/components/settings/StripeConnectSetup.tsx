@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect, useState } from "react";
+import { loadConnectAndInitialize } from "@stripe/connect-js";
+import { ConnectAccountOnboarding, ConnectComponentsProvider } from "@stripe/react-connect-js";
 
 interface RequirementItem {
   title: string;
@@ -14,6 +17,9 @@ interface RequirementItem {
 }
 
 export const StripeConnectSetup = () => {
+  const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
+  const [onboardingExited, setOnboardingExited] = useState(false);
+
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -39,17 +45,25 @@ export const StripeConnectSetup = () => {
         method: 'POST',
       });
 
-      if (error) {
-        console.error('Error from edge function:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      if (!data?.url) {
-        throw new Error('No redirect URL received from Stripe');
+      if (!data?.client_secret) {
+        throw new Error('No client secret received');
       }
 
-      // Redirect to Stripe Connect onboarding
-      window.location.href = data.url;
+      const fetchClientSecret = async () => data.client_secret;
+
+      const stripeConnect = await loadConnectAndInitialize({
+        publishableKey: 'YOUR_STRIPE_PUBLISHABLE_KEY', // Replace with your key
+        fetchClientSecret,
+        appearance: {
+          variables: {
+            colorPrimary: '#0F172A',
+          },
+        },
+      });
+
+      setStripeConnectInstance(stripeConnect);
     } catch (error) {
       console.error('Error setting up Stripe Connect:', error);
       toast.error("Failed to set up Stripe Connect. Please try again.");
@@ -108,7 +122,16 @@ export const StripeConnectSetup = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {profile.stripe_connect_account_id ? (
+        {stripeConnectInstance ? (
+          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+            <ConnectAccountOnboarding
+              onExit={() => {
+                setOnboardingExited(true);
+                window.location.reload();
+              }}
+            />
+          </ConnectComponentsProvider>
+        ) : profile.stripe_connect_account_id ? (
           <div className="space-y-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
