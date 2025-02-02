@@ -18,25 +18,56 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
+    // Get the user from the auth context
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    
+    console.log('Verifying user authentication...');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
-    if (!user) {
-      throw new Error('No user found');
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      throw new Error('Authentication failed');
     }
 
+    console.log('Fetching user profile...');
     // Get user profile to pre-fill information
-    const { data: profile } = await supabaseClient
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (!profile) {
-      throw new Error('No profile found');
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      throw new Error(`Failed to fetch profile: ${profileError.message}`);
     }
 
+    if (!profile) {
+      console.error('No profile found for user:', user.id);
+      // Create a basic profile if one doesn't exist
+      const { data: newProfile, error: createError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          role: 'property_manager'
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Profile creation error:', createError);
+        throw new Error('Failed to create profile');
+      }
+
+      console.log('Created new profile for user');
+      profile = newProfile;
+    }
+
+    console.log('Creating Stripe Connect account...');
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     });
@@ -58,16 +89,24 @@ serve(async (req) => {
       },
     });
 
+    console.log('Stripe account created:', account.id);
+
     // Update profile with the new account ID
-    await supabaseClient
+    const { error: updateError } = await supabaseClient
       .from('profiles')
       .update({ stripe_connect_account_id: account.id })
       .eq('id', user.id);
+
+    if (updateError) {
+      console.error('Profile update error:', updateError);
+      throw new Error('Failed to update profile with Stripe account ID');
+    }
 
     // Get the origin and return URL from the request
     const origin = req.headers.get('origin') || '';
     const returnUrl = `${origin}/settings`;
 
+    console.log('Creating account link...');
     // Create an account link for onboarding
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
@@ -77,6 +116,8 @@ serve(async (req) => {
       collect: 'eventually_due',
     });
 
+    console.log('Account link created successfully');
+
     return new Response(
       JSON.stringify({ url: accountLink.url }),
       {
@@ -85,7 +126,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error setting up Stripe Connect:', error);
+    console.error('Error in create-connect-account:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
