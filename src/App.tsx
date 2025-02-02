@@ -10,6 +10,7 @@ import Tenants from "@/pages/Tenants";
 import TenantProfile from "@/pages/TenantProfile";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
+import Documents from "@/pages/Documents";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +34,7 @@ function App() {
             <Route path="/properties/:id" element={<PropertyDetails />} />
             <Route path="/tenants" element={<Tenants />} />
             <Route path="/tenants/:id" element={<TenantProfile />} />
+            <Route path="/documents" element={<Documents />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
