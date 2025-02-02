@@ -5,13 +5,15 @@ import Stripe from 'https://esm.sh/stripe@14.21.0'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    })
   }
 
   try {
@@ -92,22 +94,31 @@ serve(async (req) => {
 
     console.log('Account link created:', accountLink.url)
 
-    return new Response(
-      JSON.stringify({ url: accountLink.url }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    )
+    // Prepare the response data
+    const responseData = { url: accountLink.url }
+    const responseBody = JSON.stringify(responseData)
+    
+    // Return response immediately
+    return new Response(responseBody, { 
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'Content-Length': responseBody.length.toString()
+      },
+      status: 200 
+    })
 
   } catch (error) {
     console.error('Error in create-connect-account function:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
-      }
-    )
+    const errorResponse = JSON.stringify({ error: error.message })
+    
+    return new Response(errorResponse, { 
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'Content-Length': errorResponse.length.toString()
+      },
+      status: 400 
+    })
   }
 })
