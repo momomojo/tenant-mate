@@ -62,6 +62,20 @@ serve(async (req) => {
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true },
+          us_bank_account_ach_payments: { requested: true },
+          tax_reporting_us_1099_k: { requested: true }
+        },
+        business_type: 'company',
+        business_profile: {
+          mcc: '6513', // Real Estate Agents and Managers
+          product_description: 'Property management and rent collection services',
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'manual'
+            }
+          }
         },
         metadata: {
           user_id: user.id
