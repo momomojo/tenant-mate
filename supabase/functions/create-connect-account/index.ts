@@ -74,7 +74,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         account: account.id,
-        client_secret: accountSession.client_secret 
+        client_secret: accountSession.client_secret,
+        publishable_key: Deno.env.get('STRIPE_PUBLISHABLE_KEY')
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

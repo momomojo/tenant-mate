@@ -46,8 +46,8 @@ export const StripeConnectSetup = () => {
 
       if (error) throw error;
       
-      if (!data?.client_secret) {
-        throw new Error('No client secret received');
+      if (!data?.client_secret || !data?.publishable_key) {
+        throw new Error('Missing required Stripe Connect credentials');
       }
 
       // Import dynamically to avoid build issues
@@ -56,6 +56,7 @@ export const StripeConnectSetup = () => {
       const stripeConnect = await connectModule.loadConnect().then((connect) => 
         connect.initialize({
           clientSecret: data.client_secret,
+          publishableKey: data.publishable_key,
           appearance: {
             variables: {
               colorPrimary: '#0F172A',
