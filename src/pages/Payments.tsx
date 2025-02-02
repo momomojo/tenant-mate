@@ -113,9 +113,15 @@ const Payments = () => {
           .lte("payment_date", endOfLastMonth.toISOString());
       }
 
+      console.log('Fetching payments for user:', user.id);
       const { data, error } = await query.order("payment_date", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payments:', error);
+        throw error;
+      }
+
+      console.log('Fetched payments:', data);
       return data;
     },
   });
@@ -205,7 +211,15 @@ const Payments = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                {filteredPayments && <PaymentHistory payments={filteredPayments} />}
+                {filteredPayments && filteredPayments.length > 0 ? (
+                  <PaymentHistory payments={filteredPayments} />
+                ) : (
+                  <Alert>
+                    <AlertDescription>
+                      No payments found. {userInfo?.role === 'tenant' && "Use the payment form above to make a payment."}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </CardContent>
           </Card>
