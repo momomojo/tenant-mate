@@ -12,8 +12,6 @@ import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
 import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { UnitsTable } from "@/components/property/UnitsTable";
-import { DocumentUpload } from "@/components/property/DocumentUpload";
-import { DocumentList } from "@/components/property/DocumentList";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -137,39 +135,20 @@ const PropertyDetails = () => {
 
             <PropertyOverview property={property} />
 
-            <div className="grid gap-8 md:grid-cols-2">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white">Units</h2>
-                  <AddUnitDialog propertyId={id!} onUnitAdded={refetch} />
-                </div>
-
-                <Card className="bg-[#403E43] border-none">
-                  <UnitsTable
-                    units={property.units}
-                    onManageUnit={handleManageUnit}
-                    onAssignTenant={handleAssignTenant}
-                    formatTenantLabel={formatTenantLabel}
-                  />
-                </Card>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white">Units</h2>
+                <AddUnitDialog propertyId={id!} onUnitAdded={refetch} />
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white">Documents</h2>
-                  <DocumentUpload
-                    propertyId={id!}
-                    onUploadComplete={() => refetch()}
-                  />
-                </div>
-
-                <Card className="bg-[#403E43] border-none p-4">
-                  <DocumentList
-                    propertyId={id!}
-                    onDocumentDeleted={() => refetch()}
-                  />
-                </Card>
-              </div>
+              <Card className="bg-[#403E43] border-none">
+                <UnitsTable
+                  units={property.units}
+                  onManageUnit={handleManageUnit}
+                  onAssignTenant={handleAssignTenant}
+                  formatTenantLabel={formatTenantLabel}
+                />
+              </Card>
             </div>
 
             {selectedUnit && (

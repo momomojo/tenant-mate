@@ -33,15 +33,12 @@ const fetchUserRole = async () => {
     return profile?.role;
   } catch (error) {
     console.error("Error in fetchUserRole:", error);
-    // Attempt to refresh the session
     const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
     if (refreshError || !session) {
       toast.error("Session expired. Please login again.");
-      // Redirect to auth page
       window.location.href = "/auth";
       throw error;
     }
-    // Retry the fetch after refresh
     return fetchUserRole();
   }
 };
