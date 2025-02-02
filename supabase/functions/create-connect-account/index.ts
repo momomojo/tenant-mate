@@ -23,9 +23,18 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabaseClient.auth.getUser(token);
-    
     if (!user) {
-      throw new Error('Unauthorized');
+      throw new Error("No user found");
+    }
+    
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      throw profileError;
     }
 
     console.log('Creating Stripe Connect account for user:', user.id);
@@ -33,13 +42,6 @@ serve(async (req) => {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     });
-
-    // Check if user already has a Connect account
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('stripe_connect_account_id')
-      .eq('id', user.id)
-      .single();
 
     let accountId = profile?.stripe_connect_account_id;
 
@@ -95,9 +97,7 @@ serve(async (req) => {
         payments: {
           enabled: true,
         }
-      },
-      return_url: `${req.headers.get('origin')}/settings?success=true`,
-      refresh_url: `${req.headers.get('origin')}/settings?refresh=true`,
+      }
     });
 
     console.log('Created account session:', accountSession.id);
