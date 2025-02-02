@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   unitId: string;
-  amount?: number; // Make amount optional since we'll fetch it
+  amount?: number;
 }
 
 export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps) {
@@ -31,7 +31,6 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get the active lease for the current tenant and unit
       const { data: lease, error: leaseError } = await supabase
         .from('tenant_units')
         .select(`
@@ -52,7 +51,6 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (lease?.unit?.monthly_rent) {
         setMonthlyRent(lease.unit.monthly_rent);
       } else {
-        // Fallback to default amount if provided
         setMonthlyRent(defaultAmount || 0);
       }
     } catch (error) {
@@ -103,7 +101,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         .select('is_enabled')
         .eq('tenant_id', user.id)
         .eq('unit_id', unitId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setAutoPayEnabled(data?.is_enabled || false);
