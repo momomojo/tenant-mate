@@ -8,18 +8,28 @@ import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSearchParams } from "react-router-dom";
 
-interface RequirementItem {
-  title: string;
-  description: string;
-  dueDate: string;
-  status: 'pending' | 'completed';
+interface StripeRequirement {
+  current_deadline: number;
+  currently_due: string[];
+  eventually_due: string[];
+  past_due: string[];
+  pending_verification: string[];
+}
+
+interface AccountStatus {
+  requirements: StripeRequirement;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  chargesEnabled: boolean;
 }
 
 export const StripeConnectSetup = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null);
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
+  const state = searchParams.get('state');
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
@@ -38,35 +48,33 @@ export const StripeConnectSetup = () => {
     },
   });
 
-  // Poll for profile updates when connecting account
+  // Handle OAuth return
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    
-    if (code) {
-      // Initial refetch
-      refetchProfile();
-      
-      // Set up polling every 2 seconds for 30 seconds
-      let attempts = 0;
-      intervalId = setInterval(() => {
-        attempts++;
-        if (attempts < 15) { // 30 seconds total
-          refetchProfile();
-        } else {
-          clearInterval(intervalId);
-        }
-      }, 2000);
+    const handleOAuthReturn = async () => {
+      if (!code || !state) return;
 
-      // Show success toast
-      toast.success("Stripe account connected successfully!");
-    }
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase.functions.invoke('handle-connect-oauth', {
+          method: 'POST',
+          body: { code, state },
+        });
 
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+        if (error) throw error;
+
+        setAccountStatus(data);
+        await refetchProfile();
+        toast.success("Stripe account connected successfully!");
+      } catch (error) {
+        console.error('Error handling OAuth return:', error);
+        toast.error('Failed to complete Stripe connection');
+      } finally {
+        setIsLoading(false);
       }
     };
-  }, [code, refetchProfile]);
+
+    handleOAuthReturn();
+  }, [code, state, refetchProfile]);
 
   const setupStripeConnect = async () => {
     try {
@@ -94,26 +102,22 @@ export const StripeConnectSetup = () => {
     }
   };
 
-  const requirements: RequirementItem[] = [
-    {
-      title: "Accept terms of service",
-      description: "Review and accept Stripe's terms of service",
-      dueDate: "Feb 2, 2024",
-      status: "pending"
-    },
-    {
-      title: "Provide an external account",
-      description: "Add a bank account to receive payouts",
-      dueDate: "Feb 2, 2024",
-      status: "pending"
-    },
-    {
-      title: "Provide a statement descriptor",
-      description: "Add a description that appears on customer statements",
-      dueDate: "Feb 2, 2024",
-      status: "pending"
-    }
-  ];
+  const getRequirementsList = () => {
+    if (!accountStatus?.requirements) return [];
+
+    const allRequirements = [
+      ...accountStatus.requirements.currently_due,
+      ...accountStatus.requirements.eventually_due,
+      ...accountStatus.requirements.past_due,
+    ];
+
+    return allRequirements.map(req => ({
+      title: req.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+      description: `Complete this requirement to enable payments`,
+      dueDate: new Date(accountStatus.requirements.current_deadline * 1000).toLocaleDateString(),
+      status: accountStatus.requirements.past_due.includes(req) ? 'past_due' : 'pending',
+    }));
+  };
 
   if (profileLoading) return null;
 
@@ -130,16 +134,18 @@ export const StripeConnectSetup = () => {
       <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Action Required</AlertTitle>
-              <AlertDescription>
-                Your Stripe account needs additional information before you can accept payments
-              </AlertDescription>
-            </Alert>
+            {!accountStatus?.chargesEnabled && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Action Required</AlertTitle>
+                <AlertDescription>
+                  Your Stripe account needs additional information before you can accept payments
+                </AlertDescription>
+              </Alert>
+            )}
             
             <div className="space-y-2">
-              {requirements.map((req, index) => (
+              {getRequirementsList().map((req, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
@@ -151,14 +157,16 @@ export const StripeConnectSetup = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h4 className="font-medium">{req.title}</h4>
-                      <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
-                        Past due
-                      </span>
+                      {req.status === 'past_due' && (
+                        <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
+                          Past due
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>Due {req.dueDate}</span>
                       <span>•</span>
-                      <span>Impacts payments, payouts, and transfers</span>
+                      <span>{req.description}</span>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
