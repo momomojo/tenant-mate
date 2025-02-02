@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface PaymentFormProps {
   unitId: string;
@@ -18,6 +20,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [autoPayEnabled, setAutoPayEnabled] = useState(false);
   const [monthlyRent, setMonthlyRent] = useState<number | null>(null);
+  const [stripeConnectError, setStripeConnectError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,7 +38,12 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         .from('tenant_units')
         .select(`
           unit:units (
-            monthly_rent
+            monthly_rent,
+            property:properties (
+              property_manager:profiles (
+                stripe_connect_account_id
+              )
+            )
           )
         `)
         .eq('tenant_id', user.id)
@@ -46,6 +54,10 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (leaseError) {
         console.error('Error fetching lease:', leaseError);
         return;
+      }
+
+      if (!lease?.unit?.property?.property_manager?.stripe_connect_account_id) {
+        setStripeConnectError("Your property manager hasn't set up payments yet. Please contact them to enable online payments.");
       }
 
       if (lease?.unit?.monthly_rent) {
@@ -149,6 +161,11 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       return;
     }
 
+    if (stripeConnectError) {
+      toast.error(stripeConnectError);
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -166,6 +183,10 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       });
 
       if (response.error) {
+        if (response.error.message.includes("Property manager has not set up Stripe Connect")) {
+          setStripeConnectError("Your property manager hasn't set up payments yet. Please contact them to enable online payments.");
+          throw new Error(stripeConnectError);
+        }
         throw new Error(response.error.message);
       }
 
@@ -178,7 +199,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (error.message.includes('No active session')) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
-      } else {
+      } else if (!stripeConnectError) {
         toast.error("Failed to initiate payment");
       }
     } finally {
@@ -224,6 +245,14 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {stripeConnectError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {stripeConnectError}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="space-y-2">
           <Label htmlFor="amount">Monthly Rent Amount</Label>
           <Input
@@ -245,7 +274,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         <Button
           variant="outline"
           onClick={handleCustomerPortal}
-          disabled={isLoading || !isAuthenticated}
+          disabled={isLoading || !isAuthenticated || stripeConnectError}
           className="w-full"
         >
           Manage Payment Settings
@@ -254,7 +283,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       <CardFooter>
         <Button 
           onClick={handlePayment} 
-          disabled={isLoading || !isAuthenticated || !monthlyRent}
+          disabled={isLoading || !isAuthenticated || !monthlyRent || stripeConnectError}
           className="w-full"
         >
           {isLoading ? "Processing..." : `Pay $${monthlyRent || 0}`}
