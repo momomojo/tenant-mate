@@ -11,7 +11,7 @@ import { toast } from "sonner";
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  const { data: userRole, isError, error } = useQuery({
+  const { data: userRole, isError: isRoleError, error: roleError } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -33,6 +33,36 @@ const Dashboard = () => {
     },
   });
 
+  // New query to fetch tenant's units and their total rent
+  const { data: tenantUnitsData, isError: isUnitsError } = useQuery({
+    queryKey: ["tenantUnits"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      const { data, error } = await supabase
+        .from('tenant_units')
+        .select(`
+          unit_id,
+          status,
+          units (
+            unit_number,
+            monthly_rent
+          )
+        `)
+        .eq('tenant_id', user.id)
+        .eq('status', 'active');
+
+      if (error) {
+        console.error("Error fetching tenant units:", error);
+        throw error;
+      }
+
+      return data;
+    },
+    enabled: userRole === 'tenant'
+  });
+
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -46,10 +76,29 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
-  if (isError) {
-    console.error("Error loading dashboard:", error);
+  if (isRoleError) {
+    console.error("Error loading dashboard:", roleError);
     toast.error("Error loading dashboard. Please try again.");
   }
+
+  if (isUnitsError) {
+    toast.error("Error loading tenant information. Please try again.");
+  }
+
+  const calculateTotalRent = () => {
+    if (!tenantUnitsData) return 0;
+    return tenantUnitsData.reduce((total, unit) => {
+      return total + (unit.units?.monthly_rent || 0);
+    }, 0);
+  };
+
+  const getUnitNumbers = () => {
+    if (!tenantUnitsData) return "";
+    return tenantUnitsData
+      .map(unit => unit.units?.unit_number)
+      .filter(Boolean)
+      .join(", ");
+  };
 
   const getStatsByRole = () => {
     console.log("Getting stats for role:", userRole);
@@ -128,16 +177,16 @@ const Dashboard = () => {
       case "tenant":
         return [
           {
-            title: "My Unit",
-            value: "A-101",
+            title: "My Units",
+            value: getUnitNumbers() || "No units assigned",
             icon: Home,
-            description: "Current unit number",
+            description: "Current unit numbers",
             trend: "Active",
             trendUp: true,
           },
           {
             title: "Rent Due",
-            value: "$1,200",
+            value: `$${calculateTotalRent().toLocaleString()}`,
             icon: DollarSign,
             description: "Due on 1st of month",
             trend: "5 days left",
