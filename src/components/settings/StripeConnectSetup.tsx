@@ -5,8 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useEffect, useState } from "react";
-import { ConnectAccountOnboarding, ConnectComponentsProvider } from "@stripe/react-connect-js";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 interface RequirementItem {
@@ -17,8 +16,6 @@ interface RequirementItem {
 }
 
 export const StripeConnectSetup = () => {
-  const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
-  const [onboardingExited, setOnboardingExited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -58,42 +55,14 @@ export const StripeConnectSetup = () => {
         method: 'POST',
       });
 
-      if (error) {
-        console.error('Error creating Connect account:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      if (!data?.client_secret || !data?.publishable_key) {
-        throw new Error('Missing required Stripe Connect credentials');
-      }
-
-      // If OAuth flow is preferred, redirect to Stripe's OAuth URL
-      if (data.oauth_url) {
+      if (data?.oauth_url) {
         window.location.href = data.oauth_url;
         return;
       }
 
-      console.log('Initializing Stripe Connect with:', {
-        clientSecret: data.client_secret,
-        publishableKey: data.publishable_key
-      });
-
-      const connectModule = await import('@stripe/connect-js');
-      
-      const stripeConnect = await connectModule.loadConnect().then((connect) => 
-        connect.initialize({
-          clientSecret: data.client_secret,
-          publishableKey: data.publishable_key,
-          appearance: {
-            variables: {
-              colorPrimary: '#0F172A',
-            },
-          },
-        })
-      );
-
-      console.log('Stripe Connect initialized successfully');
-      setStripeConnectInstance(stripeConnect);
+      throw new Error('Failed to get OAuth URL');
     } catch (error) {
       console.error('Error setting up Stripe Connect:', error);
       toast.error('Failed to set up Stripe Connect. Please try again.');
@@ -101,18 +70,6 @@ export const StripeConnectSetup = () => {
       setIsLoading(false);
       toast.dismiss();
     }
-  };
-
-  const handleOnboardingExit = async () => {
-    console.log('Onboarding exited');
-    setOnboardingExited(true);
-    setStripeConnectInstance(null);
-    
-    // Refresh the profile data to get the updated stripe_connect_account_id
-    await queryClient.invalidateQueries({ queryKey: ["profile"] });
-    
-    // Show success message
-    toast.success("Stripe account setup completed successfully!");
   };
 
   const requirements: RequirementItem[] = [
@@ -133,24 +90,6 @@ export const StripeConnectSetup = () => {
       description: "Add a description that appears on customer statements",
       dueDate: "Feb 2, 2024",
       status: "pending"
-    },
-    {
-      title: "Provide a business website",
-      description: "Add your business website URL",
-      dueDate: "Feb 2, 2024",
-      status: "pending"
-    },
-    {
-      title: "Provide a representative",
-      description: "Add details about your business representative",
-      dueDate: "Feb 2, 2024",
-      status: "pending"
-    },
-    {
-      title: "Update your business information",
-      description: "Complete your business profile",
-      dueDate: "Feb 2, 2024",
-      status: "pending"
     }
   ];
 
@@ -167,13 +106,7 @@ export const StripeConnectSetup = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {stripeConnectInstance ? (
-          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-            <ConnectAccountOnboarding
-              onExit={handleOnboardingExit}
-            />
-          </ConnectComponentsProvider>
-        ) : profile.stripe_connect_account_id ? (
+        {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
