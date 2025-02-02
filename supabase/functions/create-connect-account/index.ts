@@ -14,10 +14,6 @@ serve(async (req) => {
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2023-10-16',
-    });
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -27,12 +23,16 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabaseClient.auth.getUser(token);
-
+    
     if (!user) {
       throw new Error('Unauthorized');
     }
 
     console.log('Creating Stripe Connect account for user:', user.id);
+
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16',
+    });
 
     // Create a Connect account
     const account = await stripe.accounts.create({
@@ -42,6 +42,18 @@ serve(async (req) => {
         card_payments: { requested: true },
         transfers: { requested: true },
       },
+      settings: {
+        payouts: {
+          schedule: {
+            interval: 'manual' // This allows you to control when payouts occur
+          }
+        }
+      },
+      business_type: 'company',
+      business_profile: {
+        mcc: '6513', // Real Estate Agents and Managers
+        product_description: 'Property management and rental services'
+      }
     });
 
     console.log('Created Stripe Connect account:', account.id);
@@ -63,7 +75,14 @@ serve(async (req) => {
       components: {
         account_onboarding: {
           enabled: true,
+          payouts_enabled: true,
         },
+        payment_details: {
+          enabled: true,
+        },
+        payments: {
+          enabled: true,
+        }
       },
       return_url: `${req.headers.get('origin')}/settings?success=true`,
       refresh_url: `${req.headers.get('origin')}/settings?refresh=true`,
