@@ -11,24 +11,23 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 204
-    })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Get auth user
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     )
 
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       throw new Error('No authorization header')
     }
 
+    // Get user data
     console.log('Verifying user authentication...')
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
       authHeader.replace('Bearer ', '')
@@ -39,61 +38,59 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
+    // Initialize Stripe
     console.log('Creating Stripe instance...')
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     })
 
-    console.log('Creating Stripe Connect account...')
-    // Create a Stripe Connect account with more detailed information
-    const account = await stripe.accounts.create({
-      type: 'express',
-      country: 'US',
-      email: user.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      business_type: 'individual',
-      business_profile: {
-        mcc: '6513', // Real Estate Agents and Managers
-        url: req.headers.get('origin') || 'https://example.com',
-      },
-      settings: {
-        payments: {
-          statement_descriptor: 'RENTAL PAYMENT'
-        }
+    let accountId = null
+    
+    // Check if user already has a Stripe Connect account
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('stripe_connect_account_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.stripe_connect_account_id) {
+      console.log('Found existing Connect account:', profile.stripe_connect_account_id)
+      accountId = profile.stripe_connect_account_id
+    } else {
+      // Create a new Connect account
+      console.log('Creating new Connect account...')
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: user.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      })
+      accountId = account.id
+
+      // Update profile with new Connect account ID
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({ stripe_connect_account_id: accountId })
+        .eq('id', user.id)
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError)
+        throw updateError
       }
-    })
+    }
 
-    console.log('Stripe Connect account created:', account.id)
-
-    // Create account link for onboarding with more specific parameters
+    // Create an account link
+    console.log('Creating account link...')
     const accountLink = await stripe.accountLinks.create({
-      account: account.id,
+      account: accountId,
       refresh_url: `${req.headers.get('origin')}/settings?refresh=true`,
       return_url: `${req.headers.get('origin')}/settings?success=true`,
       type: 'account_onboarding',
-      collect: 'eventually_due',
     })
 
     console.log('Account link created:', accountLink.url)
-
-    // Update the user's profile with the Stripe Connect account ID
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ stripe_connect_account_id: account.id })
-      .eq('id', user.id)
-
-    if (updateError) {
-      console.error('Error updating profile:', updateError)
-      throw updateError
-    }
 
     return new Response(
       JSON.stringify({ url: accountLink.url }),
@@ -106,13 +103,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in create-connect-account function:', error)
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error instanceof Error ? error.stack : undefined 
-      }),
+      JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
+        status: 400 
       }
     )
   }
