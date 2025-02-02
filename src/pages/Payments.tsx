@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -22,51 +21,40 @@ const Payments = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
-  // Get user role and active unit
-  const { data: userInfo } = useQuery({
-    queryKey: ["userRole"],
+  // Get user's active units and their rent amounts
+  const { data: activeUnits, isLoading: isLoadingUnits } = useQuery({
+    queryKey: ["activeUnits"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+      const { data: units, error } = await supabase
+        .from('tenant_units')
+        .select(`
+          id,
+          unit:units (
+            id,
+            unit_number,
+            monthly_rent,
+            property:properties (
+              name
+            )
+          )
+        `)
+        .eq('tenant_id', user.id)
+        .eq('status', 'active');
 
-      // If user is a tenant, get their active unit
-      let activeUnit = null;
-      if (profile?.role === 'tenant') {
-        const { data: tenantUnit } = await supabase
-          .from('tenant_units')
-          .select(`
-            unit_id,
-            unit:units (id, unit_number, monthly_rent)
-          `)
-          .eq('tenant_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
-        
-        activeUnit = tenantUnit?.unit;
+      if (error) {
+        console.error('Error fetching units:', error);
+        throw error;
       }
 
-      return {
-        role: profile?.role,
-        activeUnit
-      };
+      console.log('Active units:', units);
+      return units;
     },
   });
 
-  useEffect(() => {
-    if (success) {
-      toast.success("Payment successful!");
-    }
-    if (canceled) {
-      toast.error("Payment canceled.");
-    }
-  }, [success, canceled]);
-
+  // Get payment history
   const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments", statusFilter, dateFilter],
     queryFn: async () => {
@@ -84,20 +72,18 @@ const Payments = () => {
           invoice_number,
           unit:units(
             unit_number,
-            property_id
+            property_id,
+            property:properties (
+              name
+            )
           )
-        `);
-
-      // Apply role-based filters
-      if (userInfo?.role === 'tenant') {
-        query = query.eq("tenant_id", user.id);
-      }
+        `)
+        .eq("tenant_id", user.id);
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
 
-      // Apply date filter
       if (dateFilter === "thisMonth") {
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
@@ -126,12 +112,21 @@ const Payments = () => {
     },
   });
 
+  useEffect(() => {
+    if (success) {
+      toast.success("Payment successful!");
+    }
+    if (canceled) {
+      toast.error("Payment canceled.");
+    }
+  }, [success, canceled]);
+
   const filteredPayments = payments?.filter(payment => 
     payment.unit.unit_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoadingPayments) {
+  if (isLoadingUnits || isLoadingPayments) {
     return <div>Loading...</div>;
   }
 
@@ -158,19 +153,42 @@ const Payments = () => {
             </Alert>
           )}
 
-          {/* Show payment form only for tenants with active units */}
-          {userInfo?.role === 'tenant' && userInfo.activeUnit && (
-            <PaymentForm
-              unitId={userInfo.activeUnit.id}
-              amount={userInfo.activeUnit.monthly_rent}
-            />
+          {/* Active Units and Rent Due */}
+          {activeUnits && activeUnits.length > 0 && (
+            <div className="grid gap-6 md:grid-cols-2">
+              {activeUnits.map((tenantUnit) => (
+                <Card key={tenantUnit.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5" />
+                        {tenantUnit.unit.property.name} - Unit {tenantUnit.unit.unit_number}
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Monthly Rent:</span>
+                        <span className="text-xl font-bold">${tenantUnit.unit.monthly_rent}</span>
+                      </div>
+                      <PaymentForm
+                        unitId={tenantUnit.unit.id}
+                        amount={tenantUnit.unit.monthly_rent}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
 
+          {/* Payment History */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Payments
+                Payment History
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -216,7 +234,7 @@ const Payments = () => {
                 ) : (
                   <Alert>
                     <AlertDescription>
-                      No payments found. {userInfo?.role === 'tenant' && "Use the payment form above to make a payment."}
+                      No payment history found.
                     </AlertDescription>
                   </Alert>
                 )}
