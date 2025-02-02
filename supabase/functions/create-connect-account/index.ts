@@ -40,6 +40,10 @@ serve(async (req) => {
 
     let accountId = profile?.stripe_connect_account_id;
 
+    // Get the origin and return URL from the request
+    const origin = req.headers.get('origin') || '';
+    const returnUrl = `${origin}/settings?tab=payments`;
+
     // If no account exists, create one
     if (!accountId) {
       console.log('Creating new Stripe Connect account...');
@@ -102,12 +106,12 @@ serve(async (req) => {
 
     console.log('Account session created successfully');
 
-    // Return both the account session details and OAuth URL
+    // Return both the account session details and OAuth URL with the correct return URL
     return new Response(
       JSON.stringify({
         client_secret: accountSession.client_secret,
         publishable_key: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
-        oauth_url: `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_RhO6GvtqzKJc2vtig3KfKRfGddXbJwWm&scope=read_write&state=${user.id}`
+        oauth_url: `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_RhO6GvtqzKJc2vtig3KfKRfGddXbJwWm&scope=read_write&state=${user.id}&redirect_uri=${encodeURIComponent(returnUrl)}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

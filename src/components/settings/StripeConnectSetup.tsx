@@ -7,6 +7,7 @@ import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 import { ConnectAccountOnboarding, ConnectComponentsProvider } from "@stripe/react-connect-js";
+import { useSearchParams } from "react-router-dom";
 
 interface RequirementItem {
   title: string;
@@ -20,6 +21,8 @@ export const StripeConnectSetup = () => {
   const [onboardingExited, setOnboardingExited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('code');
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
@@ -37,6 +40,14 @@ export const StripeConnectSetup = () => {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (code) {
+      // If we have a code from OAuth redirect, refresh the profile data
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Stripe account connected successfully!");
+    }
+  }, [code, queryClient]);
 
   const setupStripeConnect = async () => {
     try {
