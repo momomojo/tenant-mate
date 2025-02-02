@@ -33,7 +33,7 @@ serve(async (req) => {
       throw new Error('Not authenticated');
     }
 
-    // Get payment details
+    // Get payment details with related information
     const { data: payment, error: paymentError } = await supabaseClient
       .from('rent_payments')
       .select(`
@@ -57,32 +57,116 @@ serve(async (req) => {
     if (paymentError) throw paymentError;
     if (!payment) throw new Error('Payment not found');
 
-    // Generate receipt HTML
+    // Format the payment date
+    const paymentDate = new Date(payment.payment_date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Generate receipt HTML with improved styling
     const receiptHtml = `
       <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="UTF-8">
           <style>
-            body { font-family: Arial, sans-serif; }
-            .receipt { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .details { margin-bottom: 20px; }
-            .amount { font-size: 24px; font-weight: bold; }
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .receipt {
+              border: 1px solid #ddd;
+              padding: 30px;
+              border-radius: 8px;
+              background: #fff;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #eee;
+            }
+            .logo {
+              font-size: 24px;
+              font-weight: bold;
+              color: #2563eb;
+              margin-bottom: 10px;
+            }
+            .receipt-id {
+              color: #666;
+              font-size: 14px;
+            }
+            .details {
+              margin-bottom: 30px;
+            }
+            .section {
+              margin-bottom: 20px;
+            }
+            .section-title {
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #1f2937;
+            }
+            .amount {
+              font-size: 24px;
+              font-weight: bold;
+              color: #2563eb;
+              text-align: center;
+              padding: 20px;
+              background: #f8fafc;
+              border-radius: 6px;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #666;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #eee;
+            }
           </style>
         </head>
         <body>
           <div class="receipt">
             <div class="header">
-              <h1>Payment Receipt</h1>
-              <p>Receipt ID: ${payment.id}</p>
+              <div class="logo">${payment.unit.property.name}</div>
+              <div class="receipt-id">Receipt #${payment.invoice_number}</div>
             </div>
+            
             <div class="details">
-              <p><strong>Property:</strong> ${payment.unit.property.name}</p>
-              <p><strong>Unit:</strong> ${payment.unit.unit_number}</p>
-              <p><strong>Date:</strong> ${new Date(payment.payment_date).toLocaleDateString()}</p>
-              <p><strong>Payment Method:</strong> ${payment.payment_method || 'N/A'}</p>
-              <p><strong>Status:</strong> ${payment.status}</p>
-              <p class="amount">Amount Paid: $${payment.amount}</p>
+              <div class="section">
+                <div class="section-title">Property Details</div>
+                <p>${payment.unit.property.address}</p>
+                <p>Unit ${payment.unit.unit_number}</p>
+              </div>
+              
+              <div class="section">
+                <div class="section-title">Tenant Information</div>
+                <p>${payment.tenant.first_name} ${payment.tenant.last_name}</p>
+                <p>${payment.tenant.email}</p>
+              </div>
+              
+              <div class="section">
+                <div class="section-title">Payment Details</div>
+                <p>Date: ${paymentDate}</p>
+                <p>Payment Method: ${payment.payment_method || 'N/A'}</p>
+                <p>Status: ${payment.status}</p>
+              </div>
+              
+              <div class="amount">
+                Amount Paid: $${payment.amount.toFixed(2)}
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>Thank you for your payment!</p>
+              <p>This is an automatically generated receipt.</p>
             </div>
           </div>
         </body>

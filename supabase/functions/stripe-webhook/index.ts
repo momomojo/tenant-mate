@@ -24,6 +24,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
+    console.log('Processing webhook event:', event.type);
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
@@ -33,7 +35,10 @@ serve(async (req) => {
           // Update rent_payments status
           await supabaseClient
             .from('rent_payments')
-            .update({ status: 'paid' })
+            .update({ 
+              status: 'paid',
+              payment_method: session.payment_method_types?.[0] || 'card'
+            })
             .eq('id', paymentId);
 
           // Update payment_transactions status
@@ -41,7 +46,8 @@ serve(async (req) => {
             .from('payment_transactions')
             .update({ 
               status: 'completed',
-              stripe_payment_intent_id: session.payment_intent
+              stripe_payment_intent_id: session.payment_intent,
+              payment_method: session.payment_method_types?.[0] || 'card'
             })
             .eq('rent_payment_id', paymentId);
         }
@@ -64,6 +70,51 @@ serve(async (req) => {
             .from('payment_transactions')
             .update({ 
               status: 'failed',
+              stripe_payment_intent_id: paymentIntent.id
+            })
+            .eq('rent_payment_id', paymentId);
+        }
+        break;
+      }
+      case 'payment_intent.processing': {
+        const paymentIntent = event.data.object;
+        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id);
+        const paymentId = session.metadata?.payment_id;
+
+        if (paymentId) {
+          // Update both tables to processing status
+          await supabaseClient
+            .from('rent_payments')
+            .update({ status: 'processing' })
+            .eq('id', paymentId);
+
+          await supabaseClient
+            .from('payment_transactions')
+            .update({ 
+              status: 'processing',
+              stripe_payment_intent_id: paymentIntent.id
+            })
+            .eq('rent_payment_id', paymentId);
+        }
+        break;
+      }
+      case 'charge.refunded': {
+        const charge = event.data.object;
+        const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent);
+        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id);
+        const paymentId = session.metadata?.payment_id;
+
+        if (paymentId) {
+          // Update both tables to refunded status
+          await supabaseClient
+            .from('rent_payments')
+            .update({ status: 'refunded' })
+            .eq('id', paymentId);
+
+          await supabaseClient
+            .from('payment_transactions')
+            .update({ 
+              status: 'refunded',
               stripe_payment_intent_id: paymentIntent.id
             })
             .eq('rent_payment_id', paymentId);
