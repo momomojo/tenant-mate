@@ -34,44 +34,56 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Create a Connect account
-    const account = await stripe.accounts.create({
-      type: 'express',
-      email: user.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      settings: {
-        payouts: {
-          schedule: {
-            interval: 'manual' // This allows you to control when payouts occur
-          }
-        }
-      },
-      business_type: 'company',
-      business_profile: {
-        mcc: '6513', // Real Estate Agents and Managers
-        product_description: 'Property management and rental services'
-      }
-    });
-
-    console.log('Created Stripe Connect account:', account.id);
-
-    // Update the user's profile with their Connect account ID
-    const { error: updateError } = await supabaseClient
+    // Check if user already has a Connect account
+    const { data: profile } = await supabaseClient
       .from('profiles')
-      .update({ stripe_connect_account_id: account.id })
-      .eq('id', user.id);
+      .select('stripe_connect_account_id')
+      .eq('id', user.id)
+      .single();
 
-    if (updateError) {
-      console.error('Error updating profile:', updateError);
-      throw updateError;
+    let accountId = profile?.stripe_connect_account_id;
+
+    if (!accountId) {
+      // Create a Connect account
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: user.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'manual'
+            }
+          }
+        },
+        business_type: 'company',
+        business_profile: {
+          mcc: '6513', // Real Estate Agents and Managers
+          product_description: 'Property management and rental services'
+        }
+      });
+
+      console.log('Created Stripe Connect account:', account.id);
+      accountId = account.id;
+
+      // Update the user's profile with their Connect account ID
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({ stripe_connect_account_id: account.id })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        throw updateError;
+      }
     }
 
     // Create an account session for embedded onboarding
     const accountSession = await stripe.accountSessions.create({
-      account: account.id,
+      account: accountId,
       components: {
         account_onboarding: {
           enabled: true,
@@ -92,7 +104,6 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        account: account.id,
         client_secret: accountSession.client_secret,
         publishable_key: Deno.env.get('STRIPE_PUBLISHABLE_KEY')
       }),

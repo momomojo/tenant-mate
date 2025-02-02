@@ -18,8 +18,9 @@ interface RequirementItem {
 export const StripeConnectSetup = () => {
   const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
   const [onboardingExited, setOnboardingExited] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -38,17 +39,26 @@ export const StripeConnectSetup = () => {
 
   const setupStripeConnect = async () => {
     try {
+      setIsLoading(true);
       toast.loading("Setting up Stripe Connect...");
       
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating Connect account:', error);
+        throw error;
+      }
       
       if (!data?.client_secret || !data?.publishable_key) {
         throw new Error('Missing required Stripe Connect credentials');
       }
+
+      console.log('Initializing Stripe Connect with:', {
+        clientSecret: data.client_secret,
+        publishableKey: data.publishable_key
+      });
 
       // Import dynamically to avoid build issues
       const connectModule = await import('@stripe/connect-js');
@@ -65,10 +75,14 @@ export const StripeConnectSetup = () => {
         })
       );
 
+      console.log('Stripe Connect initialized successfully');
       setStripeConnectInstance(stripeConnect);
     } catch (error) {
       console.error('Error setting up Stripe Connect:', error);
       toast.error("Failed to set up Stripe Connect. Please try again.");
+    } finally {
+      setIsLoading(false);
+      toast.dismiss();
     }
   };
 
@@ -111,7 +125,14 @@ export const StripeConnectSetup = () => {
     }
   ];
 
-  if (isLoading) return null;
+  const handleOnboardingExit = () => {
+    console.log('Onboarding exited');
+    setOnboardingExited(true);
+    setStripeConnectInstance(null);
+    window.location.reload();
+  };
+
+  if (profileLoading) return null;
 
   if (profile?.role !== 'property_manager') return null;
 
@@ -127,10 +148,7 @@ export const StripeConnectSetup = () => {
         {stripeConnectInstance ? (
           <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
             <ConnectAccountOnboarding
-              onExit={() => {
-                setOnboardingExited(true);
-                window.location.reload();
-              }}
+              onExit={handleOnboardingExit}
             />
           </ConnectComponentsProvider>
         ) : profile.stripe_connect_account_id ? (
@@ -175,14 +193,18 @@ export const StripeConnectSetup = () => {
               variant="outline" 
               className="w-full" 
               onClick={setupStripeConnect}
+              disabled={isLoading}
             >
-              Complete Account Setup
+              {isLoading ? 'Setting up...' : 'Complete Account Setup'}
               <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </div>
         ) : (
-          <Button onClick={setupStripeConnect}>
-            Connect Stripe Account
+          <Button 
+            onClick={setupStripeConnect}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Connecting...' : 'Connect Stripe Account'}
           </Button>
         )}
       </CardContent>
