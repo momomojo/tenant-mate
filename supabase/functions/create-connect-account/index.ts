@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -41,6 +42,7 @@ serve(async (req) => {
 
     // If no account exists, create one
     if (!accountId) {
+      console.log('Creating new Stripe Connect account...');
       const account = await stripe.accounts.create({
         type: 'standard',
         capabilities: {
@@ -67,14 +69,21 @@ serve(async (req) => {
       });
 
       accountId = account.id;
+      console.log('Created account:', accountId);
 
       // Update the user's profile with the Connect account ID
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('profiles')
         .update({ stripe_connect_account_id: accountId })
         .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        throw updateError;
+      }
     }
 
+    console.log('Creating account session...');
     // Create an account session for embedded onboarding
     const accountSession = await stripe.accountSessions.create({
       account: accountId,
@@ -90,6 +99,8 @@ serve(async (req) => {
         },
       },
     });
+
+    console.log('Account session created successfully');
 
     // Return both the account session details and OAuth URL
     return new Response(

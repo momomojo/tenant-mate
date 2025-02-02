@@ -84,7 +84,7 @@ export const StripeConnectSetup = () => {
       setStripeConnectInstance(stripeConnect);
     } catch (error) {
       console.error('Error setting up Stripe Connect:', error);
-      toast.error("Failed to set up Stripe Connect. Please try again.");
+      toast.error('Failed to set up Stripe Connect. Please try again.');
     } finally {
       setIsLoading(false);
       toast.dismiss();
@@ -154,10 +154,6 @@ export const StripeConnectSetup = () => {
           <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
             <ConnectAccountOnboarding
               onExit={handleOnboardingExit}
-              collectionOptions={{
-                fields: 'eventually_due',
-                futureRequirements: 'include',
-              }}
             />
           </ConnectComponentsProvider>
         ) : profile.stripe_connect_account_id ? (
