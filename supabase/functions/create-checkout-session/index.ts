@@ -14,7 +14,8 @@ serve(async (req) => {
 
   try {
     const { amount, unit_id, setup_future_payments } = await req.json();
-    
+    console.log('Received request with:', { amount, unit_id, setup_future_payments });
+
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -30,18 +31,16 @@ serve(async (req) => {
     // Get the user from the auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
-    if (!user) {
+    if (userError || !user) {
+      console.error('User verification error:', userError);
       throw new Error('Not authenticated');
     }
 
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2023-10-16',
-    });
+    console.log('User verified:', user.id);
 
-    // Create a new payment record using the admin client
+    // Create payment record
     const { data: payment, error: paymentError } = await supabaseAdmin
       .from('rent_payments')
       .insert({
@@ -56,23 +55,15 @@ serve(async (req) => {
 
     if (paymentError) {
       console.error('Payment creation error:', paymentError);
-      throw paymentError;
+      throw new Error(`Failed to create payment record: ${paymentError.message}`);
     }
 
-    // Create payment transaction record using the admin client
-    const { error: transactionError } = await supabaseAdmin
-      .from('payment_transactions')
-      .insert({
-        rent_payment_id: payment.id,
-        amount,
-        status: 'pending',
-        payment_method: 'card'
-      });
+    console.log('Payment record created:', payment.id);
 
-    if (transactionError) {
-      console.error('Transaction creation error:', transactionError);
-      throw transactionError;
-    }
+    // Initialize Stripe
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16',
+    });
 
     // Get or create customer
     let customerId;
@@ -83,6 +74,7 @@ serve(async (req) => {
 
     if (customers.length > 0) {
       customerId = customers[0].id;
+      console.log('Found existing customer:', customerId);
     } else {
       const customer = await stripe.customers.create({
         email: user.email,
@@ -91,9 +83,11 @@ serve(async (req) => {
         },
       });
       customerId = customer.id;
+      console.log('Created new customer:', customerId);
     }
 
     // Create Stripe checkout session
+    console.log('Creating checkout session...');
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -110,9 +104,6 @@ serve(async (req) => {
         },
       ],
       mode: 'payment',
-      ...(setup_future_payments && {
-        setup_future_usage: 'off_session',
-      }),
       success_url: `${req.headers.get('origin')}/payments?success=true`,
       cancel_url: `${req.headers.get('origin')}/payments?canceled=true`,
       metadata: {
@@ -122,12 +113,33 @@ serve(async (req) => {
       },
     });
 
+    console.log('Checkout session created:', session.id);
+
+    // Create payment transaction record
+    const { error: transactionError } = await supabaseAdmin
+      .from('payment_transactions')
+      .insert({
+        rent_payment_id: payment.id,
+        amount,
+        status: 'pending',
+        stripe_payment_intent_id: session.payment_intent as string,
+        stripe_customer_id: customerId,
+      });
+
+    if (transactionError) {
+      console.error('Transaction creation error:', transactionError);
+      throw new Error(`Failed to create transaction record: ${transactionError.message}`);
+    }
+
     return new Response(
       JSON.stringify({ url: session.url }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in checkout session creation:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
