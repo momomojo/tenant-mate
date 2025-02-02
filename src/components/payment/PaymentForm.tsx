@@ -23,12 +23,29 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Auth error:', error);
+        throw error;
+      }
+      
       if (!session) {
         toast.error("Please login to make a payment");
         navigate("/auth");
         return;
       }
+
+      // Verify the session is still valid
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('User verification error:', userError);
+        await supabase.auth.signOut();
+        navigate("/auth");
+        return;
+      }
+
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Auth error:', error);
@@ -47,6 +64,11 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
     try {
       setIsLoading(true);
       
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+      
       const response = await supabase.functions.invoke('create-checkout-session', {
         body: { amount, unit_id: unitId }
       });
@@ -61,7 +83,12 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       }
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error("Failed to initiate payment");
+      if (error.message.includes('No active session')) {
+        toast.error("Your session has expired. Please login again.");
+        navigate("/auth");
+      } else {
+        toast.error("Failed to initiate payment");
+      }
     } finally {
       setIsLoading(false);
     }

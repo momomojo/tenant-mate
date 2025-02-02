@@ -8,7 +8,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: localStorage,
+    storageKey: 'supabase.auth.token',
+    flowType: 'pkce'
   },
   global: {
     headers: {
@@ -18,9 +21,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 // Add session refresh handler
-supabase.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_OUT') {
-    // Delete cached data when user signs out
-    localStorage.removeItem('supabase.auth.token');
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+    // Clear local storage on sign out or token refresh
+    if (event === 'SIGNED_OUT') {
+      localStorage.removeItem('supabase.auth.token');
+    }
+    
+    // Update the auth state
+    if (session) {
+      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+    }
   }
 });
