@@ -45,7 +45,8 @@ const TenantProfile = () => {
         .select(`
           *,
           unit:units (
-            unit_number
+            unit_number,
+            property_id
           )
         `)
         .eq("tenant_id", id)

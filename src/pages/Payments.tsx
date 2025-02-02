@@ -37,7 +37,10 @@ const Payments = () => {
           payment_date,
           status,
           payment_method,
-          unit:units(unit_number)
+          unit:units(
+            unit_number,
+            property_id
+          )
         `)
         .eq("tenant_id", user.id)
         .order("payment_date", { ascending: false });
