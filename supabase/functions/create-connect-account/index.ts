@@ -22,19 +22,26 @@ serve(async (req) => {
     // Get the session or user object
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
-    if (!user) {
-      throw new Error("No user found");
-    }
     
+    // Use maybeSingle() instead of single() to handle the case where no user is found
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !user) {
+      throw new Error(userError?.message || "No user found");
+    }
+
+    // Use maybeSingle() instead of single() to handle the case where no profile is found
     const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       throw profileError;
+    }
+
+    if (!profile) {
+      throw new Error("No profile found for user");
     }
 
     console.log('Creating Stripe Connect account for user:', user.id);
