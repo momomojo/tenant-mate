@@ -53,14 +53,16 @@ export const StripeConnectSetup = () => {
       // Import dynamically to avoid build issues
       const connectModule = await import('@stripe/connect-js');
       
-      const stripeConnect = await connectModule.default.initialize({
-        clientSecret: data.client_secret,
-        appearance: {
-          variables: {
-            colorPrimary: '#0F172A',
+      const stripeConnect = await connectModule.loadConnect().then((connect) => 
+        connect.initialize({
+          clientSecret: data.client_secret,
+          appearance: {
+            variables: {
+              colorPrimary: '#0F172A',
+            },
           },
-        },
-      });
+        })
+      );
 
       setStripeConnectInstance(stripeConnect);
     } catch (error) {
