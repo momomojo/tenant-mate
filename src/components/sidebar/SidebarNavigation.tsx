@@ -11,13 +11,18 @@ export const SidebarNavigation = () => {
   const navigate = useNavigate();
   const menuItems = useMenuItems();
 
+  const handleNavigation = (path: string) => {
+    console.log("Navigating to:", path);
+    navigate(path);
+  };
+
   return (
     <SidebarContent>
       <SidebarMenu>
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavigation(item.path)}
               className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <item.icon className="h-4 w-4" />
