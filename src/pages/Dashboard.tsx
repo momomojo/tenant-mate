@@ -11,7 +11,7 @@ import { toast } from "sonner";
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  const { data: userRole, isError: isRoleError, error: roleError } = useQuery({
+  const { data: userRole, isError: isRoleError, error: roleError, isLoading } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -76,9 +76,18 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#1A1F2C]">
+        <p className="text-white">Loading dashboard...</p>
+      </div>
+    );
+  }
+
   if (isRoleError) {
     console.error("Error loading dashboard:", roleError);
     toast.error("Error loading dashboard. Please try again.");
+    return null;
   }
 
   if (isUnitsError) {
