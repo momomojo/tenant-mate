@@ -15,15 +15,22 @@ serve(async (req) => {
   try {
     const { amount, unit_id, setup_future_payments } = await req.json();
     
-    const supabaseClient = createClient(
+    // Create a Supabase client with the service role key
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     );
 
     // Get the user from the auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
 
     if (!user) {
       throw new Error('Not authenticated');
@@ -34,8 +41,8 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Create a new payment record
-    const { data: payment, error: paymentError } = await supabaseClient
+    // Create a new payment record using the admin client
+    const { data: payment, error: paymentError } = await supabaseAdmin
       .from('rent_payments')
       .insert({
         tenant_id: user.id,
@@ -48,11 +55,12 @@ serve(async (req) => {
       .single();
 
     if (paymentError) {
+      console.error('Payment creation error:', paymentError);
       throw paymentError;
     }
 
-    // Create payment transaction record
-    const { error: transactionError } = await supabaseClient
+    // Create payment transaction record using the admin client
+    const { error: transactionError } = await supabaseAdmin
       .from('payment_transactions')
       .insert({
         rent_payment_id: payment.id,
@@ -62,6 +70,7 @@ serve(async (req) => {
       });
 
     if (transactionError) {
+      console.error('Transaction creation error:', transactionError);
       throw transactionError;
     }
 
