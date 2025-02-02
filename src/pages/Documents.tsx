@@ -6,9 +6,11 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Card } from "@/components/ui/card";
 import { DocumentUpload } from "@/components/property/DocumentUpload";
 import { DocumentList } from "@/components/property/DocumentList";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Documents = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: properties } = useQuery({
     queryKey: ["properties"],
@@ -22,6 +24,20 @@ const Documents = () => {
       return data;
     },
   });
+
+  const handleUploadComplete = () => {
+    // Invalidate and refetch documents for the selected property
+    queryClient.invalidateQueries({
+      queryKey: ["propertyDocuments", selectedPropertyId],
+    });
+  };
+
+  const handleDocumentDeleted = () => {
+    // Invalidate and refetch documents for the selected property
+    queryClient.invalidateQueries({
+      queryKey: ["propertyDocuments", selectedPropertyId],
+    });
+  };
 
   return (
     <SidebarProvider>
@@ -38,9 +54,7 @@ const Documents = () => {
                   {selectedPropertyId && (
                     <DocumentUpload
                       propertyId={selectedPropertyId}
-                      onUploadComplete={() => {
-                        // Refresh documents
-                      }}
+                      onUploadComplete={handleUploadComplete}
                     />
                   )}
                 </div>
@@ -62,9 +76,7 @@ const Documents = () => {
                   {selectedPropertyId && (
                     <DocumentList
                       propertyId={selectedPropertyId}
-                      onDocumentDeleted={() => {
-                        // Refresh documents
-                      }}
+                      onDocumentDeleted={handleDocumentDeleted}
                     />
                   )}
                 </div>
