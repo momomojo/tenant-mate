@@ -101,7 +101,6 @@ serve(async (req) => {
     });
 
     console.log('Created account session:', accountSession.id);
-
     return new Response(
       JSON.stringify({
         client_secret: accountSession.client_secret,
