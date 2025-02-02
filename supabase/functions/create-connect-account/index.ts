@@ -36,16 +36,17 @@ serve(async (req) => {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Profile fetch error:', profileError);
       throw new Error(`Failed to fetch profile: ${profileError.message}`);
     }
 
-    if (!profile) {
-      console.error('No profile found for user:', user.id);
-      // Create a basic profile if one doesn't exist
+    let userProfile = profile;
+
+    if (!userProfile) {
+      console.log('No profile found, creating new profile...');
       const { data: newProfile, error: createError } = await supabaseClient
         .from('profiles')
         .insert({
@@ -64,7 +65,12 @@ serve(async (req) => {
       }
 
       console.log('Created new profile for user');
-      profile = newProfile;
+      userProfile = newProfile;
+    }
+
+    if (userProfile.stripe_connect_account_id) {
+      console.log('User already has a Stripe Connect account');
+      throw new Error('Stripe Connect account already exists');
     }
 
     console.log('Creating Stripe Connect account...');
@@ -76,12 +82,12 @@ serve(async (req) => {
     const account = await stripe.accounts.create({
       type: 'express',
       country: 'US',
-      email: profile.email,
+      email: userProfile.email,
       business_type: 'individual',
       individual: {
-        email: profile.email,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
+        email: userProfile.email,
+        first_name: userProfile.first_name,
+        last_name: userProfile.last_name,
       },
       capabilities: {
         card_payments: { requested: true },
