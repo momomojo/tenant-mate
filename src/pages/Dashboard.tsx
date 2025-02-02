@@ -155,17 +155,17 @@ const Dashboard = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <main className="flex-1 p-8">
-          <div className="flex flex-col gap-8">
+        <main className="flex-1 p-4 sm:p-8 overflow-x-hidden">
+          <div className="flex flex-col gap-6 sm:gap-8">
             <div>
-              <h1 className="text-2xl font-semibold text-white">
+              <h1 className="text-xl sm:text-2xl font-semibold text-white">
                 {userRole === "tenant"
                   ? "My Dashboard"
                   : userRole === "property_manager"
                   ? "Property Manager Dashboard"
                   : "Admin Dashboard"}
               </h1>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 {userRole === "tenant"
                   ? "Overview of your rental information"
                   : userRole === "property_manager"
@@ -174,7 +174,7 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {getStatsByRole().map((stat) => (
                 <StatCard key={stat.title} {...stat} />
               ))}

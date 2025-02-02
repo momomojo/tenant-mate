@@ -21,21 +21,21 @@ export const StatCard = ({
   return (
     <Card className="bg-[#403E43] border-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-gray-200">
+        <CardTitle className="text-sm font-medium text-gray-200 line-clamp-1">
           {title}
         </CardTitle>
-        <div className="rounded-full bg-[#1A1F2C]/50 p-2">
+        <div className="rounded-full bg-[#1A1F2C]/50 p-2 shrink-0">
           <Icon className="h-4 w-4 text-[#9b87f5]" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-white">{value}</div>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-sm text-gray-400">{description}</p>
+        <div className="text-xl sm:text-2xl font-bold text-white line-clamp-1">{value}</div>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <p className="text-xs sm:text-sm text-gray-400 line-clamp-1">{description}</p>
           <span
             className={`text-xs ${
               trendUp ? "text-green-400" : "text-red-400"
-            }`}
+            } whitespace-nowrap`}
           >
             {trend}
           </span>

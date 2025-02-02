@@ -11,7 +11,6 @@ import TenantProfile from "@/pages/TenantProfile";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 
-// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -25,17 +24,19 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/properties" element={<Properties />} />
-          <Route path="/properties/:id" element={<PropertyDetails />} />
-          <Route path="/tenants" element={<Tenants />} />
-          <Route path="/tenants/:id" element={<TenantProfile />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
+        <div className="min-h-screen bg-[#1A1F2C]">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/properties" element={<Properties />} />
+            <Route path="/properties/:id" element={<PropertyDetails />} />
+            <Route path="/tenants" element={<Tenants />} />
+            <Route path="/tenants/:id" element={<TenantProfile />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </div>
       </BrowserRouter>
     </QueryClientProvider>
   );
