@@ -10,7 +10,6 @@ export function AppSidebar() {
   return (
     <Sidebar 
       variant="sidebar" 
-      defaultCollapsed={isMobile}
       className="border-r border-sidebar-border"
     >
       <SidebarHeader />
