@@ -92,10 +92,10 @@ serve(async (req) => {
       components: {
         account_onboarding: {
           enabled: true,
-          payouts_enabled: true,
+          payouts_enabled: true
         },
         payments: {
-          enabled: true,
+          enabled: true
         }
       }
     });
