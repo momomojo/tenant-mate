@@ -49,6 +49,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "automatic_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "automatic_payments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["unit_id"]
+          },
+          {
             foreignKeyName: "automatic_payments_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -106,6 +120,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "deleted_tenant_units_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
             foreignKeyName: "deleted_tenant_units_original_id_fkey"
             columns: ["original_id"]
             isOneToOne: false
@@ -118,6 +139,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deleted_tenant_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "deleted_tenant_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "deleted_tenant_units_unit_id_fkey"
@@ -171,6 +206,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "maintenance_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "maintenance_requests_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["unit_id"]
+          },
+          {
             foreignKeyName: "maintenance_requests_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -214,6 +263,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "properties"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_configs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
           },
         ]
       }
@@ -301,6 +357,7 @@ export type Database = {
           created_by: string
           id: string
           name: string
+          property_manager_id: string | null
           updated_at: string
         }
         Insert: {
@@ -309,6 +366,7 @@ export type Database = {
           created_by: string
           id?: string
           name: string
+          property_manager_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -317,6 +375,7 @@ export type Database = {
           created_by?: string
           id?: string
           name?: string
+          property_manager_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -326,6 +385,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "properties_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -369,11 +449,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
+          },
+          {
             foreignKeyName: "property_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -426,6 +520,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "rent_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "rent_payments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["unit_id"]
+          },
+          {
             foreignKeyName: "rent_payments_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -474,6 +582,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tenant_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "tenant_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["unit_id"]
+          },
+          {
             foreignKeyName: "tenant_units_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -518,6 +640,13 @@ export type Database = {
             referencedRelation: "properties"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
+          },
         ]
       }
     }
@@ -545,11 +674,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
+          },
+          {
             foreignKeyName: "property_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -570,6 +713,41 @@ export type Database = {
           unit_number: string | null
         }
         Relationships: []
+      }
+      property_manager_assignments: {
+        Row: {
+          lease_end_date: string | null
+          lease_start_date: string | null
+          manager_email: string | null
+          manager_first_name: string | null
+          manager_last_name: string | null
+          property_id: string | null
+          property_manager_id: string | null
+          property_name: string | null
+          stripe_connect_account_id: string | null
+          tenant_email: string | null
+          tenant_first_name: string | null
+          tenant_id: string | null
+          tenant_last_name: string | null
+          unit_id: string | null
+          unit_number: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+        ]
       }
     }
     Functions: {

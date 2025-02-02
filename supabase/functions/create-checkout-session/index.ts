@@ -40,27 +40,20 @@ serve(async (req) => {
 
     console.log('User verified:', user.id);
 
-    // Get the property manager's Stripe account for this unit
-    const { data: propertyData, error: propertyError } = await supabaseAdmin
-      .from('units')
-      .select(`
-        property:properties (
-          id,
-          created_by,
-          property_manager:profiles (
-            stripe_connect_account_id
-          )
-        )
-      `)
-      .eq('id', unit_id)
+    // Get the property manager's Stripe account using the new view
+    const { data: assignment, error: assignmentError } = await supabaseAdmin
+      .from('property_manager_assignments')
+      .select('*')
+      .eq('unit_id', unit_id)
+      .eq('tenant_id', user.id)
       .single();
 
-    if (propertyError || !propertyData) {
-      console.error('Error fetching property data:', propertyError);
-      throw new Error('Failed to fetch property data');
+    if (assignmentError || !assignment) {
+      console.error('Error fetching property manager:', assignmentError);
+      throw new Error('Failed to fetch property manager details');
     }
 
-    const stripeConnectAccountId = propertyData.property.property_manager?.stripe_connect_account_id;
+    const stripeConnectAccountId = assignment.stripe_connect_account_id;
     if (!stripeConnectAccountId) {
       throw new Error('Property manager has not set up Stripe Connect');
     }

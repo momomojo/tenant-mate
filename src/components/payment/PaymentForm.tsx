@@ -34,34 +34,39 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: lease, error: leaseError } = await supabase
-        .from('tenant_units')
-        .select(`
-          unit:units (
-            monthly_rent,
-            property:properties (
-              property_manager:profiles (
-                stripe_connect_account_id
-              )
-            )
-          )
-        `)
-        .eq('tenant_id', user.id)
+      // Use the property_manager_assignments view to get all the necessary information
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('property_manager_assignments')
+        .select('*')
         .eq('unit_id', unitId)
-        .eq('status', 'active')
+        .eq('tenant_id', user.id)
         .single();
 
-      if (leaseError) {
-        console.error('Error fetching lease:', leaseError);
+      if (assignmentError) {
+        console.error('Error fetching lease:', assignmentError);
         return;
       }
 
-      if (!lease?.unit?.property?.property_manager?.stripe_connect_account_id) {
+      // Check if property manager has Stripe Connect set up
+      if (!assignment?.stripe_connect_account_id) {
         setStripeConnectError("Your property manager hasn't set up payments yet. Please contact them to enable online payments.");
+        return;
       }
 
-      if (lease?.unit?.monthly_rent) {
-        setMonthlyRent(lease.unit.monthly_rent);
+      // Get the monthly rent from the units table
+      const { data: unit, error: unitError } = await supabase
+        .from('units')
+        .select('monthly_rent')
+        .eq('id', unitId)
+        .single();
+
+      if (unitError) {
+        console.error('Error fetching unit:', unitError);
+        return;
+      }
+
+      if (unit?.monthly_rent) {
+        setMonthlyRent(unit.monthly_rent);
       } else {
         setMonthlyRent(defaultAmount || 0);
       }
@@ -183,10 +188,6 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       });
 
       if (response.error) {
-        if (response.error.message.includes("Property manager has not set up Stripe Connect")) {
-          setStripeConnectError("Your property manager hasn't set up payments yet. Please contact them to enable online payments.");
-          throw new Error(stripeConnectError);
-        }
         throw new Error(response.error.message);
       }
 
@@ -199,7 +200,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (error.message.includes('No active session')) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
-      } else if (!stripeConnectError) {
+      } else {
         toast.error("Failed to initiate payment");
       }
     } finally {
