@@ -8,6 +8,8 @@ import { DollarSign, CheckCircle2, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
 const Payments = () => {
   const [searchParams] = useSearchParams();
@@ -76,49 +78,54 @@ const Payments = () => {
   }
 
   return (
-    <div className="container py-6 space-y-6">
-      {success && (
-        <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertDescription>
-            Payment successful! Your payment has been processed.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {canceled && (
-        <Alert className="bg-red-500/15 text-red-500 border-red-500/50">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>
-            Payment was canceled. Please try again if you wish to complete the payment.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Payments
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {activeUnit ? (
-            <PaymentForm
-              unitId={activeUnit.unit_id}
-              amount={activeUnit.unit.monthly_rent}
-            />
-          ) : (
-            <Alert>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <AppSidebar />
+        <div className="flex-1 p-6 space-y-6">
+          {success && (
+            <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
+              <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
-                No active lease found. Please contact your property manager if you believe this is an error.
+                Payment successful! Your payment has been processed.
               </AlertDescription>
             </Alert>
           )}
-          {payments && <PaymentHistory payments={payments} />}
-        </CardContent>
-      </Card>
-    </div>
+          
+          {canceled && (
+            <Alert className="bg-red-500/15 text-red-500 border-red-500/50">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>
+                Payment was canceled. Please try again if you wish to complete the payment.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Payments
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {activeUnit ? (
+                <PaymentForm
+                  unitId={activeUnit.unit_id}
+                  amount={activeUnit.unit.monthly_rent}
+                />
+              ) : (
+                <Alert>
+                  <AlertDescription>
+                    No active lease found. Please contact your property manager if you believe this is an error.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {payments && <PaymentHistory payments={payments} />}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
