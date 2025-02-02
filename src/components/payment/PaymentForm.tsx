@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,20 +14,39 @@ interface PaymentFormProps {
 
 export function PaymentForm({ unitId, amount }: PaymentFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
-  const handlePayment = async () => {
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
     try {
-      setIsLoading(true);
-      
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         toast.error("Please login to make a payment");
         navigate("/auth");
         return;
       }
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Auth error:', error);
+      toast.error("Authentication error. Please login again.");
+      navigate("/auth");
+    }
+  };
 
+  const handlePayment = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to make a payment");
+      navigate("/auth");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
       const response = await supabase.functions.invoke('create-checkout-session', {
         body: { amount, unit_id: unitId }
       });
@@ -71,7 +90,7 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       <CardFooter>
         <Button 
           onClick={handlePayment} 
-          disabled={isLoading}
+          disabled={isLoading || !isAuthenticated}
           className="w-full"
         >
           {isLoading ? "Processing..." : `Pay $${amount}`}
