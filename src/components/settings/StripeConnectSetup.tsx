@@ -3,6 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+interface RequirementItem {
+  title: string;
+  description: string;
+  dueDate: string;
+  status: 'pending' | 'completed';
+}
 
 export const StripeConnectSetup = () => {
   const { data: profile, isLoading } = useQuery({
@@ -38,6 +47,45 @@ export const StripeConnectSetup = () => {
     }
   };
 
+  const requirements: RequirementItem[] = [
+    {
+      title: "Accept terms of service",
+      description: "Review and accept Stripe's terms of service",
+      dueDate: "Feb 2, 2024",
+      status: "pending"
+    },
+    {
+      title: "Provide an external account",
+      description: "Add a bank account to receive payouts",
+      dueDate: "Feb 2, 2024",
+      status: "pending"
+    },
+    {
+      title: "Provide a statement descriptor",
+      description: "Add a description that appears on customer statements",
+      dueDate: "Feb 2, 2024",
+      status: "pending"
+    },
+    {
+      title: "Provide a business website",
+      description: "Add your business website URL",
+      dueDate: "Feb 2, 2024",
+      status: "pending"
+    },
+    {
+      title: "Provide a representative",
+      description: "Add details about your business representative",
+      dueDate: "Feb 2, 2024",
+      status: "pending"
+    },
+    {
+      title: "Update your business information",
+      description: "Complete your business profile",
+      dueDate: "Feb 2, 2024",
+      status: "pending"
+    }
+  ];
+
   if (isLoading) return null;
 
   if (profile?.role !== 'property_manager') return null;
@@ -50,10 +98,50 @@ export const StripeConnectSetup = () => {
           Set up your Stripe account to receive rent payments directly
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
-          <div className="text-sm text-muted-foreground">
-            Your Stripe account is connected and ready to receive payments.
+          <div className="space-y-4">
+            <Alert variant="warning">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Action Required</AlertTitle>
+              <AlertDescription>
+                Your Stripe account needs additional information before you can accept payments
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-2">
+              {requirements.map((req, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                  onClick={setupStripeConnect}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{req.title}</h4>
+                      <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
+                        Past due
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Due {req.dueDate}</span>
+                      <span>•</span>
+                      <span>Impacts payments, payouts, and transfers</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              ))}
+            </div>
+
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={setupStripeConnect}
+            >
+              Complete Account Setup
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         ) : (
           <Button onClick={setupStripeConnect}>
