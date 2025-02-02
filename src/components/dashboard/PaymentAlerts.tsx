@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BellAlert, CalendarClock, DollarSign } from "lucide-react";
+import { Bell, CalendarClock, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -69,7 +69,7 @@ export function PaymentAlerts() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BellAlert className="h-5 w-5" />
+            <Bell className="h-5 w-5" />
             Payment Alerts
           </CardTitle>
         </CardHeader>
