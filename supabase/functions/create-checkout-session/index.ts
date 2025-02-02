@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, unit_id } = await req.json();
+    const { amount, unit_id, setup_future_payments } = await req.json();
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -65,8 +65,28 @@ serve(async (req) => {
       throw transactionError;
     }
 
+    // Get or create customer
+    let customerId;
+    const { data: customers } = await stripe.customers.list({
+      email: user.email,
+      limit: 1,
+    });
+
+    if (customers.length > 0) {
+      customerId = customers[0].id;
+    } else {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {
+          tenant_id: user.id,
+        },
+      });
+      customerId = customer.id;
+    }
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
+      customer: customerId,
       payment_method_types: ['card'],
       line_items: [
         {
@@ -81,6 +101,9 @@ serve(async (req) => {
         },
       ],
       mode: 'payment',
+      ...(setup_future_payments && {
+        setup_future_usage: 'off_session',
+      }),
       success_url: `${req.headers.get('origin')}/payments?success=true`,
       cancel_url: `${req.headers.get('origin')}/payments?canceled=true`,
       metadata: {

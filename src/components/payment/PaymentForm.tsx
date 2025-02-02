@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,10 +16,12 @@ interface PaymentFormProps {
 export function PaymentForm({ unitId, amount }: PaymentFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [autoPayEnabled, setAutoPayEnabled] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
+    checkAutoPayStatus();
   }, []);
 
   const checkAuth = async () => {
@@ -36,7 +39,6 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
         return;
       }
 
-      // Verify the session is still valid
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -51,6 +53,52 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       console.error('Auth error:', error);
       toast.error("Authentication error. Please login again.");
       navigate("/auth");
+    }
+  };
+
+  const checkAutoPayStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('automatic_payments')
+        .select('is_enabled')
+        .eq('tenant_id', user.id)
+        .eq('unit_id', unitId)
+        .single();
+
+      if (error) throw error;
+      setAutoPayEnabled(data?.is_enabled || false);
+    } catch (error) {
+      console.error('Error checking autopay status:', error);
+    }
+  };
+
+  const handleAutoPayToggle = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const newStatus = !autoPayEnabled;
+      
+      const { error } = await supabase
+        .from('automatic_payments')
+        .upsert({
+          tenant_id: user.id,
+          unit_id: unitId,
+          is_enabled: newStatus
+        }, {
+          onConflict: 'tenant_id,unit_id'
+        });
+
+      if (error) throw error;
+      
+      setAutoPayEnabled(newStatus);
+      toast.success(newStatus ? 'Automatic payments enabled' : 'Automatic payments disabled');
+    } catch (error) {
+      console.error('Error toggling autopay:', error);
+      toast.error('Failed to update automatic payment settings');
     }
   };
 
@@ -70,7 +118,11 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       }
       
       const response = await supabase.functions.invoke('create-checkout-session', {
-        body: { amount, unit_id: unitId }
+        body: { 
+          amount, 
+          unit_id: unitId,
+          setup_future_payments: autoPayEnabled 
+        }
       });
 
       if (response.error) {
@@ -112,6 +164,14 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
             type="number"
             className="bg-muted"
           />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="autopay"
+            checked={autoPayEnabled}
+            onCheckedChange={handleAutoPayToggle}
+          />
+          <Label htmlFor="autopay">Enable automatic monthly payments</Label>
         </div>
       </CardContent>
       <CardFooter>
