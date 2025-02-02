@@ -53,6 +53,7 @@ serve(async (req) => {
         }
         break;
       }
+
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object;
         const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id);
@@ -76,49 +77,51 @@ serve(async (req) => {
         }
         break;
       }
-      case 'payment_intent.processing': {
-        const paymentIntent = event.data.object;
-        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id);
-        const paymentId = session.metadata?.payment_id;
 
-        if (paymentId) {
-          // Update both tables to processing status
-          await supabaseClient
-            .from('rent_payments')
-            .update({ status: 'processing' })
-            .eq('id', paymentId);
-
-          await supabaseClient
-            .from('payment_transactions')
-            .update({ 
-              status: 'processing',
-              stripe_payment_intent_id: paymentIntent.id
-            })
-            .eq('rent_payment_id', paymentId);
-        }
+      case 'account.updated': {
+        const account = event.data.object;
+        console.log('Stripe account updated:', account.id);
+        
+        // Update the profile's Stripe account status
+        await supabaseClient
+          .from('profiles')
+          .update({ 
+            stripe_connect_account_id: account.id,
+          })
+          .eq('stripe_connect_account_id', account.id);
+        
         break;
       }
-      case 'charge.refunded': {
-        const charge = event.data.object;
-        const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent);
-        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id);
-        const paymentId = session.metadata?.payment_id;
 
-        if (paymentId) {
-          // Update both tables to refunded status
-          await supabaseClient
-            .from('rent_payments')
-            .update({ status: 'refunded' })
-            .eq('id', paymentId);
+      case 'account.application.deauthorized': {
+        const account = event.data.object;
+        console.log('Stripe account deauthorized:', account.id);
+        
+        // Remove the Stripe account ID from the profile
+        await supabaseClient
+          .from('profiles')
+          .update({ 
+            stripe_connect_account_id: null 
+          })
+          .eq('stripe_connect_account_id', account.id);
+        
+        break;
+      }
 
-          await supabaseClient
-            .from('payment_transactions')
-            .update({ 
-              status: 'refunded',
-              stripe_payment_intent_id: paymentIntent.id
-            })
-            .eq('rent_payment_id', paymentId);
-        }
+      case 'capability.updated': {
+        const capability = event.data.object;
+        console.log('Capability updated for account:', capability.account);
+        
+        // You might want to store capability status in a new column if needed
+        // For now we'll just log it
+        console.log('New capability status:', capability.status);
+        break;
+      }
+
+      case 'account.external_account.created': {
+        const externalAccount = event.data.object;
+        console.log('Bank account added for account:', externalAccount.account);
+        // Log the event - you might want to update some status in your database
         break;
       }
     }
