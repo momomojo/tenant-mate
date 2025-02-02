@@ -34,7 +34,7 @@ serve(async (req) => {
     }
 
     const body = await req.text();
-    console.log('Received webhook body:', body);
+    console.log('Webhook body:', body);
 
     let event: Stripe.Event;
     
@@ -61,6 +61,12 @@ serve(async (req) => {
       case 'account.updated': {
         const account = event.data.object as Stripe.Account;
         console.log('Account updated:', account.id);
+        console.log('Account details:', {
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          details_submitted: account.details_submitted,
+          requirements: account.requirements,
+        });
         
         // Update the profile's Stripe account status
         const { data, error } = await supabaseClient
@@ -97,18 +103,6 @@ serve(async (req) => {
         }
 
         console.log('Profile updated successfully:', data);
-        break;
-      }
-
-      case 'capability.updated': {
-        const capability = event.data.object as Stripe.Capability;
-        console.log('Capability updated:', capability.account, capability.id, capability.status);
-        break;
-      }
-
-      case 'account.external_account.created': {
-        const externalAccount = event.data.object as Stripe.BankAccount | Stripe.Card;
-        console.log('External account created:', externalAccount.account);
         break;
       }
 

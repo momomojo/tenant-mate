@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 interface RequirementItem {
@@ -22,7 +21,7 @@ export const StripeConnectSetup = () => {
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -39,13 +38,35 @@ export const StripeConnectSetup = () => {
     },
   });
 
+  // Poll for profile updates when connecting account
   useEffect(() => {
+    let intervalId: number;
+    
     if (code) {
-      // If we have a code from OAuth redirect, refresh the profile data
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      // Initial refetch
+      refetchProfile();
+      
+      // Set up polling every 2 seconds for 30 seconds
+      let attempts = 0;
+      intervalId = setInterval(() => {
+        attempts++;
+        if (attempts < 15) { // 30 seconds total
+          refetchProfile();
+        } else {
+          clearInterval(intervalId);
+        }
+      }, 2000);
+
+      // Show success toast
       toast.success("Stripe account connected successfully!");
     }
-  }, [code, queryClient]);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [code, refetchProfile]);
 
   const setupStripeConnect = async () => {
     try {
@@ -159,6 +180,7 @@ export const StripeConnectSetup = () => {
           <Button 
             onClick={setupStripeConnect}
             disabled={isLoading}
+            className="w-full"
           >
             {isLoading ? 'Connecting...' : 'Connect Stripe Account'}
           </Button>
