@@ -10,19 +10,56 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   unitId: string;
-  amount: number;
+  amount?: number; // Make amount optional since we'll fetch it
 }
 
-export function PaymentForm({ unitId, amount }: PaymentFormProps) {
+export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [autoPayEnabled, setAutoPayEnabled] = useState(false);
+  const [monthlyRent, setMonthlyRent] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
     checkAutoPayStatus();
+    fetchMonthlyRent();
   }, []);
+
+  const fetchMonthlyRent = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get the active lease for the current tenant and unit
+      const { data: lease, error: leaseError } = await supabase
+        .from('tenant_units')
+        .select(`
+          unit:units (
+            monthly_rent
+          )
+        `)
+        .eq('tenant_id', user.id)
+        .eq('unit_id', unitId)
+        .eq('status', 'active')
+        .single();
+
+      if (leaseError) {
+        console.error('Error fetching lease:', leaseError);
+        return;
+      }
+
+      if (lease?.unit?.monthly_rent) {
+        setMonthlyRent(lease.unit.monthly_rent);
+      } else {
+        // Fallback to default amount if provided
+        setMonthlyRent(defaultAmount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching monthly rent:', error);
+      toast.error('Failed to fetch monthly rent amount');
+    }
+  };
 
   const checkAuth = async () => {
     try {
@@ -109,6 +146,11 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       return;
     }
 
+    if (!monthlyRent) {
+      toast.error("Unable to process payment. Monthly rent amount not found.");
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -119,7 +161,7 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       
       const response = await supabase.functions.invoke('create-checkout-session', {
         body: { 
-          amount, 
+          amount: monthlyRent, 
           unit_id: unitId,
           setup_future_payments: autoPayEnabled 
         }
@@ -156,10 +198,10 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="amount">Monthly Rent Amount</Label>
           <Input
             id="amount"
-            value={amount}
+            value={monthlyRent || 0}
             readOnly
             type="number"
             className="bg-muted"
@@ -177,10 +219,10 @@ export function PaymentForm({ unitId, amount }: PaymentFormProps) {
       <CardFooter>
         <Button 
           onClick={handlePayment} 
-          disabled={isLoading || !isAuthenticated}
+          disabled={isLoading || !isAuthenticated || !monthlyRent}
           className="w-full"
         >
-          {isLoading ? "Processing..." : `Pay $${amount}`}
+          {isLoading ? "Processing..." : `Pay $${monthlyRent || 0}`}
         </Button>
       </CardFooter>
     </Card>
