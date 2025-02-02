@@ -48,6 +48,27 @@ export const StripeConnectSetup = () => {
     },
   });
 
+  // Fetch account status on mount and after OAuth return
+  useEffect(() => {
+    const fetchAccountStatus = async () => {
+      if (!profile?.stripe_connect_account_id) return;
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('get-connect-account-status', {
+          body: { account_id: profile.stripe_connect_account_id }
+        });
+
+        if (error) throw error;
+        setAccountStatus(data);
+      } catch (error) {
+        console.error('Error fetching account status:', error);
+        toast.error('Failed to fetch account status');
+      }
+    };
+
+    fetchAccountStatus();
+  }, [profile?.stripe_connect_account_id]);
+
   // Handle OAuth return
   useEffect(() => {
     const handleOAuthReturn = async () => {
@@ -129,6 +150,9 @@ export const StripeConnectSetup = () => {
 
   if (profile?.role !== 'property_manager') return null;
 
+  const requirements = getRequirementsList();
+  const hasRequirements = requirements.length > 0;
+
   return (
     <Card>
       <CardHeader>
@@ -145,40 +169,44 @@ export const StripeConnectSetup = () => {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Action Required</AlertTitle>
                 <AlertDescription>
-                  Your Stripe account needs additional information before you can accept payments
+                  {hasRequirements 
+                    ? "Your Stripe account needs additional information before you can accept payments"
+                    : "Your account is being verified by Stripe. This may take a few minutes."}
                 </AlertDescription>
               </Alert>
             )}
             
-            <div className="space-y-2">
-              {getRequirementsList().map((req, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                  onClick={setupStripeConnect}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setupStripeConnect()}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{req.title}</h4>
-                      {req.status === 'past_due' && (
-                        <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
-                          Past due
-                        </span>
-                      )}
+            {hasRequirements && (
+              <div className="space-y-2">
+                {requirements.map((req, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                    onClick={setupStripeConnect}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && setupStripeConnect()}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{req.title}</h4>
+                        {req.status === 'past_due' && (
+                          <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
+                            Past due
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Due {req.dueDate}</span>
+                        <span>•</span>
+                        <span>{req.description}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Due {req.dueDate}</span>
-                      <span>•</span>
-                      <span>{req.description}</span>
-                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <Button 
               variant="outline" 
