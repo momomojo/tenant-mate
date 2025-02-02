@@ -8,8 +8,11 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('Received request:', req.method)
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request')
     return new Response(null, { 
       headers: corsHeaders,
       status: 204
@@ -18,6 +21,7 @@ serve(async (req) => {
 
   try {
     // Initialize Supabase client
+    console.log('Initializing Supabase client...')
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -26,6 +30,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('No authorization header')
       throw new Error('No authorization header')
     }
 
@@ -49,6 +54,7 @@ serve(async (req) => {
     let accountId = null
     
     // Check if user already has a Stripe Connect account
+    console.log('Checking for existing Connect account...')
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('stripe_connect_account_id')
@@ -72,6 +78,7 @@ serve(async (req) => {
       accountId = account.id
 
       // Update profile with new Connect account ID
+      console.log('Updating profile with Connect account ID...')
       const { error: updateError } = await supabaseClient
         .from('profiles')
         .update({ stripe_connect_account_id: accountId })
@@ -98,7 +105,7 @@ serve(async (req) => {
     const responseData = { url: accountLink.url }
     const responseBody = JSON.stringify(responseData)
     
-    // Return response immediately
+    // Return response with proper headers
     return new Response(responseBody, { 
       headers: { 
         ...corsHeaders, 
@@ -110,7 +117,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in create-connect-account function:', error)
-    const errorResponse = JSON.stringify({ error: error.message })
+    const errorResponse = JSON.stringify({ 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
     
     return new Response(errorResponse, { 
       headers: { 
