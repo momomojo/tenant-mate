@@ -33,6 +33,8 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    console.log('Creating Stripe Connect account...');
+    
     // Create a Stripe Connect account
     const account = await stripe.accounts.create({
       type: 'express',
@@ -45,6 +47,8 @@ serve(async (req) => {
       business_type: 'individual',
     });
 
+    console.log('Stripe Connect account created:', account.id);
+
     // Create account link for onboarding
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
@@ -52,6 +56,8 @@ serve(async (req) => {
       return_url: `${req.headers.get('origin')}/settings?success=true`,
       type: 'account_onboarding',
     });
+
+    console.log('Account link created:', accountLink.url);
 
     // Update the user's profile with the Stripe Connect account ID
     const supabaseAdmin = createClient(

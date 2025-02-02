@@ -101,7 +101,7 @@ export const StripeConnectSetup = () => {
       <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
-            <Alert variant="warning">
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Action Required</AlertTitle>
               <AlertDescription>
