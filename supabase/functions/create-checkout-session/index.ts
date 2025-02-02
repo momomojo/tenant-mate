@@ -16,7 +16,7 @@ serve(async (req) => {
     const { amount, unit_id, setup_future_payments } = await req.json();
     console.log('Received request with:', { amount, unit_id, setup_future_payments });
 
-    // Create a Supabase client with the service role key
+    // Create a Supabase client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -40,25 +40,30 @@ serve(async (req) => {
 
     console.log('User verified:', user.id);
 
-    // Create payment record
-    const { data: payment, error: paymentError } = await supabaseAdmin
-      .from('rent_payments')
-      .insert({
-        tenant_id: user.id,
-        unit_id,
-        amount,
-        status: 'pending',
-        payment_method: 'card'
-      })
-      .select()
+    // Get the property manager's Stripe account for this unit
+    const { data: propertyData, error: propertyError } = await supabaseAdmin
+      .from('units')
+      .select(`
+        property:properties (
+          id,
+          created_by,
+          property_manager:profiles (
+            stripe_connect_account_id
+          )
+        )
+      `)
+      .eq('id', unit_id)
       .single();
 
-    if (paymentError) {
-      console.error('Payment creation error:', paymentError);
-      throw new Error(`Failed to create payment record: ${paymentError.message}`);
+    if (propertyError || !propertyData) {
+      console.error('Error fetching property data:', propertyError);
+      throw new Error('Failed to fetch property data');
     }
 
-    console.log('Payment record created:', payment.id);
+    const stripeConnectAccountId = propertyData.property.property_manager?.stripe_connect_account_id;
+    if (!stripeConnectAccountId) {
+      throw new Error('Property manager has not set up Stripe Connect');
+    }
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -86,7 +91,31 @@ serve(async (req) => {
       console.log('Created new customer:', customerId);
     }
 
-    // Create Stripe checkout session
+    // Create payment record
+    const { data: payment, error: paymentError } = await supabaseAdmin
+      .from('rent_payments')
+      .insert({
+        tenant_id: user.id,
+        unit_id,
+        amount,
+        status: 'pending',
+        payment_method: 'card'
+      })
+      .select()
+      .single();
+
+    if (paymentError) {
+      console.error('Payment creation error:', paymentError);
+      throw new Error(`Failed to create payment record: ${paymentError.message}`);
+    }
+
+    console.log('Payment record created:', payment.id);
+
+    // Calculate application fee (platform fee)
+    const platformFeePercentage = 0.05; // 5% platform fee
+    const applicationFee = Math.round(amount * platformFeePercentage * 100); // Convert to cents
+
+    // Create Stripe checkout session with Connect account
     console.log('Creating checkout session...');
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -97,6 +126,7 @@ serve(async (req) => {
             currency: 'usd',
             product_data: {
               name: 'Rent Payment',
+              description: `Rent payment for unit ${unit_id}`,
             },
             unit_amount: Math.round(amount * 100), // Convert to cents
           },
@@ -110,6 +140,12 @@ serve(async (req) => {
         payment_id: payment.id,
         tenant_id: user.id,
         unit_id,
+      },
+      payment_intent_data: {
+        application_fee_amount: applicationFee,
+        transfer_data: {
+          destination: stripeConnectAccountId,
+        },
       },
     });
 
