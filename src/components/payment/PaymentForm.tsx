@@ -274,7 +274,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         <Button
           variant="outline"
           onClick={handleCustomerPortal}
-          disabled={isLoading || !isAuthenticated || stripeConnectError}
+          disabled={isLoading || !isAuthenticated || Boolean(stripeConnectError)}
           className="w-full"
         >
           Manage Payment Settings
@@ -283,7 +283,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       <CardFooter>
         <Button 
           onClick={handlePayment} 
-          disabled={isLoading || !isAuthenticated || !monthlyRent || stripeConnectError}
+          disabled={isLoading || !isAuthenticated || !monthlyRent || Boolean(stripeConnectError)}
           className="w-full"
         >
           {isLoading ? "Processing..." : `Pay $${monthlyRent || 0}`}
