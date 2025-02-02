@@ -41,13 +41,28 @@ serve(async (req) => {
         tenant_id: user.id,
         unit_id,
         amount,
-        status: 'pending'
+        status: 'pending',
+        payment_method: 'card'
       })
       .select()
       .single();
 
     if (paymentError) {
       throw paymentError;
+    }
+
+    // Create payment transaction record
+    const { error: transactionError } = await supabaseClient
+      .from('payment_transactions')
+      .insert({
+        rent_payment_id: payment.id,
+        amount,
+        status: 'pending',
+        payment_method: 'card'
+      });
+
+    if (transactionError) {
+      throw transactionError;
     }
 
     // Create Stripe checkout session
