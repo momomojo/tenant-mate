@@ -51,12 +51,16 @@ serve(async (req) => {
       customerId = customer.id;
     }
 
+    console.log('Creating portal session for customer:', customerId);
+
     // Create a portal session
     const { url } = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${req.headers.get('origin')}/payments`,
       configuration: Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID'),
     });
+
+    console.log('Portal session created with URL:', url);
 
     return new Response(
       JSON.stringify({ url }),
