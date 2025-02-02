@@ -13,6 +13,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Starting create-connect-account function');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -31,11 +33,10 @@ serve(async (req) => {
     }
 
     console.log('Fetching user profile...');
-    // Get user profile to pre-fill information
     const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
       .maybeSingle();
 
     if (profileError) {
@@ -48,7 +49,7 @@ serve(async (req) => {
     if (!userProfile) {
       console.log('No profile found, creating new profile...');
       const { data: newProfile, error: createError } = await supabaseClient
-        .from('profiles')
+        .from("profiles")
         .insert({
           id: user.id,
           email: user.email,
@@ -64,12 +65,12 @@ serve(async (req) => {
         throw new Error('Failed to create profile');
       }
 
-      console.log('Created new profile for user');
+      console.log('Created new profile:', newProfile);
       userProfile = newProfile;
     }
 
     if (userProfile.stripe_connect_account_id) {
-      console.log('User already has a Stripe Connect account');
+      console.log('User already has a Stripe Connect account:', userProfile.stripe_connect_account_id);
       throw new Error('Stripe Connect account already exists');
     }
 
@@ -93,15 +94,25 @@ serve(async (req) => {
         card_payments: { requested: true },
         transfers: { requested: true },
       },
+      settings: {
+        payouts: {
+          schedule: {
+            interval: 'manual'
+          }
+        }
+      }
     });
 
     console.log('Stripe account created:', account.id);
 
     // Update profile with the new account ID
     const { error: updateError } = await supabaseClient
-      .from('profiles')
-      .update({ stripe_connect_account_id: account.id })
-      .eq('id', user.id);
+      .from("profiles")
+      .update({ 
+        stripe_connect_account_id: account.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", user.id);
 
     if (updateError) {
       console.error('Profile update error:', updateError);
