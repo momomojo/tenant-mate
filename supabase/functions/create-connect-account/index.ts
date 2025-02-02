@@ -21,10 +21,10 @@ serve(async (req) => {
     // Get the user from the request
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
-    if (!user) {
-      throw new Error('No user found');
+    if (userError || !user) {
+      throw new Error('Not authenticated');
     }
 
     // Initialize Stripe
@@ -41,6 +41,7 @@ serve(async (req) => {
         card_payments: { requested: true },
         transfers: { requested: true },
       },
+      business_type: 'individual',
     });
 
     // Create account link for onboarding
