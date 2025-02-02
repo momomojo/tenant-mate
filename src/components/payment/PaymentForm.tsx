@@ -186,6 +186,35 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     }
   };
 
+  const handleCustomerPortal = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to access your payment settings");
+      navigate("/auth");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await supabase.functions.invoke('create-portal-session', {
+        body: { return_url: window.location.origin + '/payments' }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { url } = response.data;
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Portal session error:', error);
+      toast.error("Failed to access payment settings");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -213,6 +242,14 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
           />
           <Label htmlFor="autopay">Enable automatic monthly payments</Label>
         </div>
+        <Button
+          variant="outline"
+          onClick={handleCustomerPortal}
+          disabled={isLoading || !isAuthenticated}
+          className="w-full"
+        >
+          Manage Payment Settings
+        </Button>
       </CardContent>
       <CardFooter>
         <Button 
