@@ -4,9 +4,10 @@ import { PaymentHistory } from "@/components/tenant/PaymentHistory";
 import { PaymentForm } from "@/components/payment/PaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Payments = () => {
-  const { data: payments, isLoading } = useQuery({
+  const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -30,7 +31,7 @@ const Payments = () => {
     },
   });
 
-  const { data: activeUnit } = useQuery({
+  const { data: activeUnit, isLoading: isLoadingUnit } = useQuery({
     queryKey: ["active-unit"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -44,14 +45,14 @@ const Payments = () => {
         `)
         .eq("tenant_id", user.id)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
     },
   });
 
-  if (isLoading) {
+  if (isLoadingPayments || isLoadingUnit) {
     return <div>Loading...</div>;
   }
 
@@ -65,11 +66,17 @@ const Payments = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {activeUnit && (
+          {activeUnit ? (
             <PaymentForm
               unitId={activeUnit.unit_id}
               amount={activeUnit.unit.monthly_rent}
             />
+          ) : (
+            <Alert>
+              <AlertDescription>
+                No active lease found. Please contact your property manager if you believe this is an error.
+              </AlertDescription>
+            </Alert>
           )}
           {payments && <PaymentHistory payments={payments} />}
         </CardContent>
