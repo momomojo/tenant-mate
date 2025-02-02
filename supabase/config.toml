@@ -2,3 +2,9 @@ project_id = "jjwrzarqegbswrndjpup"
 
 [functions.create-connect-account]
 verify_jwt = true
+
+[functions.handle-connect-oauth]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false

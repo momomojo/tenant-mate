@@ -53,12 +53,16 @@ export const StripeConnectSetup = () => {
     const handleOAuthReturn = async () => {
       if (!code || !state) return;
 
+      console.log("Handling OAuth return with code:", code, "and state:", state);
+      
       try {
         setIsLoading(true);
         const { data, error } = await supabase.functions.invoke('handle-connect-oauth', {
           method: 'POST',
           body: { code, state },
         });
+
+        console.log("OAuth handler response:", data, error);
 
         if (error) throw error;
 
@@ -84,6 +88,8 @@ export const StripeConnectSetup = () => {
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
       });
+
+      console.log("Create connect account response:", data, error);
 
       if (error) throw error;
       
