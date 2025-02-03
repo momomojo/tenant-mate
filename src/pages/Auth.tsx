@@ -69,13 +69,38 @@ const Auth = () => {
     };
   }, [navigate]);
 
-  const handleAuthError = (error: any) => {
+  const handleAuthError = async (error: any) => {
+    // Check system settings for email verification requirement
+    const { data: settings } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'email_confirmation_required')
+      .single();
+
+    const isEmailConfirmationRequired = settings?.value === true || settings?.value === 'true';
+
     if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
-      toast({
-        variant: "destructive",
-        title: "Email Not Verified",
-        description: "Please check your email and click the verification link before signing in.",
-      });
+      if (isEmailConfirmationRequired) {
+        toast({
+          variant: "destructive",
+          title: "Email Not Verified",
+          description: "Please check your email and click the verification link before signing in.",
+        });
+      } else {
+        // If email confirmation is not required, try signing in again
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: form.getValues('email'),
+          password: form.getValues('password'),
+        });
+        
+        if (signInError) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: signInError.message,
+          });
+        }
+      }
     } else {
       toast({
         variant: "destructive",
