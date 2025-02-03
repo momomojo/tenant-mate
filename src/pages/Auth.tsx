@@ -70,36 +70,44 @@ const Auth = () => {
   }, [navigate]);
 
   const handleAuthError = async (error: any) => {
-    // Check system settings for email verification requirement
-    const { data: settings } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'email_confirmation_required')
-      .single();
-
-    const isEmailConfirmationRequired = settings?.value === true || settings?.value === 'true';
-
     if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
-      if (isEmailConfirmationRequired) {
-        toast({
-          variant: "destructive",
-          title: "Email Not Verified",
-          description: "Please check your email and click the verification link before signing in.",
-        });
-      } else {
-        // If email confirmation is not required, try signing in again
+      try {
+        // Try signing in directly first since email verification might be disabled
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: form.getValues('email'),
           password: form.getValues('password'),
         });
         
         if (signInError) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: signInError.message,
-          });
+          // If direct sign in fails, check if email verification is required
+          const { data: settings } = await supabase
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'email_confirmation_required')
+            .single();
+
+          const isEmailConfirmationRequired = settings?.value === true || settings?.value === 'true';
+
+          if (isEmailConfirmationRequired) {
+            toast({
+              variant: "destructive",
+              title: "Email Not Verified",
+              description: "Please check your email and click the verification link before signing in.",
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: signInError.message,
+            });
+          }
         }
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: err.message,
+        });
       }
     } else {
       toast({
@@ -128,7 +136,7 @@ const Auth = () => {
         if (error) throw error;
         toast({
           title: "Success!",
-          description: "Please check your email to verify your account before signing in.",
+          description: "Account created successfully. You can now sign in.",
         });
         setMode("signin");
       } else {
@@ -139,11 +147,13 @@ const Auth = () => {
         if (error) throw error;
       }
     } catch (error: any) {
-      handleAuthError(error);
+      await handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // ... keep existing code (JSX for the form)
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
