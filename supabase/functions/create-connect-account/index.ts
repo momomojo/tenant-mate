@@ -7,6 +7,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const TEST_DATA = {
+  dates: {
+    successfulVerification: '1901-01-01',
+    immediateVerification: '1902-01-01',
+    ofacAlert: '1900-01-01',
+  },
+  addresses: {
+    fullMatch: 'address_full_match',
+    noMatch: 'address_no_match',
+    line1NoMatch: 'address_line1_no_match',
+  },
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -16,13 +29,13 @@ serve(async (req) => {
     console.log('Starting create-connect-account function');
     
     const { onboardingData } = await req.json();
+    const isTestMode = Deno.env.get('NODE_ENV') !== 'production';
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
-    // Get the user from the auth context
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     
@@ -67,7 +80,6 @@ serve(async (req) => {
         throw new Error('Failed to create profile');
       }
 
-      console.log('Created new profile:', newProfile);
       userProfile = newProfile;
     }
 
@@ -81,11 +93,22 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Parse date of birth
+    // Handle test mode data
+    if (isTestMode) {
+      console.log('Using test mode data');
+      if (onboardingData.dateOfBirth === TEST_DATA.dates.ofacAlert) {
+        throw new Error('OFAC Alert triggered (test mode)');
+      }
+      
+      // Modify address for test scenarios
+      if (onboardingData.addressLine1 === TEST_DATA.addresses.noMatch) {
+        console.log('Using test address that will fail verification');
+      }
+    }
+
     const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
 
-    // Create a Stripe Connect account with pre-filled information
-    const account = await stripe.accounts.create({
+    const accountParams = {
       type: 'express',
       country: 'US',
       email: onboardingData.email || userProfile.email,
@@ -109,9 +132,9 @@ serve(async (req) => {
         ssn_last_4: onboardingData.ssnLast4,
       },
       business_profile: {
-        mcc: '6513', // Real Estate Agents and Managers
+        mcc: '6513',
         product_description: 'Property rental payments',
-        url: 'https://example.com', // Replace with your platform's URL
+        url: 'https://example.com',
       },
       capabilities: {
         card_payments: { requested: true },
@@ -131,15 +154,34 @@ serve(async (req) => {
         date: Math.floor(Date.now() / 1000),
         ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip'),
       },
-    });
+    };
+
+    // Create account with retry logic
+    let account;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        account = await stripe.accounts.create(accountParams);
+        break;
+      } catch (error) {
+        console.error(`Attempt ${retryCount + 1} failed:`, error);
+        retryCount++;
+        if (retryCount === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
 
     console.log('Stripe account created:', account.id);
 
-    // Update profile with the new account ID
+    // Update profile with the new account ID and onboarding data
     const { error: updateError } = await supabaseClient
       .from("profiles")
       .update({ 
         stripe_connect_account_id: account.id,
+        stripe_onboarding_data: onboardingData,
+        onboarding_status: 'in_progress',
         updated_at: new Date().toISOString()
       })
       .eq("id", user.id);
@@ -149,12 +191,10 @@ serve(async (req) => {
       throw new Error('Failed to update profile with Stripe account ID');
     }
 
-    // Get the origin and return URL from the request
     const origin = req.headers.get('origin') || '';
     const returnUrl = `${origin}/settings`;
 
     console.log('Creating account link...');
-    // Create an account link for onboarding
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
       refresh_url: `${returnUrl}?refresh=true`,
