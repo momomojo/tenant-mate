@@ -33,7 +33,7 @@ serve(async (req) => {
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Using service role key for admin access
     );
 
     const authHeader = req.headers.get('Authorization')!;
@@ -52,7 +52,7 @@ serve(async (req) => {
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .maybeSingle();
+      .single();
 
     if (profileError) {
       console.error('Profile fetch error:', profileError);
@@ -63,24 +63,29 @@ serve(async (req) => {
 
     if (!userProfile) {
       console.log('No profile found, creating new profile...');
-      const { data: newProfile, error: createError } = await supabaseClient
-        .from("profiles")
-        .insert({
-          id: user.id,
-          email: user.email,
-          first_name: onboardingData?.firstName || user.user_metadata?.first_name || '',
-          last_name: onboardingData?.lastName || user.user_metadata?.last_name || '',
-          role: 'property_manager'
-        })
-        .select()
-        .single();
+      try {
+        const { data: newProfile, error: createError } = await supabaseClient
+          .from("profiles")
+          .insert({
+            id: user.id,
+            email: user.email,
+            first_name: onboardingData?.firstName || user.user_metadata?.first_name || '',
+            last_name: onboardingData?.lastName || user.user_metadata?.last_name || '',
+            role: 'property_manager'
+          })
+          .select()
+          .single();
 
-      if (createError) {
-        console.error('Profile creation error:', createError);
+        if (createError) {
+          console.error('Profile creation error:', createError);
+          throw new Error(`Failed to create profile: ${createError.message}`);
+        }
+
+        userProfile = newProfile;
+      } catch (error) {
+        console.error('Detailed profile creation error:', error);
         throw new Error('Failed to create profile');
       }
-
-      userProfile = newProfile;
     }
 
     if (userProfile.stripe_connect_account_id) {
@@ -100,7 +105,6 @@ serve(async (req) => {
         throw new Error('OFAC Alert triggered (test mode)');
       }
       
-      // Modify address for test scenarios
       if (onboardingData.addressLine1 === TEST_DATA.addresses.noMatch) {
         console.log('Using test address that will fail verification');
       }
@@ -176,19 +180,30 @@ serve(async (req) => {
     console.log('Stripe account created:', account.id);
 
     // Update profile with the new account ID and onboarding data
-    const { error: updateError } = await supabaseClient
-      .from("profiles")
-      .update({ 
-        stripe_connect_account_id: account.id,
-        stripe_onboarding_data: onboardingData,
-        onboarding_status: 'in_progress',
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", user.id);
+    try {
+      const { error: updateError } = await supabaseClient
+        .from("profiles")
+        .update({ 
+          stripe_connect_account_id: account.id,
+          stripe_onboarding_data: onboardingData,
+          onboarding_status: 'in_progress',
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id);
 
-    if (updateError) {
-      console.error('Profile update error:', updateError);
-      throw new Error('Failed to update profile with Stripe account ID');
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+        // Try to delete the Stripe account if profile update fails
+        try {
+          await stripe.accounts.del(account.id);
+        } catch (deleteError) {
+          console.error('Failed to delete Stripe account after profile update failure:', deleteError);
+        }
+        throw new Error('Failed to update profile with Stripe account ID');
+      }
+    } catch (error) {
+      console.error('Detailed profile update error:', error);
+      throw new Error('Failed to update profile');
     }
 
     const origin = req.headers.get('origin') || '';
@@ -206,7 +221,10 @@ serve(async (req) => {
     console.log('Account link created successfully');
 
     return new Response(
-      JSON.stringify({ url: accountLink.url }),
+      JSON.stringify({ 
+        oauth_url: accountLink.url,
+        account_id: account.id 
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
