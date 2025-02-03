@@ -100,7 +100,8 @@ const Settings = () => {
 
   if (isLoading) return null;
 
-  if (profile?.role !== 'property_manager') return null;
+  // Only allow access if user is an admin or property manager
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'property_manager')) return null;
 
   return (
     <SidebarProvider>
