@@ -91,13 +91,16 @@ const Settings = () => {
         return;
       }
 
-      setEmailConfirmationRequired(data.value);
+      // Ensure we're converting the JSON value to a boolean
+      setEmailConfirmationRequired(data.value === true || data.value === 'true');
     };
 
     fetchEmailConfirmationSetting();
   }, []);
 
   if (isLoading) return null;
+
+  if (profile?.role !== 'property_manager') return null;
 
   return (
     <SidebarProvider>
@@ -332,6 +335,7 @@ const Settings = () => {
                                   .eq('key', 'email_confirmation_required');
                                 
                                 if (error) throw error;
+                                setEmailConfirmationRequired(checked);
                                 toast.success('Email confirmation setting updated');
                               } catch (error) {
                                 console.error('Error updating email confirmation setting:', error);
