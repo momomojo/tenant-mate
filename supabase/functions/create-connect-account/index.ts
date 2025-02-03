@@ -112,13 +112,13 @@ serve(async (req) => {
 
     const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
 
-    // Get client IP from various possible headers
+    // Get client IP from various possible headers or use a default test IP
     const clientIp = req.headers.get('x-forwarded-for') || 
                     req.headers.get('cf-connecting-ip') || 
                     req.headers.get('x-real-ip') || 
-                    '127.0.0.1'; // Fallback to localhost if no IP found
+                    '8.8.8.8'; // Use a valid default IP for testing
 
-    console.log('Client IP for TOS acceptance:', clientIp);
+    console.log('Using IP for TOS acceptance:', clientIp);
 
     const accountParams = {
       type: 'express',
