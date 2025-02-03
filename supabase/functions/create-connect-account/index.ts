@@ -7,19 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const TEST_DATA = {
-  dates: {
-    successfulVerification: '1901-01-01',
-    immediateVerification: '1902-01-01',
-    ofacAlert: '1900-01-01',
-  },
-  addresses: {
-    fullMatch: 'address_full_match',
-    noMatch: 'address_no_match',
-    line1NoMatch: 'address_line1_no_match',
-  },
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -126,6 +113,9 @@ serve(async (req) => {
 
     console.log('Using IP for TOS acceptance:', clientIp);
 
+    const origin = req.headers.get('origin') || 'https://app.example.com';
+    const businessUrl = `${origin}/properties`;
+
     const accountParams = {
       type: 'express',
       country: 'US',
@@ -152,7 +142,7 @@ serve(async (req) => {
       business_profile: {
         mcc: '6513', // Real Estate
         product_description: 'Property rental payments',
-        url: 'https://example.com',
+        url: businessUrl,
       },
       capabilities: {
         card_payments: { requested: true },
@@ -220,7 +210,6 @@ serve(async (req) => {
       throw new Error('Failed to update profile');
     }
 
-    const origin = req.headers.get('origin') || '';
     const returnUrl = `${origin}/settings`;
 
     console.log('Creating account link...');
