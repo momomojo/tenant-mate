@@ -33,7 +33,7 @@ serve(async (req) => {
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Using service role key for admin access
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     const authHeader = req.headers.get('Authorization')!;
@@ -112,6 +112,14 @@ serve(async (req) => {
 
     const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
 
+    // Get client IP from various possible headers
+    const clientIp = req.headers.get('x-forwarded-for') || 
+                    req.headers.get('cf-connecting-ip') || 
+                    req.headers.get('x-real-ip') || 
+                    '127.0.0.1'; // Fallback to localhost if no IP found
+
+    console.log('Client IP for TOS acceptance:', clientIp);
+
     const accountParams = {
       type: 'express',
       country: 'US',
@@ -136,7 +144,7 @@ serve(async (req) => {
         ssn_last_4: onboardingData.ssnLast4,
       },
       business_profile: {
-        mcc: '6513',
+        mcc: '6513', // Real Estate
         product_description: 'Property rental payments',
         url: 'https://example.com',
       },
@@ -156,7 +164,7 @@ serve(async (req) => {
       },
       tos_acceptance: {
         date: Math.floor(Date.now() / 1000),
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip'),
+        ip: clientIp,
       },
     };
 
