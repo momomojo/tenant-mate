@@ -8,6 +8,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { TEST_DATA, isTestMode } from "@/utils/stripeConnectTestData";
 
 const formSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -44,10 +45,27 @@ export function StripeOnboardingForm({ onComplete }: StripeOnboardingFormProps) 
         .eq("id", user.id)
         .maybeSingle();
 
+      // If in test mode, use test data
+      if (isTestMode()) {
+        return {
+          firstName: profile?.first_name || "Test",
+          lastName: profile?.last_name || "User",
+          email: profile?.email || user.email || "",
+          phone: "1234567890",
+          addressLine1: TEST_DATA.addresses.fullMatch,
+          city: "Test City",
+          state: "CA",
+          postalCode: "12345",
+          dateOfBirth: TEST_DATA.dates.successfulVerification,
+          ssnLast4: "0000",
+          statementDescriptor: "Test Property Rentals",
+        };
+      }
+
       return {
         firstName: profile?.first_name || "",
         lastName: profile?.last_name || "",
-        email: profile?.email || "",
+        email: profile?.email || user.email || "",
         phone: "",
         addressLine1: "",
         city: "",
@@ -96,6 +114,11 @@ export function StripeOnboardingForm({ onComplete }: StripeOnboardingFormProps) 
         <CardTitle>Complete Your Profile</CardTitle>
         <CardDescription>
           Please provide the following information to set up your Stripe Connect account
+          {isTestMode() && (
+            <span className="block text-sm text-muted-foreground mt-1">
+              Test mode active - form pre-filled with test data
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
