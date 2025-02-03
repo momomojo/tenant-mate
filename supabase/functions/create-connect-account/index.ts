@@ -112,11 +112,17 @@ serve(async (req) => {
 
     const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
 
-    // Get client IP from various possible headers or use a default test IP
-    const clientIp = req.headers.get('x-forwarded-for') || 
-                    req.headers.get('cf-connecting-ip') || 
-                    req.headers.get('x-real-ip') || 
-                    '8.8.8.8'; // Use a valid default IP for testing
+    // Get client IP and validate format
+    let clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                  req.headers.get('cf-connecting-ip') || 
+                  req.headers.get('x-real-ip');
+
+    // Validate IP format (basic IPv4 validation)
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!clientIp || !ipv4Regex.test(clientIp)) {
+      // Use a valid test IP address that's not a reserved address
+      clientIp = '98.51.100.1';
+    }
 
     console.log('Using IP for TOS acceptance:', clientIp);
 
