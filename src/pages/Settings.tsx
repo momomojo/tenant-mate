@@ -63,7 +63,6 @@ const Settings = () => {
         .update({
           first_name: data.firstName,
           last_name: data.lastName,
-          // Add more fields as needed for the profile
         })
         .eq("id", profile?.id);
 
@@ -80,19 +79,22 @@ const Settings = () => {
   // Fetch email confirmation setting
   useEffect(() => {
     const fetchEmailConfirmationSetting = async () => {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'email_confirmation_required')
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'email_confirmation_required')
+          .single();
 
-      if (error) {
-        console.error('Error fetching email confirmation setting:', error);
-        return;
+        if (error) {
+          console.error('Error fetching email confirmation setting:', error);
+          return;
+        }
+
+        setEmailConfirmationRequired(data?.value === true || data?.value === 'true');
+      } catch (error) {
+        console.error('Error:', error);
       }
-
-      // Ensure we're converting the JSON value to a boolean
-      setEmailConfirmationRequired(data.value === true || data.value === 'true');
     };
 
     fetchEmailConfirmationSetting();
@@ -102,6 +104,25 @@ const Settings = () => {
 
   // Only allow access if user is an admin or property manager
   if (!profile || (profile.role !== 'admin' && profile.role !== 'property_manager')) return null;
+
+  const handleEmailConfirmationToggle = async (checked: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .update({ 
+          value: checked,
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'email_confirmation_required');
+      
+      if (error) throw error;
+      setEmailConfirmationRequired(checked);
+      toast.success('Email confirmation setting updated');
+    } catch (error) {
+      console.error('Error updating email confirmation setting:', error);
+      toast.error('Failed to update email confirmation setting');
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -295,7 +316,6 @@ const Settings = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Add notification preferences here */}
                       <p className="text-sm text-muted-foreground">
                         Notification settings coming soon
                       </p>
@@ -325,24 +345,7 @@ const Settings = () => {
                           <Switch
                             id="email-confirmation"
                             checked={emailConfirmationRequired}
-                            onCheckedChange={async (checked) => {
-                              try {
-                                const { error } = await supabase
-                                  .from('system_settings')
-                                  .update({ 
-                                    value: checked,
-                                    updated_at: new Date().toISOString()
-                                  })
-                                  .eq('key', 'email_confirmation_required');
-                                
-                                if (error) throw error;
-                                setEmailConfirmationRequired(checked);
-                                toast.success('Email confirmation setting updated');
-                              } catch (error) {
-                                console.error('Error updating email confirmation setting:', error);
-                                toast.error('Failed to update email confirmation setting');
-                              }
-                            }}
+                            onCheckedChange={handleEmailConfirmationToggle}
                           />
                         </div>
                       )}
@@ -363,7 +366,6 @@ const Settings = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Add billing information here */}
                       <p className="text-sm text-muted-foreground">
                         Billing settings coming soon
                       </p>
