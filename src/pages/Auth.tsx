@@ -69,46 +69,13 @@ const Auth = () => {
     };
   }, [navigate]);
 
-  const handleAuthError = async (error: any) => {
+  const handleAuthError = (error: any) => {
     if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
-      try {
-        // Try signing in directly first since email verification might be disabled
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: form.getValues('email'),
-          password: form.getValues('password'),
-        });
-        
-        if (signInError) {
-          // If direct sign in fails, check if email verification is required
-          const { data: settings } = await supabase
-            .from('system_settings')
-            .select('value')
-            .eq('key', 'email_confirmation_required')
-            .single();
-
-          const isEmailConfirmationRequired = settings?.value === true || settings?.value === 'true';
-
-          if (isEmailConfirmationRequired) {
-            toast({
-              variant: "destructive",
-              title: "Email Not Verified",
-              description: "Please check your email and click the verification link before signing in.",
-            });
-          } else {
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: signInError.message,
-            });
-          }
-        }
-      } catch (err: any) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: err.message,
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Email Not Verified",
+        description: "Please check your email and click the verification link before signing in.",
+      });
     } else {
       toast({
         variant: "destructive",
@@ -136,7 +103,7 @@ const Auth = () => {
         if (error) throw error;
         toast({
           title: "Success!",
-          description: "Account created successfully. You can now sign in.",
+          description: "Please check your email to verify your account before signing in.",
         });
         setMode("signin");
       } else {
@@ -147,13 +114,11 @@ const Auth = () => {
         if (error) throw error;
       }
     } catch (error: any) {
-      await handleAuthError(error);
+      handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // ... keep existing code (JSX for the form)
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
