@@ -12,6 +12,17 @@ import { toast } from "sonner";
 import { StripeConnectSetup } from "@/components/settings/StripeConnectSetup";
 import { Settings2, CreditCard, Building2, Bell, Shield, DollarSign } from "lucide-react";
 
+interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}
+
 const Settings = () => {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
@@ -30,21 +41,27 @@ const Settings = () => {
     },
   });
 
-  const form = useForm({
+  const form = useForm<ProfileFormData>({
     defaultValues: {
       firstName: profile?.first_name || "",
       lastName: profile?.last_name || "",
       email: profile?.email || "",
+      phone: "",
+      addressLine1: "",
+      city: "",
+      state: "",
+      postalCode: "",
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: ProfileFormData) => {
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
           first_name: data.firstName,
           last_name: data.lastName,
+          // Add more fields as needed for the profile
         })
         .eq("id", profile?.id);
 
@@ -104,11 +121,11 @@ const Settings = () => {
                   <CardHeader>
                     <CardTitle>Profile Information</CardTitle>
                     <CardDescription>
-                      Update your personal information and email address
+                      Update your personal information and contact details
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="firstName">First Name</Label>
@@ -125,6 +142,7 @@ const Settings = () => {
                           />
                         </div>
                       </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
@@ -132,8 +150,55 @@ const Settings = () => {
                           type="email"
                           {...form.register("email")}
                           disabled
+                          className="bg-gray-100"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Email cannot be changed as it's used for authentication
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          {...form.register("phone")}
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="addressLine1">Address</Label>
+                        <Input
+                          id="addressLine1"
+                          {...form.register("addressLine1")}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            {...form.register("city")}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            {...form.register("state")}
+                            maxLength={2}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="postalCode">Postal Code</Label>
+                          <Input
+                            id="postalCode"
+                            {...form.register("postalCode")}
+                          />
+                        </div>
+                      </div>
+
                       <Button type="submit">Save Changes</Button>
                     </form>
                   </CardContent>
