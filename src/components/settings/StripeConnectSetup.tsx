@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, ChevronRight, ExternalLink } from "lucide-react";
+import { AlertCircle, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSearchParams } from "react-router-dom";
 import { StripeOnboardingForm } from "./StripeOnboardingForm";
+import { Progress } from "@/components/ui/progress";
 
 interface StripeRequirement {
   current_deadline: number;
@@ -60,19 +61,39 @@ export const StripeConnectSetup = () => {
 
         if (error) throw error;
         setAccountStatus(data);
+        
+        // Update onboarding status in profile
+        if (data.chargesEnabled && data.payoutsEnabled) {
+          await supabase
+            .from('profiles')
+            .update({ 
+              onboarding_status: 'completed',
+              onboarding_completed_at: new Date().toISOString()
+            })
+            .eq('id', profile.id);
+        }
       } catch (error) {
         console.error('Error fetching account status:', error);
-        toast.error('Failed to fetch account status');
+        toast.error('Failed to fetch account status. Please try again.');
       }
     };
 
     fetchAccountStatus();
-  }, [profile?.stripe_connect_account_id]);
+    // Poll for status updates every 30 seconds if not completed
+    const interval = setInterval(() => {
+      if (profile?.stripe_connect_account_id && (!accountStatus?.chargesEnabled || !accountStatus?.payoutsEnabled)) {
+        fetchAccountStatus();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [profile?.stripe_connect_account_id, accountStatus?.chargesEnabled, accountStatus?.payoutsEnabled]);
 
   useEffect(() => {
     const handleOAuthReturn = async () => {
       if (!code || !state) return;
 
+      const toastId = toast.loading("Completing Stripe Connect setup...");
       try {
         setIsLoading(true);
         const { data, error } = await supabase.functions.invoke('handle-connect-oauth', {
@@ -84,10 +105,10 @@ export const StripeConnectSetup = () => {
 
         setAccountStatus(data);
         await refetchProfile();
-        toast.success("Stripe account connected successfully!");
+        toast.success("Stripe account connected successfully!", { id: toastId });
       } catch (error) {
         console.error('Error handling OAuth return:', error);
-        toast.error('Failed to complete Stripe connection');
+        toast.error('Failed to complete Stripe connection. Please try again.', { id: toastId });
       } finally {
         setIsLoading(false);
       }
@@ -97,9 +118,9 @@ export const StripeConnectSetup = () => {
   }, [code, state, refetchProfile]);
 
   const setupStripeConnect = async (onboardingData?: any) => {
+    const toastId = toast.loading("Setting up Stripe Connect...");
     try {
       setIsLoading(true);
-      toast.loading("Setting up Stripe Connect...");
       
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
@@ -109,6 +130,17 @@ export const StripeConnectSetup = () => {
       if (error) throw error;
       
       if (data?.oauth_url) {
+        // Save onboarding data before redirect
+        if (onboardingData) {
+          await supabase
+            .from('profiles')
+            .update({ 
+              stripe_onboarding_data: onboardingData,
+              onboarding_status: 'in_progress'
+            })
+            .eq('id', profile?.id);
+        }
+        
         window.location.href = data.oauth_url;
         return;
       }
@@ -116,17 +148,16 @@ export const StripeConnectSetup = () => {
       throw new Error('Failed to get OAuth URL');
     } catch (error) {
       console.error('Error setting up Stripe Connect:', error);
-      toast.error('Failed to set up Stripe Connect. Please try again.');
+      toast.error('Failed to set up Stripe Connect. Please try again.', { id: toastId });
     } finally {
       setIsLoading(false);
-      toast.dismiss();
+      toast.dismiss(toastId);
     }
   };
 
   const getUniqueRequirements = () => {
     if (!accountStatus?.requirements) return [];
 
-    // Combine and deduplicate requirements
     const allRequirements = new Set([
       ...accountStatus.requirements.currently_due,
       ...accountStatus.requirements.eventually_due,
@@ -141,6 +172,16 @@ export const StripeConnectSetup = () => {
     }));
   };
 
+  const getOnboardingProgress = () => {
+    if (!accountStatus) return 0;
+    const total = 4; // Total steps: account creation, details submission, charges enabled, payouts enabled
+    let completed = 1; // Account creation is done if we have a status
+    if (accountStatus.detailsSubmitted) completed++;
+    if (accountStatus.chargesEnabled) completed++;
+    if (accountStatus.payoutsEnabled) completed++;
+    return (completed / total) * 100;
+  };
+
   const openStripeDashboard = () => {
     if (!profile?.stripe_connect_account_id) return;
     window.open(`https://dashboard.stripe.com/connect/accounts/${profile.stripe_connect_account_id}`, '_blank');
@@ -152,6 +193,7 @@ export const StripeConnectSetup = () => {
 
   const requirements = getUniqueRequirements();
   const hasRequirements = requirements.length > 0;
+  const progress = getOnboardingProgress();
 
   if (showOnboardingForm && !profile.stripe_connect_account_id) {
     return <StripeOnboardingForm onComplete={(data) => {
@@ -167,14 +209,19 @@ export const StripeConnectSetup = () => {
         <CardDescription>
           Set up your Stripe account to receive rent payments directly
         </CardDescription>
+        {profile.stripe_connect_account_id && (
+          <Progress value={progress} className="h-2" />
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
             {!accountStatus?.chargesEnabled && (
-              <Alert variant="destructive">
+              <Alert variant={hasRequirements ? "destructive" : "default"}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Action Required</AlertTitle>
+                <AlertTitle>
+                  {hasRequirements ? "Action Required" : "Account Under Review"}
+                </AlertTitle>
                 <AlertDescription>
                   {hasRequirements 
                     ? "Your Stripe account needs additional information before you can accept payments"
@@ -231,8 +278,17 @@ export const StripeConnectSetup = () => {
                 onClick={() => setupStripeConnect()}
                 disabled={isLoading}
               >
-                {isLoading ? 'Setting up...' : 'Complete Account Setup'}
-                <ExternalLink className="ml-2 h-4 w-4" />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Setting up...
+                  </>
+                ) : (
+                  <>
+                    Complete Account Setup
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -243,7 +299,14 @@ export const StripeConnectSetup = () => {
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? 'Connecting...' : 'Start Stripe Connect Setup'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Start Stripe Connect Setup'
+              )}
             </Button>
           </div>
         )}

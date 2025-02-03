@@ -319,33 +319,57 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address_line1: string | null
+          city: string | null
           created_at: string
           email: string | null
           first_name: string | null
           id: string
           last_name: string | null
+          onboarding_completed_at: string | null
+          onboarding_status: string | null
+          phone_number: string | null
+          postal_code: string | null
           role: Database["public"]["Enums"]["user_role"] | null
+          state: string | null
           stripe_connect_account_id: string | null
+          stripe_onboarding_data: Json | null
           updated_at: string
         }
         Insert: {
+          address_line1?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_status?: string | null
+          phone_number?: string | null
+          postal_code?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
+          state?: string | null
           stripe_connect_account_id?: string | null
+          stripe_onboarding_data?: Json | null
           updated_at?: string
         }
         Update: {
+          address_line1?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_status?: string | null
+          phone_number?: string | null
+          postal_code?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
+          state?: string | null
           stripe_connect_account_id?: string | null
+          stripe_onboarding_data?: Json | null
           updated_at?: string
         }
         Relationships: []
