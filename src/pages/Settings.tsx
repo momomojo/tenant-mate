@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -5,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +74,28 @@ const Settings = () => {
       toast.error("Failed to update profile");
     }
   };
+
+  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(true);
+
+  // Fetch email confirmation setting
+  useEffect(() => {
+    const fetchEmailConfirmationSetting = async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'email_confirmation_required')
+        .single();
+
+      if (error) {
+        console.error('Error fetching email confirmation setting:', error);
+        return;
+      }
+
+      setEmailConfirmationRequired(data.value);
+    };
+
+    fetchEmailConfirmationSetting();
+  }, []);
 
   if (isLoading) return null;
 
@@ -285,7 +309,38 @@ const Settings = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
+                      {profile?.role === 'admin' && (
+                        <div className="flex items-center justify-between space-x-2">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="email-confirmation">Email Confirmation</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Require email confirmation for new sign ups
+                            </p>
+                          </div>
+                          <Switch
+                            id="email-confirmation"
+                            checked={emailConfirmationRequired}
+                            onCheckedChange={async (checked) => {
+                              try {
+                                const { error } = await supabase
+                                  .from('system_settings')
+                                  .update({ 
+                                    value: checked,
+                                    updated_at: new Date().toISOString()
+                                  })
+                                  .eq('key', 'email_confirmation_required');
+                                
+                                if (error) throw error;
+                                toast.success('Email confirmation setting updated');
+                              } catch (error) {
+                                console.error('Error updating email confirmation setting:', error);
+                                toast.error('Failed to update email confirmation setting');
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
                       <Button variant="outline">Change Password</Button>
                       <Button variant="outline">Enable Two-Factor Authentication</Button>
                     </div>
