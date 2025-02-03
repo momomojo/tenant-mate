@@ -566,6 +566,36 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          type: Database["public"]["Enums"]["setting_type"]
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          type: Database["public"]["Enums"]["setting_type"]
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          type?: Database["public"]["Enums"]["setting_type"]
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       tenant_units: {
         Row: {
           created_at: string
@@ -811,6 +841,7 @@ export type Database = {
         | "completed"
         | "failed"
         | "refunded"
+      setting_type: "boolean" | "number" | "string"
       user_role: "admin" | "property_manager" | "tenant"
     }
     CompositeTypes: {
