@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { code, state } = await req.json();
+    const { code, state, property_id } = await req.json();
 
     if (!code || !state) {
       throw new Error('Missing required parameters');
@@ -35,25 +35,28 @@ serve(async (req) => {
       throw new Error('No connected account ID received');
     }
 
-    // Get the connected account details - explicitly request required fields
+    // Get the connected account details
     const account = await stripe.accounts.retrieve(connectedAccountId, {
       expand: ['capabilities', 'requirements']
     });
 
-    // Update the user's profile with the connected account ID and status
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
+    // Update the property_stripe_accounts table
     const { error: updateError } = await supabaseClient
-      .from('profiles')
+      .from('property_stripe_accounts')
       .update({ 
         stripe_connect_account_id: connectedAccountId,
-        onboarding_status: account.details_submitted ? 'completed' : 'in_progress',
-        onboarding_completed_at: account.details_submitted ? new Date().toISOString() : null,
+        status: account.details_submitted ? 'completed' : 'pending',
+        verification_status: account.details_submitted ? 'verified' : 'pending',
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', state);
+      .eq('property_manager_id', state)
+      .eq('is_active', true);
 
     if (updateError) {
       throw updateError;

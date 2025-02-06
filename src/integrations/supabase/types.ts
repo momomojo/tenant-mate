@@ -657,6 +657,71 @@ export type Database = {
           },
         ]
       }
+      property_stripe_accounts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          property_id: string
+          property_manager_id: string
+          status: string | null
+          stripe_connect_account_id: string | null
+          updated_at: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          property_id: string
+          property_manager_id: string
+          status?: string | null
+          stripe_connect_account_id?: string | null
+          updated_at?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          property_id?: string
+          property_manager_id?: string
+          status?: string | null
+          stripe_connect_account_id?: string | null
+          updated_at?: string | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_stripe_accounts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_stripe_accounts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "property_stripe_accounts_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_stripe_accounts_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+        ]
+      }
       rent_payments: {
         Row: {
           amount: number
