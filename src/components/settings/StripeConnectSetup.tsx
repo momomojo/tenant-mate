@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
+import { AlertCircle, ChevronRight, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSearchParams } from "react-router-dom";
 import { StripeOnboardingForm } from "./StripeOnboardingForm";
@@ -230,8 +230,9 @@ export const StripeConnectSetup = () => {
   if (profile?.role !== 'property_manager') return null;
 
   const requirements = getUniqueRequirements();
-  const hasRequirements = requirements.length > 0;
+  const hasRequirements = Object.keys(requirements).length > 0;
   const progress = getOnboardingProgress();
+  const isVerified = accountStatus?.chargesEnabled && accountStatus?.payoutsEnabled;
 
   if (showOnboardingForm && !profile.stripe_connect_account_id) {
     return <StripeOnboardingForm onComplete={(data) => {
@@ -248,13 +249,21 @@ export const StripeConnectSetup = () => {
           Set up your Stripe account to receive rent payments directly
         </CardDescription>
         {profile.stripe_connect_account_id && (
-          <Progress value={getOnboardingProgress()} className="h-2" />
+          <Progress value={progress} className="h-2" />
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
-            {!accountStatus?.chargesEnabled && (
+            {isVerified ? (
+              <Alert>
+                <CheckCircle2 className="h-4 w-4" />
+                <AlertTitle>Account Verified</AlertTitle>
+                <AlertDescription>
+                  Your Stripe account is verified and ready to accept payments
+                </AlertDescription>
+              </Alert>
+            ) : hasRequirements ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Action Required</AlertTitle>
@@ -262,13 +271,13 @@ export const StripeConnectSetup = () => {
                   Your Stripe account needs additional information before you can accept payments
                 </AlertDescription>
               </Alert>
-            )}
+            ) : null}
             
-            {Object.entries(getUniqueRequirements()).map(([category, requirements], index) => (
+            {hasRequirements && Object.entries(requirements).map(([category, reqs], index) => (
               <div key={category} className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">{category}</h3>
                 <div className="space-y-2">
-                  {requirements.map((req) => (
+                  {reqs.map((req) => (
                     <div
                       key={req}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
@@ -291,7 +300,7 @@ export const StripeConnectSetup = () => {
                     </div>
                   ))}
                 </div>
-                {index < Object.entries(getUniqueRequirements()).length - 1 && (
+                {index < Object.entries(requirements).length - 1 && (
                   <Separator className="my-4" />
                 )}
               </div>
@@ -307,24 +316,26 @@ export const StripeConnectSetup = () => {
                 <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
 
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={() => setupStripeConnect()}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Setting up...
-                  </>
-                ) : (
-                  <>
-                    Complete Account Setup
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
+              {!isVerified && (
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => setupStripeConnect()}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Setting up...
+                    </>
+                  ) : (
+                    <>
+                      Complete Account Setup
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         ) : (
