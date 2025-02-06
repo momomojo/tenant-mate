@@ -26,6 +26,7 @@ interface AccountStatus {
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
   chargesEnabled: boolean;
+  remediationLink?: string;
 }
 
 // Group requirements by category
@@ -211,6 +212,14 @@ export const StripeConnectSetup = () => {
     window.open(`https://dashboard.stripe.com/connect/accounts/${profile.stripe_connect_account_id}`, '_blank');
   };
 
+  const handleRequirementClick = (requirement: string) => {
+    if (accountStatus?.remediationLink) {
+      window.open(accountStatus.remediationLink, '_blank');
+    } else {
+      openStripeDashboard();
+    }
+  };
+
   if (profileLoading) return null;
 
   if (profile?.role !== 'property_manager') return null;
@@ -253,13 +262,14 @@ export const StripeConnectSetup = () => {
                 requirements={reqs}
                 pastDueRequirements={accountStatus?.requirements.past_due || []}
                 isLastGroup={index === Object.entries(requirements).length - 1}
-                onItemClick={openStripeDashboard}
+                onItemClick={handleRequirementClick}
               />
             ))}
 
             <StripeAccountActions
               isVerified={isVerified}
               isLoading={isLoading}
+              remediationLink={accountStatus?.remediationLink}
               onDashboardOpen={openStripeDashboard}
               onSetupComplete={() => setupStripeConnect()}
             />

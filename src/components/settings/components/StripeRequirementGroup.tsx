@@ -7,7 +7,7 @@ interface StripeRequirementGroupProps {
   requirements: string[];
   pastDueRequirements: string[];
   isLastGroup: boolean;
-  onItemClick: () => void;
+  onItemClick: (requirement: string) => void;
 }
 
 export const StripeRequirementGroup = ({
@@ -26,7 +26,7 @@ export const StripeRequirementGroup = ({
             key={req}
             requirement={req}
             isPastDue={pastDueRequirements.includes(req)}
-            onClick={onItemClick}
+            onClick={() => onItemClick(req)}
           />
         ))}
       </div>

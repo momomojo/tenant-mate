@@ -5,6 +5,7 @@ import { ExternalLink, Loader2 } from "lucide-react";
 interface StripeAccountActionsProps {
   isVerified: boolean;
   isLoading: boolean;
+  remediationLink?: string;
   onDashboardOpen: () => void;
   onSetupComplete: () => void;
 }
@@ -12,9 +13,18 @@ interface StripeAccountActionsProps {
 export const StripeAccountActions = ({
   isVerified,
   isLoading,
+  remediationLink,
   onDashboardOpen,
   onSetupComplete,
 }: StripeAccountActionsProps) => {
+  const handleSetupClick = () => {
+    if (remediationLink) {
+      window.open(remediationLink, '_blank');
+    } else {
+      onSetupComplete();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2 pt-4">
       <Button 
@@ -30,7 +40,7 @@ export const StripeAccountActions = ({
         <Button 
           variant="outline" 
           className="w-full" 
-          onClick={onSetupComplete}
+          onClick={handleSetupClick}
           disabled={isLoading}
         >
           {isLoading ? (

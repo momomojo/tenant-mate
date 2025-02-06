@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 
@@ -27,11 +28,25 @@ serve(async (req) => {
     
     const account = await stripe.accounts.retrieve(account_id);
     
+    // Get the account link for remediation if there are requirements
+    let remediationLink = undefined;
+    if (account.requirements?.currently_due?.length > 0 || account.requirements?.eventually_due?.length > 0) {
+      const accountLink = await stripe.accountLinks.create({
+        account: account_id,
+        refresh_url: `${Deno.env.get('SITE_URL')}/settings`,
+        return_url: `${Deno.env.get('SITE_URL')}/settings`,
+        type: 'account_onboarding',
+        collect: 'eventually_due',
+      });
+      remediationLink = accountLink.url;
+    }
+    
     console.log('Account status retrieved:', {
       requirements: account.requirements,
       payoutsEnabled: account.payouts_enabled,
       detailsSubmitted: account.details_submitted,
       chargesEnabled: account.charges_enabled,
+      remediationLink: remediationLink ? 'Available' : 'Not needed',
     });
 
     return new Response(
@@ -40,6 +55,7 @@ serve(async (req) => {
         payoutsEnabled: account.payouts_enabled,
         detailsSubmitted: account.details_submitted,
         chargesEnabled: account.charges_enabled,
+        remediationLink,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
