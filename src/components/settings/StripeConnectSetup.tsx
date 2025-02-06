@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSearchParams } from "react-router-dom";
 import { StripeOnboardingForm } from "./StripeOnboardingForm";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 interface StripeRequirement {
   current_deadline: number;
@@ -24,6 +25,48 @@ interface AccountStatus {
   detailsSubmitted: boolean;
   chargesEnabled: boolean;
 }
+
+// Helper function to format requirement keys for display
+const formatRequirementKey = (key: string) => {
+  // Split by dots and get the last part
+  const parts = key.split('.');
+  const lastPart = parts[parts.length - 1];
+  // Convert snake_case to Title Case
+  return lastPart
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+// Group requirements by category
+const groupRequirements = (requirements: string[]) => {
+  const groups: { [key: string]: string[] } = {
+    'Personal Information': [],
+    'Address': [],
+    'Identity Verification': [],
+    'Business Details': [],
+    'Other': [],
+  };
+
+  requirements.forEach(req => {
+    if (req.includes('address')) {
+      groups['Address'].push(req);
+    } else if (req.includes('dob') || req.includes('ssn') || req.includes('id_number')) {
+      groups['Identity Verification'].push(req);
+    } else if (req.includes('first_name') || req.includes('last_name') || req.includes('email') || req.includes('phone')) {
+      groups['Personal Information'].push(req);
+    } else if (req.includes('business') || req.includes('external_account')) {
+      groups['Business Details'].push(req);
+    } else {
+      groups['Other'].push(req);
+    }
+  });
+
+  // Remove empty groups
+  return Object.fromEntries(
+    Object.entries(groups).filter(([_, reqs]) => reqs.length > 0)
+  );
+};
 
 export const StripeConnectSetup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -156,7 +199,7 @@ export const StripeConnectSetup = () => {
   };
 
   const getUniqueRequirements = () => {
-    if (!accountStatus?.requirements) return [];
+    if (!accountStatus?.requirements) return {};
 
     const allRequirements = new Set([
       ...accountStatus.requirements.currently_due,
@@ -164,12 +207,7 @@ export const StripeConnectSetup = () => {
       ...accountStatus.requirements.past_due,
     ]);
 
-    return Array.from(allRequirements).map(req => ({
-      title: req.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-      description: `Complete this requirement to enable payments`,
-      dueDate: new Date(accountStatus.requirements.current_deadline * 1000).toLocaleDateString(),
-      status: accountStatus.requirements.past_due.includes(req) ? 'past_due' : 'pending',
-    }));
+    return groupRequirements(Array.from(allRequirements));
   };
 
   const getOnboardingProgress = () => {
@@ -210,59 +248,56 @@ export const StripeConnectSetup = () => {
           Set up your Stripe account to receive rent payments directly
         </CardDescription>
         {profile.stripe_connect_account_id && (
-          <Progress value={progress} className="h-2" />
+          <Progress value={getOnboardingProgress()} className="h-2" />
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
             {!accountStatus?.chargesEnabled && (
-              <Alert variant={hasRequirements ? "destructive" : "default"}>
+              <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>
-                  {hasRequirements ? "Action Required" : "Account Under Review"}
-                </AlertTitle>
+                <AlertTitle>Action Required</AlertTitle>
                 <AlertDescription>
-                  {hasRequirements 
-                    ? "Your Stripe account needs additional information before you can accept payments"
-                    : "Your account is being verified by Stripe. This may take a few minutes."}
+                  Your Stripe account needs additional information before you can accept payments
                 </AlertDescription>
               </Alert>
             )}
             
-            {hasRequirements && (
-              <div className="space-y-2">
-                {requirements.map((req, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                    onClick={openStripeDashboard}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && openStripeDashboard()}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{req.title}</h4>
-                        {req.status === 'past_due' && (
-                          <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
-                            Past due
-                          </span>
-                        )}
+            {Object.entries(getUniqueRequirements()).map(([category, requirements], index) => (
+              <div key={category} className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">{category}</h3>
+                <div className="space-y-2">
+                  {requirements.map((req) => (
+                    <div
+                      key={req}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                      onClick={openStripeDashboard}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && openStripeDashboard()}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{formatRequirementKey(req)}</p>
+                          {accountStatus?.requirements.past_due.includes(req) && (
+                            <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
+                              Past due
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>Due {req.dueDate}</span>
-                        <span>•</span>
-                        <span>{req.description}</span>
-                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {index < Object.entries(getUniqueRequirements()).length - 1 && (
+                  <Separator className="my-4" />
+                )}
               </div>
-            )}
+            ))}
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 pt-4">
               <Button 
                 variant="outline" 
                 className="w-full" 
