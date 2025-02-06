@@ -9,6 +9,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Log function invocation
+  console.log('Portal session function invoked');
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -19,14 +22,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
+    // Parse request body
+    const { return_url } = await req.json();
+    console.log('Received return_url:', return_url);
+
+    if (!return_url) {
+      throw new Error('Return URL is required');
+    }
+
     // Get the user from the auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
+      console.error('Authentication error:', userError);
       throw new Error('Not authenticated');
     }
+
+    console.log('Authenticated user:', user.email);
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -42,6 +56,7 @@ serve(async (req) => {
 
     if (customers.length > 0) {
       customerId = customers[0].id;
+      console.log('Found existing customer:', customerId);
     } else {
       const customer = await stripe.customers.create({
         email: user.email,
@@ -50,9 +65,8 @@ serve(async (req) => {
         },
       });
       customerId = customer.id;
+      console.log('Created new customer:', customerId);
     }
-
-    console.log('Creating portal session for customer:', customerId);
 
     // Get the portal configuration ID from the database
     const { data: configs, error: configError } = await supabaseClient
@@ -67,13 +81,12 @@ serve(async (req) => {
       throw new Error('Failed to fetch portal configuration');
     }
 
-    // Create portal session config with origin URL
-    const origin = new URL(req.url).origin;
-    console.log('Return URL origin:', origin);
+    console.log('Using portal configuration:', configs.portal_configuration_id);
 
+    // Create portal session config
     const portalConfig = {
       customer: customerId,
-      return_url: `${origin}/payments`,
+      return_url: return_url,
       configuration: configs.portal_configuration_id
     };
 
