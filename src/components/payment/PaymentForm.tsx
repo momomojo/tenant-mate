@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -244,12 +243,10 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       const { url } = response.data;
       if (url) {
         window.location.href = url;
-      } else {
-        throw new Error('No URL returned from portal session creation');
       }
     } catch (error) {
       console.error('Portal session error:', error);
-      toast.error("Failed to access payment settings. Please try again later.");
+      toast.error("Failed to access payment settings");
     } finally {
       setIsLoading(false);
     }
