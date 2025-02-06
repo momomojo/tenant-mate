@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -68,18 +67,18 @@ serve(async (req) => {
           requirements: account.requirements,
         });
         
-        // Update the profile's Stripe account status
-        const { data, error } = await supabaseClient
-          .from('profiles')
+        // Update the property's Stripe account status
+        const { error } = await supabaseClient
+          .from('property_stripe_accounts')
           .update({ 
-            stripe_connect_account_id: account.id,
-            onboarding_status: account.details_submitted ? 'completed' : 'pending',
-            onboarding_completed_at: account.details_submitted ? new Date().toISOString() : null,
+            status: account.details_submitted ? 'completed' : 'pending',
+            verification_status: account.charges_enabled && account.payouts_enabled ? 'verified' : 'pending',
+            updated_at: new Date().toISOString(),
           })
           .eq('stripe_connect_account_id', account.id);
 
         if (error) {
-          console.error('Error updating profile:', error);
+          console.error('Error updating property stripe account:', error);
           throw error;
         }
 
@@ -87,7 +86,7 @@ serve(async (req) => {
         await supabaseClient.rpc('log_payment_event', {
           p_event_type: 'account.updated',
           p_entity_type: 'stripe_account',
-          p_entity_id: data[0].id,
+          p_entity_id: account.id,
           p_changes: {
             charges_enabled: account.charges_enabled,
             payouts_enabled: account.payouts_enabled,
@@ -95,7 +94,6 @@ serve(async (req) => {
           }
         });
 
-        console.log('Profile updated successfully:', data);
         break;
       }
 
@@ -103,30 +101,32 @@ serve(async (req) => {
         const account = event.data.object as Stripe.Account;
         console.log('Account deauthorized:', account.id);
         
-        // Get the profile before updating
-        const { data: profile, error: profileError } = await supabaseClient
-          .from('profiles')
-          .select('id')
+        // Get the property stripe account before updating
+        const { data: stripeAccount, error: accountError } = await supabaseClient
+          .from('property_stripe_accounts')
+          .select('id, property_id')
           .eq('stripe_connect_account_id', account.id)
           .single();
 
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          throw profileError;
+        if (accountError) {
+          console.error('Error fetching property stripe account:', accountError);
+          throw accountError;
         }
 
-        // Remove the Stripe account ID from the profile
+        // Update the property stripe account
         const { error } = await supabaseClient
-          .from('profiles')
+          .from('property_stripe_accounts')
           .update({ 
             stripe_connect_account_id: null,
-            onboarding_status: 'pending',
-            onboarding_completed_at: null,
+            status: 'pending',
+            verification_status: 'pending',
+            is_active: false,
+            updated_at: new Date().toISOString(),
           })
           .eq('stripe_connect_account_id', account.id);
 
         if (error) {
-          console.error('Error updating profile:', error);
+          console.error('Error updating property stripe account:', error);
           throw error;
         }
 
@@ -134,14 +134,13 @@ serve(async (req) => {
         await supabaseClient.rpc('log_payment_event', {
           p_event_type: 'account.deauthorized',
           p_entity_type: 'stripe_account',
-          p_entity_id: profile.id,
+          p_entity_id: stripeAccount.id,
           p_changes: {
             stripe_connect_account_id: null,
             deauthorized_at: new Date().toISOString(),
           }
         });
 
-        console.log('Profile updated successfully');
         break;
       }
 

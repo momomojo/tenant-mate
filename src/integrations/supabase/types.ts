@@ -420,6 +420,8 @@ export type Database = {
           created_at: string
           id: string
           payment_method: string | null
+          property_manager_id: string | null
+          property_stripe_account_id: string | null
           rent_payment_id: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           stripe_customer_id: string | null
@@ -431,6 +433,8 @@ export type Database = {
           created_at?: string
           id?: string
           payment_method?: string | null
+          property_manager_id?: string | null
+          property_stripe_account_id?: string | null
           rent_payment_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           stripe_customer_id?: string | null
@@ -442,6 +446,8 @@ export type Database = {
           created_at?: string
           id?: string
           payment_method?: string | null
+          property_manager_id?: string | null
+          property_stripe_account_id?: string | null
           rent_payment_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           stripe_customer_id?: string | null
@@ -449,6 +455,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_transactions_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_property_stripe_account_id_fkey"
+            columns: ["property_stripe_account_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_transactions_rent_payment_id_fkey"
             columns: ["rent_payment_id"]
