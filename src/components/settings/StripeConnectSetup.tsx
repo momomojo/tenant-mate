@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -95,14 +94,25 @@ export const StripeConnectSetup = () => {
         if (error) throw error;
         setAccountStatus(data);
         
+        // Check if this update represents a completion of onboarding
         if (data.chargesEnabled && data.payoutsEnabled) {
-          await supabase
-            .from('profiles')
-            .update({ 
-              onboarding_status: 'completed',
-              onboarding_completed_at: new Date().toISOString()
-            })
-            .eq('id', profile.id);
+          const wasOnboardingIncomplete = profile.onboarding_status !== 'completed';
+          
+          if (wasOnboardingIncomplete) {
+            // Update profile status
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ 
+                onboarding_status: 'completed',
+                onboarding_completed_at: new Date().toISOString()
+              })
+              .eq('id', profile.id);
+              
+            if (!updateError) {
+              toast.success("Stripe account verification completed! You can now accept payments.");
+              await refetchProfile();
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching account status:', error);
@@ -136,7 +146,7 @@ export const StripeConnectSetup = () => {
 
         setAccountStatus(data);
         await refetchProfile();
-        toast.success("Stripe account connected successfully!", { id: toastId });
+        toast.success("Successfully connected to Stripe! Please complete any remaining verification steps.", { id: toastId });
       } catch (error) {
         console.error('Error handling OAuth return:', error);
         toast.error('Failed to complete Stripe connection. Please try again.', { id: toastId });
