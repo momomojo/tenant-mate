@@ -1,3 +1,4 @@
+
 project_id = "jjwrzarqegbswrndjpup"
 
 [functions.create-connect-account]
@@ -14,3 +15,6 @@ verify_jwt = false
 
 [functions.get-connect-account-status]
 verify_jwt = true
+
+[functions.create-portal-config]
+verify_jwt = false
