@@ -27,16 +27,14 @@ export const StripeAccountActions = ({
 
   return (
     <div className="flex flex-col gap-2 pt-4">
-      {isVerified && (
-        <Button 
-          variant="outline" 
-          className="w-full" 
-          onClick={onDashboardOpen}
-        >
-          Open Stripe Dashboard
-          <ExternalLink className="ml-2 h-4 w-4" />
-        </Button>
-      )}
+      <Button 
+        variant="outline" 
+        className="w-full" 
+        onClick={onDashboardOpen}
+      >
+        Open Stripe Dashboard
+        <ExternalLink className="ml-2 h-4 w-4" />
+      </Button>
 
       {!isVerified && (
         <Button 
@@ -61,4 +59,3 @@ export const StripeAccountActions = ({
     </div>
   );
 };
-
