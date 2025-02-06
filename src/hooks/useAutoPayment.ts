@@ -3,15 +3,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export function useAutoPayment(unitId: string, userId: string) {
+export function useAutoPayment(unitId: string, userId: string | undefined) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    checkAutoPayStatus();
-  }, [unitId, userId]);
+    // Only check status if we have both unitId and userId
+    if (unitId && userId) {
+      checkAutoPayStatus();
+    }
+  }, [unitId, userId]); // Properly listing dependencies
 
   const checkAutoPayStatus = async () => {
+    if (!userId || !unitId) return;
+    
     try {
       const { data, error } = await supabase
         .from('automatic_payments')
@@ -24,10 +29,19 @@ export function useAutoPayment(unitId: string, userId: string) {
       setIsEnabled(data?.is_enabled || false);
     } catch (error) {
       console.error('Error checking autopay status:', error);
+      // Only show toast for actual errors, not for missing data
+      if (error.code !== 'PGRST116') {
+        toast.error('Failed to check automatic payment status');
+      }
     }
   };
 
   const toggleAutoPay = async () => {
+    if (!userId || !unitId) {
+      toast.error('Cannot update automatic payments at this time');
+      return;
+    }
+
     try {
       setIsLoading(true);
       const newStatus = !isEnabled;
