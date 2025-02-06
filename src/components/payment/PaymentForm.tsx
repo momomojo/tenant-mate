@@ -187,14 +187,17 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('No active session');
+        throw new Error("No active session");
       }
-      
-      const response = await supabase.functions.invoke('create-checkout-session', {
-        body: { 
-          amount: monthlyRent, 
+
+      const response = await supabase.functions.invoke("create-checkout-session", {
+        body: JSON.stringify({
+          amount: monthlyRent,
           unit_id: unitId,
-          setup_future_payments: autoPayEnabled 
+          setup_future_payments: autoPayEnabled
+        }),
+        headers: { 
+          "Content-Type": "application/json"
         }
       });
 
@@ -206,9 +209,9 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (url) {
         window.location.href = url;
       }
-    } catch (error) {
-      console.error('Payment error:', error);
-      if (error.message.includes('No active session')) {
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      if (error.message.includes("No active session")) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
       } else {
@@ -239,7 +242,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       console.log("Sending portal request with:", requestBody);
 
       const response = await supabase.functions.invoke("create-portal-session", {
-        body: requestBody,
+        body: JSON.stringify(requestBody),
         headers: { 
           "Content-Type": "application/json"
         }
