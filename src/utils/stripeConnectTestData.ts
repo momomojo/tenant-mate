@@ -70,4 +70,3 @@ export const validateTestData = (data: any) => {
     return true;
   });
 };
-
