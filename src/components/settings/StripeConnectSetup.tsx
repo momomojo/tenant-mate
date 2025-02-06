@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -232,6 +233,7 @@ export const StripeConnectSetup = () => {
 
   if (profileLoading) return null;
 
+  // Only check for property_manager role
   if (profile?.role !== 'property_manager') return null;
 
   const requirements = getUniqueRequirements();
@@ -239,19 +241,17 @@ export const StripeConnectSetup = () => {
   const progress = getOnboardingProgress();
   const isVerified = accountStatus?.chargesEnabled && accountStatus?.payoutsEnabled;
 
-  if (showOnboardingForm && !profile.stripe_connect_account_id) {
-    return <StripeOnboardingForm onComplete={(data) => {
-      setShowOnboardingForm(false);
-      setupStripeConnect(data);
-    }} />;
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Stripe Connect Setup</CardTitle>
+        <CardTitle>Payment Processing Setup</CardTitle>
         <CardDescription>
-          Set up your Stripe account to receive rent payments directly
+          Set up your Stripe account to accept rent payments securely from your tenants.
+          {!profile.stripe_connect_account_id && (
+            <span className="block mt-2 text-sm text-muted-foreground">
+              As a property manager, you need to connect a Stripe account to receive payments from your tenants.
+            </span>
+          )}
         </CardDescription>
         {profile.stripe_connect_account_id && (
           <Progress value={progress} className="h-2" />
@@ -297,7 +297,7 @@ export const StripeConnectSetup = () => {
                   Connecting...
                 </>
               ) : (
-                'Start Stripe Connect Setup'
+                'Start Payment Setup'
               )}
             </Button>
           </div>
