@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,10 +39,33 @@ serve(async (req) => {
 
     console.log('Portal configuration created:', configuration.id);
 
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false,
+        }
+      }
+    );
+
+    // Save the configuration ID to the database
+    const { error: insertError } = await supabaseClient
+      .from('stripe_configurations')
+      .insert({
+        portal_configuration_id: configuration.id
+      });
+
+    if (insertError) {
+      console.error('Error saving configuration to database:', insertError);
+      throw new Error('Failed to save configuration to database');
+    }
+
     return new Response(
       JSON.stringify({ 
         configurationId: configuration.id,
-        message: 'Portal configuration created successfully' 
+        message: 'Portal configuration created and saved successfully' 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
