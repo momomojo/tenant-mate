@@ -40,7 +40,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     try {
       const url = await createCheckoutSession(monthlyRent, unitId, autoPayEnabled);
       if (url) {
-        window.location.href = url;
+        window.open(url, '_blank');
       }
     } catch (error: any) {
       if (error.message.includes("No active session")) {
@@ -56,7 +56,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     try {
       const url = await createPortalSession(window.location.origin + "/payments");
       if (url) {
-        window.location.href = url;
+        window.open(url, '_blank');
       }
     } catch (error) {
       toast.error("Failed to access payment settings. Please try again.");
