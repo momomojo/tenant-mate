@@ -20,7 +20,7 @@ serve(async (req) => {
 
     console.log('Creating portal configuration...');
 
-    // Create the portal configuration
+    // Create the portal configuration without the deprecated subscription_pause feature
     const configuration = await stripe.billingPortal.configurations.create({
       business_profile: {
         headline: 'Manage your subscription and billing details',
@@ -29,7 +29,6 @@ serve(async (req) => {
         invoice_history: { enabled: true },
         payment_method_update: { enabled: true },
         subscription_cancel: { enabled: true },
-        subscription_pause: { enabled: true },
         customer_update: {
           enabled: true,
           allowed_updates: ['email', 'address', 'phone'],
