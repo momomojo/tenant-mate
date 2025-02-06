@@ -228,6 +228,54 @@ export type Database = {
           },
         ]
       }
+      payment_audit_logs: {
+        Row: {
+          changes: Json | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          user_id: string | null
+        }
+        Insert: {
+          changes?: Json | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          changes?: Json | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+        ]
+      }
       payment_configs: {
         Row: {
           created_at: string
@@ -270,6 +318,57 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean | null
+          last_four: string | null
+          metadata: Json | null
+          stripe_payment_method_id: string
+          tenant_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          last_four?: string | null
+          metadata?: Json | null
+          stripe_payment_method_id: string
+          tenant_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          last_four?: string | null
+          metadata?: Json | null
+          stripe_payment_method_id?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_methods_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -322,6 +421,7 @@ export type Database = {
           address_line1: string | null
           city: string | null
           created_at: string
+          default_payment_method_id: string | null
           email: string | null
           first_name: string | null
           id: string
@@ -333,6 +433,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"] | null
           state: string | null
           stripe_connect_account_id: string | null
+          stripe_customer_id: string | null
           stripe_onboarding_data: Json | null
           updated_at: string
         }
@@ -340,6 +441,7 @@ export type Database = {
           address_line1?: string | null
           city?: string | null
           created_at?: string
+          default_payment_method_id?: string | null
           email?: string | null
           first_name?: string | null
           id: string
@@ -351,6 +453,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"] | null
           state?: string | null
           stripe_connect_account_id?: string | null
+          stripe_customer_id?: string | null
           stripe_onboarding_data?: Json | null
           updated_at?: string
         }
@@ -358,6 +461,7 @@ export type Database = {
           address_line1?: string | null
           city?: string | null
           created_at?: string
+          default_payment_method_id?: string | null
           email?: string | null
           first_name?: string | null
           id?: string
@@ -369,10 +473,19 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"] | null
           state?: string | null
           stripe_connect_account_id?: string | null
+          stripe_customer_id?: string | null
           stripe_onboarding_data?: Json | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_payment_method_id_fkey"
+            columns: ["default_payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
@@ -822,6 +935,15 @@ export type Database = {
           user_id: string
         }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      log_payment_event: {
+        Args: {
+          p_event_type: string
+          p_entity_type: string
+          p_entity_id: string
+          p_changes?: Json
+        }
+        Returns: string
       }
       process_automatic_payments: {
         Args: Record<PropertyKey, never>

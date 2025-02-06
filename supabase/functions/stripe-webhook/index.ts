@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -15,7 +16,6 @@ const corsHeaders = {
 serve(async (req) => {
   console.log('Webhook received:', req.method);
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -52,7 +52,7 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     console.log('Processing event type:', event.type);
@@ -73,6 +73,8 @@ serve(async (req) => {
           .from('profiles')
           .update({ 
             stripe_connect_account_id: account.id,
+            onboarding_status: account.details_submitted ? 'completed' : 'pending',
+            onboarding_completed_at: account.details_submitted ? new Date().toISOString() : null,
           })
           .eq('stripe_connect_account_id', account.id);
 
@@ -80,6 +82,18 @@ serve(async (req) => {
           console.error('Error updating profile:', error);
           throw error;
         }
+
+        // Log the event
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'account.updated',
+          p_entity_type: 'stripe_account',
+          p_entity_id: data[0].id,
+          p_changes: {
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            details_submitted: account.details_submitted,
+          }
+        });
 
         console.log('Profile updated successfully:', data);
         break;
@@ -89,11 +103,25 @@ serve(async (req) => {
         const account = event.data.object as Stripe.Account;
         console.log('Account deauthorized:', account.id);
         
+        // Get the profile before updating
+        const { data: profile, error: profileError } = await supabaseClient
+          .from('profiles')
+          .select('id')
+          .eq('stripe_connect_account_id', account.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          throw profileError;
+        }
+
         // Remove the Stripe account ID from the profile
-        const { data, error } = await supabaseClient
+        const { error } = await supabaseClient
           .from('profiles')
           .update({ 
-            stripe_connect_account_id: null 
+            stripe_connect_account_id: null,
+            onboarding_status: 'pending',
+            onboarding_completed_at: null,
           })
           .eq('stripe_connect_account_id', account.id);
 
@@ -102,7 +130,155 @@ serve(async (req) => {
           throw error;
         }
 
-        console.log('Profile updated successfully:', data);
+        // Log the event
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'account.deauthorized',
+          p_entity_type: 'stripe_account',
+          p_entity_id: profile.id,
+          p_changes: {
+            stripe_connect_account_id: null,
+            deauthorized_at: new Date().toISOString(),
+          }
+        });
+
+        console.log('Profile updated successfully');
+        break;
+      }
+
+      case 'payment_method.attached': {
+        const paymentMethod = event.data.object as Stripe.PaymentMethod;
+        console.log('Payment method attached:', paymentMethod.id);
+
+        // Get the customer's profile
+        const { data: profile, error: profileError } = await supabaseClient
+          .from('profiles')
+          .select('id')
+          .eq('stripe_customer_id', paymentMethod.customer)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          throw profileError;
+        }
+
+        // Insert the payment method
+        const { data: paymentMethodData, error: insertError } = await supabaseClient
+          .from('payment_methods')
+          .insert({
+            tenant_id: profile.id,
+            stripe_payment_method_id: paymentMethod.id,
+            type: paymentMethod.type,
+            last_four: paymentMethod.card?.last4 || null,
+            is_default: false, // New payment methods are not default by default
+            metadata: {
+              brand: paymentMethod.card?.brand,
+              exp_month: paymentMethod.card?.exp_month,
+              exp_year: paymentMethod.card?.exp_year,
+            }
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error inserting payment method:', insertError);
+          throw insertError;
+        }
+
+        // Log the event
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'payment_method.attached',
+          p_entity_type: 'payment_method',
+          p_entity_id: paymentMethodData.id,
+          p_changes: {
+            payment_method_id: paymentMethod.id,
+            type: paymentMethod.type,
+          }
+        });
+
+        console.log('Payment method inserted successfully:', paymentMethodData);
+        break;
+      }
+
+      case 'payment_method.detached': {
+        const paymentMethod = event.data.object as Stripe.PaymentMethod;
+        console.log('Payment method detached:', paymentMethod.id);
+
+        // Get the payment method record
+        const { data: existingPaymentMethod, error: fetchError } = await supabaseClient
+          .from('payment_methods')
+          .select('id, tenant_id')
+          .eq('stripe_payment_method_id', paymentMethod.id)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching payment method:', fetchError);
+          throw fetchError;
+        }
+
+        // Remove the payment method
+        const { error: deleteError } = await supabaseClient
+          .from('payment_methods')
+          .delete()
+          .eq('stripe_payment_method_id', paymentMethod.id);
+
+        if (deleteError) {
+          console.error('Error deleting payment method:', deleteError);
+          throw deleteError;
+        }
+
+        // Log the event
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'payment_method.detached',
+          p_entity_type: 'payment_method',
+          p_entity_id: existingPaymentMethod.id,
+          p_changes: {
+            payment_method_id: paymentMethod.id,
+            detached_at: new Date().toISOString(),
+          }
+        });
+
+        console.log('Payment method deleted successfully');
+        break;
+      }
+
+      case 'payment_method.updated': {
+        const paymentMethod = event.data.object as Stripe.PaymentMethod;
+        console.log('Payment method updated:', paymentMethod.id);
+
+        // Update the payment method
+        const { data: updatedPaymentMethod, error: updateError } = await supabaseClient
+          .from('payment_methods')
+          .update({
+            type: paymentMethod.type,
+            last_four: paymentMethod.card?.last4 || null,
+            metadata: {
+              brand: paymentMethod.card?.brand,
+              exp_month: paymentMethod.card?.exp_month,
+              exp_year: paymentMethod.card?.exp_year,
+            }
+          })
+          .eq('stripe_payment_method_id', paymentMethod.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Error updating payment method:', updateError);
+          throw updateError;
+        }
+
+        // Log the event
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'payment_method.updated',
+          p_entity_type: 'payment_method',
+          p_entity_id: updatedPaymentMethod.id,
+          p_changes: {
+            payment_method_id: paymentMethod.id,
+            type: paymentMethod.type,
+            updated_at: new Date().toISOString(),
+          }
+        });
+
+        console.log('Payment method updated successfully:', updatedPaymentMethod);
         break;
       }
 
