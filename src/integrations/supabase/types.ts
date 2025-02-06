@@ -679,6 +679,27 @@ export type Database = {
           },
         ]
       }
+      stripe_configurations: {
+        Row: {
+          created_at: string
+          id: string
+          portal_configuration_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          portal_configuration_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          portal_configuration_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string
