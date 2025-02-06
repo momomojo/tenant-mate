@@ -190,13 +190,11 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       }
 
       const response = await supabase.functions.invoke("create-checkout-session", {
-        body: JSON.stringify({
+        method: 'POST',
+        body: {
           amount: monthlyRent,
           unit_id: unitId,
           setup_future_payments: autoPayEnabled
-        }),
-        headers: { 
-          "Content-Type": "application/json"
         }
       });
 

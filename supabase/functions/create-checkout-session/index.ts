@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -8,12 +9,31 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Checkout session function invoked with method:', req.method);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed. Use POST' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
-    const { amount, unit_id, setup_future_payments } = await req.json();
+    const text = await req.text();
+    console.log('Raw request body text:', text);
+    
+    if (!text) {
+      return new Response(
+        JSON.stringify({ error: 'Empty request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { amount, unit_id, setup_future_payments } = JSON.parse(text);
     console.log('Received request with:', { amount, unit_id, setup_future_payments });
 
     // Create a Supabase client
