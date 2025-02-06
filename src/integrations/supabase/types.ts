@@ -372,6 +372,48 @@ export type Database = {
           },
         ]
       }
+      payment_receipts: {
+        Row: {
+          created_at: string | null
+          id: string
+          payment_id: string
+          receipt_number: string
+          receipt_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          payment_id: string
+          receipt_number: string
+          receipt_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payment_id?: string
+          receipt_number?: string
+          receipt_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_receipts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payment_history_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "rent_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount: number
@@ -407,6 +449,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_transactions_rent_payment_id_fkey"
+            columns: ["rent_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payment_history_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_transactions_rent_payment_id_fkey"
             columns: ["rent_payment_id"]
@@ -881,6 +930,52 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_manager_id"]
+          },
+        ]
+      }
+      payment_history_view: {
+        Row: {
+          amount: number | null
+          id: string | null
+          invoice_number: number | null
+          payment_date: string | null
+          payment_method: string | null
+          property_id: string | null
+          property_name: string | null
+          receipt_number: string | null
+          receipt_url: string | null
+          status: string | null
+          tenant_id: string | null
+          unit_number: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rent_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rent_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
           },
         ]
       }

@@ -49,12 +49,11 @@ const Payments = () => {
         throw error;
       }
 
-      console.log('Active units:', units);
       return units;
     },
   });
 
-  // Get payment history
+  // Get payment history using the new hook
   const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments", statusFilter, dateFilter],
     queryFn: async () => {
@@ -62,23 +61,9 @@ const Payments = () => {
       if (!user) throw new Error("No user found");
 
       let query = supabase
-        .from("rent_payments")
-        .select(`
-          id,
-          amount,
-          payment_date,
-          status,
-          payment_method,
-          invoice_number,
-          unit:units(
-            unit_number,
-            property_id,
-            property:properties (
-              name
-            )
-          )
-        `)
-        .eq("tenant_id", user.id);
+        .from('payment_history_view')
+        .select('*')
+        .eq('tenant_id', user.id);
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
@@ -99,7 +84,6 @@ const Payments = () => {
           .lte("payment_date", endOfLastMonth.toISOString());
       }
 
-      console.log('Fetching payments for user:', user.id);
       const { data, error } = await query.order("payment_date", { ascending: false });
 
       if (error) {
@@ -107,8 +91,13 @@ const Payments = () => {
         throw error;
       }
 
-      console.log('Fetched payments:', data);
-      return data;
+      return data.map(payment => ({
+        ...payment,
+        unit: {
+          unit_number: payment.unit_number,
+          property_id: payment.property_id
+        }
+      }));
     },
   });
 
