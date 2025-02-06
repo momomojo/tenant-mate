@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -53,12 +54,20 @@ serve(async (req) => {
 
     console.log('Creating portal session for customer:', customerId);
 
-    // Create a portal session
-    const { url } = await stripe.billingPortal.sessions.create({
+    // Create portal session config
+    const portalConfig: any = {
       customer: customerId,
       return_url: `${req.headers.get('origin')}/payments`,
-      configuration: Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID'),
-    });
+    };
+
+    // Only add configuration if it exists
+    const configId = Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID');
+    if (configId) {
+      portalConfig.configuration = configId;
+    }
+
+    // Create a portal session
+    const { url } = await stripe.billingPortal.sessions.create(portalConfig);
 
     console.log('Portal session created with URL:', url);
 
