@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,16 +13,14 @@ import { StripeAccountStatus } from "./components/StripeAccountStatus";
 import { StripeAccountActions } from "./components/StripeAccountActions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface StripeRequirement {
-  current_deadline: number;
-  currently_due: string[];
-  eventually_due: string[];
-  past_due: string[];
-  pending_verification: string[];
-}
-
 interface AccountStatus {
-  requirements: StripeRequirement;
+  requirements: {
+    current_deadline: number;
+    currently_due: string[];
+    eventually_due: string[];
+    past_due: string[];
+    pending_verification: string[];
+  };
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
   chargesEnabled: boolean;
@@ -38,6 +35,9 @@ interface PropertyStripeAccount {
   status: string;
   verification_status: string;
   is_active: boolean;
+  verification_requirements?: any;
+  verification_errors?: any;
+  last_webhook_received_at?: string;
 }
 
 const groupRequirements = (requirements: string[]) => {
@@ -157,7 +157,7 @@ export const StripeConnectSetup = () => {
             }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching account status:', error);
         toast.error('Failed to fetch account status. Please try again.');
       }
@@ -223,7 +223,7 @@ export const StripeConnectSetup = () => {
       }
 
       throw new Error('Failed to get OAuth URL');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error setting up Stripe Connect:', error);
       toast.error('Failed to set up Stripe Connect. Please try again.', { id: toastId });
     } finally {
@@ -272,7 +272,7 @@ export const StripeConnectSetup = () => {
   // Only check for property_manager role
   if (profile?.role !== 'property_manager') return null;
 
-  const requirements = getUniqueRequirements();
+  const requirements = accountStatus?.requirements ? getUniqueRequirements() : {};
   const hasRequirements = Object.keys(requirements).length > 0;
   const selectedAccount = propertyAccounts?.find(a => a.property_id === selectedProperty);
   const isVerified = selectedAccount?.status === 'completed' && selectedAccount?.verification_status === 'verified';
@@ -334,6 +334,13 @@ export const StripeConnectSetup = () => {
                     <StripeAccountStatus 
                       isVerified={isVerified} 
                       hasRequirements={hasRequirements}
+                      propertyName={account.property_name}
+                      verificationDetails={{
+                        requirements: accountStatus?.requirements,
+                        status: account.status,
+                        verificationStatus: account.verification_status,
+                        lastUpdated: account.last_webhook_received_at
+                      }}
                     />
                     
                     {hasRequirements && Object.entries(requirements).map(([category, reqs], index) => (

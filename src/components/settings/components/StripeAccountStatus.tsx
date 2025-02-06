@@ -2,6 +2,7 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 interface VerificationRequirement {
   current_deadline: number;
@@ -18,6 +19,7 @@ interface VerificationRequirement {
 interface StripeAccountStatusProps {
   isVerified: boolean;
   hasRequirements: boolean;
+  propertyName?: string;
   verificationDetails?: {
     requirements?: VerificationRequirement;
     status: string;
@@ -28,7 +30,8 @@ interface StripeAccountStatusProps {
 
 export const StripeAccountStatus = ({ 
   isVerified, 
-  hasRequirements, 
+  hasRequirements,
+  propertyName = '',
   verificationDetails 
 }: StripeAccountStatusProps) => {
   const formatRequirementName = (requirement: string) => {
@@ -38,11 +41,29 @@ export const StripeAccountStatus = ({
       .join(' ');
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'verified':
+        return 'text-green-500';
+      case 'pending':
+        return 'text-yellow-500';
+      default:
+        return 'text-red-500';
+    }
+  };
+
   if (isVerified) {
     return (
       <Alert className="bg-green-50 border-green-200">
         <CheckCircle2 className="h-4 w-4 text-green-500" />
-        <AlertTitle className="text-green-800">Account Verified</AlertTitle>
+        <AlertTitle className="text-green-800">
+          Account Verified
+          {propertyName && (
+            <Badge variant="outline" className="ml-2">
+              {propertyName}
+            </Badge>
+          )}
+        </AlertTitle>
         <AlertDescription className="text-green-700">
           Your Stripe account is verified and ready to accept payments
         </AlertDescription>
@@ -56,8 +77,15 @@ export const StripeAccountStatus = ({
       <Alert variant="destructive" className="space-y-4">
         <div className="flex items-start gap-2">
           <AlertCircle className="h-4 w-4 mt-1" />
-          <div>
-            <AlertTitle>Action Required</AlertTitle>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <AlertTitle>Action Required</AlertTitle>
+              {propertyName && (
+                <Badge variant="outline" className="ml-2">
+                  {propertyName}
+                </Badge>
+              )}
+            </div>
             <AlertDescription>
               Your Stripe account needs additional information before you can accept payments
             </AlertDescription>
