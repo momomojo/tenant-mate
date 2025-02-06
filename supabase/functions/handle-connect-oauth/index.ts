@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -47,6 +48,8 @@ serve(async (req) => {
       .from('profiles')
       .update({ 
         stripe_connect_account_id: connectedAccountId,
+        onboarding_status: account.details_submitted ? 'completed' : 'in_progress',
+        onboarding_completed_at: account.details_submitted ? new Date().toISOString() : null,
       })
       .eq('id', state);
 
@@ -54,7 +57,7 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Return the account status
+    // Return the account status and requirements
     return new Response(
       JSON.stringify({
         accountId: connectedAccountId,

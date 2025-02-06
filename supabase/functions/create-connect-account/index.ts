@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -50,29 +51,24 @@ serve(async (req) => {
 
     if (!userProfile) {
       console.log('No profile found, creating new profile...');
-      try {
-        const { data: newProfile, error: createError } = await supabaseClient
-          .from("profiles")
-          .insert({
-            id: user.id,
-            email: user.email,
-            first_name: onboardingData?.firstName || user.user_metadata?.first_name || '',
-            last_name: onboardingData?.lastName || user.user_metadata?.last_name || '',
-            role: 'property_manager'
-          })
-          .select()
-          .single();
+      const { data: newProfile, error: createError } = await supabaseClient
+        .from("profiles")
+        .insert({
+          id: user.id,
+          email: user.email,
+          first_name: onboardingData?.firstName || user.user_metadata?.first_name || '',
+          last_name: onboardingData?.lastName || user.user_metadata?.last_name || '',
+          role: 'property_manager'
+        })
+        .select()
+        .single();
 
-        if (createError) {
-          console.error('Profile creation error:', createError);
-          throw new Error(`Failed to create profile: ${createError.message}`);
-        }
-
-        userProfile = newProfile;
-      } catch (error) {
-        console.error('Detailed profile creation error:', error);
-        throw new Error('Failed to create profile');
+      if (createError) {
+        console.error('Profile creation error:', createError);
+        throw new Error(`Failed to create profile: ${createError.message}`);
       }
+
+      userProfile = newProfile;
     }
 
     if (userProfile.stripe_connect_account_id) {
@@ -85,18 +81,6 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Handle test mode data
-    if (isTestMode) {
-      console.log('Using test mode data');
-      if (onboardingData.dateOfBirth === TEST_DATA.dates.ofacAlert) {
-        throw new Error('OFAC Alert triggered (test mode)');
-      }
-      
-      if (onboardingData.addressLine1 === TEST_DATA.addresses.noMatch) {
-        console.log('Using test address that will fail verification');
-      }
-    }
-
     const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
 
     // Get client IP and validate format
@@ -107,17 +91,15 @@ serve(async (req) => {
     // Validate IP format (basic IPv4 validation)
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (!clientIp || !ipv4Regex.test(clientIp)) {
-      // Use a valid test IP address that's not a reserved address
       clientIp = '98.51.100.1';
     }
-
-    console.log('Using IP for TOS acceptance:', clientIp);
 
     const origin = req.headers.get('origin') || 'https://app.example.com';
     const businessUrl = `${origin}/properties`;
 
+    // Create Stripe Custom account with full requirements
     const accountParams = {
-      type: 'express',
+      type: 'custom',
       country: 'US',
       email: onboardingData.email || userProfile.email,
       business_type: 'individual',
@@ -131,6 +113,7 @@ serve(async (req) => {
           city: onboardingData.city,
           state: onboardingData.state,
           postal_code: onboardingData.postalCode,
+          country: 'US',
         },
         dob: {
           day,
@@ -164,7 +147,6 @@ serve(async (req) => {
       },
     };
 
-    // Create account with retry logic
     let account;
     let retryCount = 0;
     const maxRetries = 3;
@@ -184,41 +166,36 @@ serve(async (req) => {
     console.log('Stripe account created:', account.id);
 
     // Update profile with the new account ID and onboarding data
-    try {
-      const { error: updateError } = await supabaseClient
-        .from("profiles")
-        .update({ 
-          stripe_connect_account_id: account.id,
-          stripe_onboarding_data: onboardingData,
-          onboarding_status: 'in_progress',
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", user.id);
+    const { error: updateError } = await supabaseClient
+      .from("profiles")
+      .update({ 
+        stripe_connect_account_id: account.id,
+        stripe_onboarding_data: onboardingData,
+        onboarding_status: 'in_progress',
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", user.id);
 
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-        // Try to delete the Stripe account if profile update fails
-        try {
-          await stripe.accounts.del(account.id);
-        } catch (deleteError) {
-          console.error('Failed to delete Stripe account after profile update failure:', deleteError);
-        }
-        throw new Error('Failed to update profile with Stripe account ID');
+    if (updateError) {
+      console.error('Profile update error:', updateError);
+      try {
+        await stripe.accounts.del(account.id);
+      } catch (deleteError) {
+        console.error('Failed to delete Stripe account after profile update failure:', deleteError);
       }
-    } catch (error) {
-      console.error('Detailed profile update error:', error);
-      throw new Error('Failed to update profile');
+      throw new Error('Failed to update profile with Stripe account ID');
     }
 
-    const returnUrl = `${origin}/settings`;
-
-    console.log('Creating account link...');
+    // Create account link with proper collection options
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${returnUrl}?refresh=true`,
-      return_url: returnUrl,
+      refresh_url: `${origin}/settings?refresh=true`,
+      return_url: `${origin}/settings?setup=complete`,
       type: 'account_onboarding',
       collect: 'eventually_due',
+      collection_options: {
+        fields: ['currently_due', 'eventually_due']
+      }
     });
 
     console.log('Account link created successfully');
