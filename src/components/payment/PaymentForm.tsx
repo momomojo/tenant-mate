@@ -229,20 +229,14 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       setIsLoading(true);
       console.log('Initiating customer portal request');
       
-      // Get current session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No active session');
       }
 
-      const requestBody = {
-        return_url: window.location.origin + '/payments'
-      };
-
-      console.log('Sending portal request with:', requestBody);
-
       const response = await supabase.functions.invoke('create-portal-session', {
-        body: requestBody
+        body: { return_url: window.location.origin + '/payments' },
+        headers: { "Content-Type": "application/json" }
       });
 
       console.log('Portal session response:', response);
