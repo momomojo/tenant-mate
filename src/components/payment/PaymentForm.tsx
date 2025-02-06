@@ -227,26 +227,43 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
 
     try {
       setIsLoading(true);
+      console.log('Initiating customer portal request');
+      
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const requestBody = {
+        return_url: window.location.origin + '/payments'
+      };
+
+      console.log('Sending portal request with body:', requestBody);
+
       const response = await supabase.functions.invoke('create-portal-session', {
-        body: { 
-          return_url: window.location.origin + '/payments' 
-        },
+        body: JSON.stringify(requestBody),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
         }
       });
 
+      console.log('Portal session response:', response);
+
       if (response.error) {
-        throw new Error(response.error.message);
+        throw new Error(response.error.message || 'Failed to create portal session');
       }
 
       const { url } = response.data;
-      if (url) {
-        window.location.href = url;
+      if (!url) {
+        throw new Error('No portal URL received');
       }
+
+      window.location.href = url;
     } catch (error) {
       console.error('Portal session error:', error);
-      toast.error("Failed to access payment settings");
+      toast.error("Failed to access payment settings. Please try again.");
     } finally {
       setIsLoading(false);
     }

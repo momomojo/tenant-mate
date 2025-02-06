@@ -9,38 +9,60 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Log function invocation
   console.log('Portal session function invoked');
 
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
-    // Parse request body with error handling
-    let return_url;
+    // Parse request body
+    let requestBody;
     try {
-      const body = await req.json();
-      return_url = body.return_url;
-      console.log('Received return_url:', return_url);
+      requestBody = await req.json();
+      console.log('Received request body:', requestBody);
     } catch (error) {
       console.error('Error parsing request body:', error);
-      throw new Error('Invalid request body');
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body format' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
+    // Validate return_url
+    const { return_url } = requestBody;
     if (!return_url) {
-      throw new Error('Return URL is required');
+      console.error('Missing return_url in request body');
+      return new Response(
+        JSON.stringify({ error: 'return_url is required' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    // Get the user from the auth header
+    // Get user from auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Authorization header is missing');
+      console.error('Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authorization header is required' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -48,7 +70,13 @@ serve(async (req) => {
 
     if (userError || !user) {
       console.error('Authentication error:', userError);
-      throw new Error('Not authenticated');
+      return new Response(
+        JSON.stringify({ error: 'Authentication failed' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     console.log('Authenticated user:', user.email);
@@ -60,68 +88,91 @@ serve(async (req) => {
 
     // Get or create customer
     let customerId;
-    const { data: customers } = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
-    });
-
-    if (customers.length > 0) {
-      customerId = customers[0].id;
-      console.log('Found existing customer:', customerId);
-    } else {
-      const customer = await stripe.customers.create({
+    try {
+      const { data: customers } = await stripe.customers.list({
         email: user.email,
-        metadata: {
-          tenant_id: user.id,
-        },
+        limit: 1,
       });
-      customerId = customer.id;
-      console.log('Created new customer:', customerId);
-    }
 
-    // Get the portal configuration ID from the database
-    const { data: configs, error: configError } = await supabaseClient
-      .from('stripe_configurations')
-      .select('portal_configuration_id')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (configError) {
-      console.error('Error fetching portal configuration:', configError);
-      throw new Error('Failed to fetch portal configuration');
-    }
-
-    console.log('Using portal configuration:', configs.portal_configuration_id);
-
-    // Create portal session config
-    const portalConfig = {
-      customer: customerId,
-      return_url: return_url,
-      configuration: configs.portal_configuration_id
-    };
-
-    console.log('Creating portal session with config:', portalConfig);
-
-    // Create a portal session
-    const { url } = await stripe.billingPortal.sessions.create(portalConfig);
-
-    console.log('Portal session created with URL:', url);
-
-    return new Response(
-      JSON.stringify({ url }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+      if (customers.length > 0) {
+        customerId = customers[0].id;
+        console.log('Found existing customer:', customerId);
+      } else {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            tenant_id: user.id,
+          },
+        });
+        customerId = customer.id;
+        console.log('Created new customer:', customerId);
       }
-    );
+    } catch (error) {
+      console.error('Error with Stripe customer:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process customer information' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Get portal configuration
+    try {
+      const { data: configs, error: configError } = await supabaseClient
+        .from('stripe_configurations')
+        .select('portal_configuration_id')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (configError) {
+        console.error('Error fetching portal configuration:', configError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch portal configuration' }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      console.log('Using portal configuration:', configs.portal_configuration_id);
+
+      // Create portal session
+      const { url } = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: return_url,
+        configuration: configs.portal_configuration_id
+      });
+
+      console.log('Portal session created with URL:', url);
+
+      return new Response(
+        JSON.stringify({ url }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create portal session' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
   } catch (error) {
-    console.error('Error creating portal session:', error);
+    console.error('Unexpected error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }
