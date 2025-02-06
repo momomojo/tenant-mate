@@ -23,17 +23,40 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
-    // Parse request body
+    // Parse request body with detailed error logging
     let requestBody;
     try {
-      requestBody = await req.json();
-      console.log('Received request body:', requestBody);
-    } catch (error) {
-      console.error('Error parsing request body:', error);
+      const contentType = req.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+      
+      const rawBody = await req.text();
+      console.log('Raw request body:', rawBody);
+      
+      try {
+        requestBody = JSON.parse(rawBody);
+        console.log('Parsed request body:', requestBody);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid JSON format',
+            details: parseError.message 
+          }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } catch (bodyError) {
+      console.error('Error reading request body:', bodyError);
       return new Response(
-        JSON.stringify({ error: 'Invalid request body format' }),
+        JSON.stringify({ 
+          error: 'Error reading request body',
+          details: bodyError.message 
+        }),
         { 
-          status: 400, 
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
@@ -44,7 +67,26 @@ serve(async (req) => {
     if (!return_url) {
       console.error('Missing return_url in request body');
       return new Response(
-        JSON.stringify({ error: 'return_url is required' }),
+        JSON.stringify({ 
+          error: 'return_url is required',
+          receivedBody: requestBody 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    try {
+      new URL(return_url);
+    } catch (urlError) {
+      console.error('Invalid return_url format:', urlError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid return_url format',
+          details: urlError.message 
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -71,7 +113,10 @@ serve(async (req) => {
     if (userError || !user) {
       console.error('Authentication error:', userError);
       return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
+        JSON.stringify({ 
+          error: 'Authentication failed',
+          details: userError?.message 
+        }),
         { 
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -86,36 +131,40 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Get or create customer
+    // Get or create customer with retry logic
     let customerId;
-    try {
-      const { data: customers } = await stripe.customers.list({
-        email: user.email,
-        limit: 1,
-      });
-
-      if (customers.length > 0) {
-        customerId = customers[0].id;
-        console.log('Found existing customer:', customerId);
-      } else {
-        const customer = await stripe.customers.create({
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const { data: customers } = await stripe.customers.list({
           email: user.email,
-          metadata: {
-            tenant_id: user.id,
-          },
+          limit: 1,
         });
-        customerId = customer.id;
-        console.log('Created new customer:', customerId);
-      }
-    } catch (error) {
-      console.error('Error with Stripe customer:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to process customer information' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+
+        if (customers.length > 0) {
+          customerId = customers[0].id;
+          console.log('Found existing customer:', customerId);
+          break;
+        } else {
+          const customer = await stripe.customers.create({
+            email: user.email,
+            metadata: {
+              tenant_id: user.id,
+            },
+          });
+          customerId = customer.id;
+          console.log('Created new customer:', customerId);
+          break;
         }
-      );
+      } catch (error) {
+        retries--;
+        if (retries === 0) {
+          console.error('All retries failed for customer operation:', error);
+          throw error;
+        }
+        console.log(`Retry attempt ${3 - retries} for customer operation`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
     // Get portal configuration
@@ -130,7 +179,21 @@ serve(async (req) => {
       if (configError) {
         console.error('Error fetching portal configuration:', configError);
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch portal configuration' }),
+          JSON.stringify({ 
+            error: 'Failed to fetch portal configuration',
+            details: configError.message 
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      if (!configs?.portal_configuration_id) {
+        console.error('No portal configuration found');
+        return new Response(
+          JSON.stringify({ error: 'Portal configuration not found' }),
           { 
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -159,7 +222,10 @@ serve(async (req) => {
     } catch (error) {
       console.error('Error creating portal session:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to create portal session' }),
+        JSON.stringify({ 
+          error: 'Failed to create portal session',
+          details: error.message 
+        }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -169,7 +235,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Unexpected error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message 
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

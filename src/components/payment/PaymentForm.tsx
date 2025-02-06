@@ -239,14 +239,10 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         return_url: window.location.origin + '/payments'
       };
 
-      console.log('Sending portal request with body:', requestBody);
+      console.log('Sending portal request with:', requestBody);
 
       const response = await supabase.functions.invoke('create-portal-session', {
-        body: JSON.stringify(requestBody),
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        }
+        body: requestBody
       });
 
       console.log('Portal session response:', response);
