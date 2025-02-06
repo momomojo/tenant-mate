@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -227,32 +228,37 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
 
     try {
       setIsLoading(true);
-      console.log('Initiating customer portal request');
+      console.log("Initiating customer portal request");
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('No active session');
+        throw new Error("No active session");
       }
 
-      const response = await supabase.functions.invoke('create-portal-session', {
-        body: { return_url: window.location.origin + '/payments' },
-        headers: { "Content-Type": "application/json" }
+      const requestBody = { return_url: window.location.origin + "/payments" };
+      console.log("Sending portal request with:", requestBody);
+
+      const response = await supabase.functions.invoke("create-portal-session", {
+        body: requestBody,
+        headers: { 
+          "Content-Type": "application/json"
+        }
       });
 
-      console.log('Portal session response:', response);
+      console.log("Portal session response:", response);
 
       if (response.error) {
-        throw new Error(response.error.message || 'Failed to create portal session');
+        throw new Error(response.error.message || "Failed to create portal session");
       }
 
       const { url } = response.data;
       if (!url) {
-        throw new Error('No portal URL received');
+        throw new Error("No portal URL received");
       }
 
       window.location.href = url;
-    } catch (error) {
-      console.error('Portal session error:', error);
+    } catch (error: any) {
+      console.error("Portal session error:", error);
       toast.error("Failed to access payment settings. Please try again.");
     } finally {
       setIsLoading(false);
