@@ -9,33 +9,42 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => {
-  console.log("Portal session function invoked");
+  console.log("Portal session function invoked with method:", req.method);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed. Use POST" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   let requestBody: any;
   try {
-    requestBody = await req.json();
-    console.log("Parsed request body:", requestBody);
-  } catch (parseError) {
-    const rawBody = await req.text();
-    console.error("JSON parse error:", parseError);
-    console.log("Raw request body:", rawBody);
-    try {
-      requestBody = JSON.parse(rawBody);
-      console.log("Parsed request body after manual parse:", requestBody);
-    } catch (finalError) {
-      console.error("Final JSON parse error:", finalError);
+    const text = await req.text();
+    console.log("Raw request body text:", text);
+    
+    if (!text) {
       return new Response(
-        JSON.stringify({
-          error: "Invalid JSON format",
-          details: finalError.message,
-        }),
+        JSON.stringify({ error: "Empty request body" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    requestBody = JSON.parse(text);
+    console.log("Parsed request body:", requestBody);
+  } catch (parseError) {
+    console.error("JSON parse error:", parseError);
+    return new Response(
+      JSON.stringify({
+        error: "Invalid JSON format",
+        details: parseError.message,
+      }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   const { return_url } = requestBody;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -242,10 +241,8 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       console.log("Sending portal request with:", requestBody);
 
       const response = await supabase.functions.invoke("create-portal-session", {
-        body: JSON.stringify(requestBody),
-        headers: { 
-          "Content-Type": "application/json"
-        }
+        method: 'POST',
+        body: requestBody  // supabase.functions.invoke handles JSON.stringify internally
       });
 
       console.log("Portal session response:", response);
