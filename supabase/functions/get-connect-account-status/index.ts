@@ -31,10 +31,16 @@ serve(async (req) => {
     // Get the account link for remediation if there are requirements
     let remediationLink = undefined;
     if (account.requirements?.currently_due?.length > 0 || account.requirements?.eventually_due?.length > 0) {
+      const siteUrl = Deno.env.get('SITE_URL') || '';
+      // Ensure URL starts with https://
+      const baseUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+      
+      console.log('Creating account link with base URL:', baseUrl);
+      
       const accountLink = await stripe.accountLinks.create({
         account: account_id,
-        refresh_url: `${Deno.env.get('SITE_URL')}/settings`,
-        return_url: `${Deno.env.get('SITE_URL')}/settings`,
+        refresh_url: `${baseUrl}/settings`,
+        return_url: `${baseUrl}/settings`,
         type: 'account_onboarding',
         collect: 'eventually_due',
       });
