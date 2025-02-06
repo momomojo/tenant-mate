@@ -11,15 +11,32 @@ export function useAuthenticatedUser() {
 
   useEffect(() => {
     checkAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        navigate('/auth');
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          setUser(session.user);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAuth = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // First try to get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (error) {
-        console.error('Auth error:', error);
-        throw error;
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw sessionError;
       }
       
       if (!session) {
@@ -32,16 +49,40 @@ export function useAuthenticatedUser() {
         return;
       }
 
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        console.error('User verification error:', userError);
+      // Try to refresh the session
+      const { data: { session: refreshedSession }, error: refreshError } = 
+        await supabase.auth.refreshSession();
+
+      if (refreshError) {
+        console.error('Session refresh error:', refreshError);
+        throw refreshError;
+      }
+
+      if (!refreshedSession) {
+        // Session refresh failed
         await supabase.auth.signOut();
-        navigate("/auth");
+        if (!window.location.pathname.includes('/auth')) {
+          toast.error("Session expired. Please login again");
+          navigate("/auth");
+        }
+        setIsLoading(false);
         return;
       }
 
-      setUser(user);
+      // Get the user data with the refreshed session
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !currentUser) {
+        console.error('User verification error:', userError);
+        await supabase.auth.signOut();
+        if (!window.location.pathname.includes('/auth')) {
+          toast.error("Authentication error. Please login again");
+          navigate("/auth");
+        }
+        return;
+      }
+
+      setUser(currentUser);
     } catch (error) {
       console.error('Auth error:', error);
       // Clear any stale session data
@@ -49,7 +90,7 @@ export function useAuthenticatedUser() {
       
       // Only show error toast if we're not on the auth page
       if (!window.location.pathname.includes('/auth')) {
-        toast.error("Authentication error. Please login again.");
+        toast.error("Authentication error. Please login again");
         navigate("/auth");
       }
     } finally {
