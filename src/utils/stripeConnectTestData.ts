@@ -1,3 +1,4 @@
+
 export const TEST_DATA = {
   dates: {
     successfulVerification: '1901-01-01',
