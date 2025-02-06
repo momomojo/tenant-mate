@@ -1,15 +1,17 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, ChevronRight, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { StripeOnboardingForm } from "./StripeOnboardingForm";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
+import { StripeRequirementGroup } from "./components/StripeRequirementGroup";
+import { StripeAccountStatus } from "./components/StripeAccountStatus";
+import { StripeAccountActions } from "./components/StripeAccountActions";
 
 interface StripeRequirement {
   current_deadline: number;
@@ -25,18 +27,6 @@ interface AccountStatus {
   detailsSubmitted: boolean;
   chargesEnabled: boolean;
 }
-
-// Helper function to format requirement keys for display
-const formatRequirementKey = (key: string) => {
-  // Split by dots and get the last part
-  const parts = key.split('.');
-  const lastPart = parts[parts.length - 1];
-  // Convert snake_case to Title Case
-  return lastPart
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
 
 // Group requirements by category
 const groupRequirements = (requirements: string[]) => {
@@ -62,7 +52,6 @@ const groupRequirements = (requirements: string[]) => {
     }
   });
 
-  // Remove empty groups
   return Object.fromEntries(
     Object.entries(groups).filter(([_, reqs]) => reqs.length > 0)
   );
@@ -105,7 +94,6 @@ export const StripeConnectSetup = () => {
         if (error) throw error;
         setAccountStatus(data);
         
-        // Update onboarding status in profile
         if (data.chargesEnabled && data.payoutsEnabled) {
           await supabase
             .from('profiles')
@@ -122,7 +110,6 @@ export const StripeConnectSetup = () => {
     };
 
     fetchAccountStatus();
-    // Poll for status updates every 30 seconds if not completed
     const interval = setInterval(() => {
       if (profile?.stripe_connect_account_id && (!accountStatus?.chargesEnabled || !accountStatus?.payoutsEnabled)) {
         fetchAccountStatus();
@@ -173,7 +160,6 @@ export const StripeConnectSetup = () => {
       if (error) throw error;
       
       if (data?.oauth_url) {
-        // Save onboarding data before redirect
         if (onboardingData) {
           await supabase
             .from('profiles')
@@ -212,8 +198,8 @@ export const StripeConnectSetup = () => {
 
   const getOnboardingProgress = () => {
     if (!accountStatus) return 0;
-    const total = 4; // Total steps: account creation, details submission, charges enabled, payouts enabled
-    let completed = 1; // Account creation is done if we have a status
+    const total = 4;
+    let completed = 1;
     if (accountStatus.detailsSubmitted) completed++;
     if (accountStatus.chargesEnabled) completed++;
     if (accountStatus.payoutsEnabled) completed++;
@@ -255,88 +241,28 @@ export const StripeConnectSetup = () => {
       <CardContent className="space-y-4">
         {profile.stripe_connect_account_id ? (
           <div className="space-y-4">
-            {isVerified ? (
-              <Alert>
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>Account Verified</AlertTitle>
-                <AlertDescription>
-                  Your Stripe account is verified and ready to accept payments
-                </AlertDescription>
-              </Alert>
-            ) : hasRequirements ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Action Required</AlertTitle>
-                <AlertDescription>
-                  Your Stripe account needs additional information before you can accept payments
-                </AlertDescription>
-              </Alert>
-            ) : null}
+            <StripeAccountStatus 
+              isVerified={isVerified} 
+              hasRequirements={hasRequirements} 
+            />
             
             {hasRequirements && Object.entries(requirements).map(([category, reqs], index) => (
-              <div key={category} className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">{category}</h3>
-                <div className="space-y-2">
-                  {reqs.map((req) => (
-                    <div
-                      key={req}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                      onClick={openStripeDashboard}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => e.key === 'Enter' && openStripeDashboard()}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">{formatRequirementKey(req)}</p>
-                          {accountStatus?.requirements.past_due.includes(req) && (
-                            <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
-                              Past due
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  ))}
-                </div>
-                {index < Object.entries(requirements).length - 1 && (
-                  <Separator className="my-4" />
-                )}
-              </div>
+              <StripeRequirementGroup
+                key={category}
+                category={category}
+                requirements={reqs}
+                pastDueRequirements={accountStatus?.requirements.past_due || []}
+                isLastGroup={index === Object.entries(requirements).length - 1}
+                onItemClick={openStripeDashboard}
+              />
             ))}
 
-            <div className="flex flex-col gap-2 pt-4">
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={openStripeDashboard}
-              >
-                Open Stripe Dashboard
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
-
-              {!isVerified && (
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={() => setupStripeConnect()}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Setting up...
-                    </>
-                  ) : (
-                    <>
-                      Complete Account Setup
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            <StripeAccountActions
+              isVerified={isVerified}
+              isLoading={isLoading}
+              onDashboardOpen={openStripeDashboard}
+              onSetupComplete={() => setupStripeConnect()}
+            />
           </div>
         ) : (
           <div className="space-y-4">
