@@ -25,16 +25,22 @@ export const StripeAccountActions = ({
     }
   };
 
+  const handleDashboardClick = () => {
+    onDashboardOpen();
+  };
+
   return (
     <div className="flex flex-col gap-2 pt-4">
-      <Button 
-        variant="outline" 
-        className="w-full" 
-        onClick={onDashboardOpen}
-      >
-        Open Stripe Dashboard
-        <ExternalLink className="ml-2 h-4 w-4" />
-      </Button>
+      {isVerified && (
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={handleDashboardClick}
+        >
+          Open Stripe Dashboard
+          <ExternalLink className="ml-2 h-4 w-4" />
+        </Button>
+      )}
 
       {!isVerified && (
         <Button 
