@@ -22,16 +22,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     );
 
-    // Parse request body
-    const { return_url } = await req.json();
-    console.log('Received return_url:', return_url);
+    // Parse request body with error handling
+    let return_url;
+    try {
+      const body = await req.json();
+      return_url = body.return_url;
+      console.log('Received return_url:', return_url);
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      throw new Error('Invalid request body');
+    }
 
     if (!return_url) {
       throw new Error('Return URL is required');
     }
 
     // Get the user from the auth header
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Authorization header is missing');
+    }
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 

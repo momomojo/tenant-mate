@@ -228,7 +228,12 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     try {
       setIsLoading(true);
       const response = await supabase.functions.invoke('create-portal-session', {
-        body: { return_url: window.location.origin + '/payments' }
+        body: { 
+          return_url: window.location.origin + '/payments' 
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.error) {
