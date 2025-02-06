@@ -31,20 +31,37 @@ serve(async (req) => {
     // Get the account link for remediation if there are requirements
     let remediationLink = undefined;
     if (account.requirements?.currently_due?.length > 0 || account.requirements?.eventually_due?.length > 0) {
-      const siteUrl = Deno.env.get('SITE_URL') || '';
-      // Ensure URL starts with https://
-      const baseUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+      // Get the request origin or use a default URL
+      const origin = req.headers.get('origin');
+      let baseUrl;
+      
+      if (origin) {
+        baseUrl = origin;
+      } else {
+        // Fallback to SITE_URL if available, or use a default
+        const siteUrl = Deno.env.get('SITE_URL');
+        if (siteUrl) {
+          baseUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+        } else {
+          throw new Error('No valid origin or SITE_URL available');
+        }
+      }
       
       console.log('Creating account link with base URL:', baseUrl);
       
-      const accountLink = await stripe.accountLinks.create({
-        account: account_id,
-        refresh_url: `${baseUrl}/settings`,
-        return_url: `${baseUrl}/settings`,
-        type: 'account_onboarding',
-        collect: 'eventually_due',
-      });
-      remediationLink = accountLink.url;
+      try {
+        const accountLink = await stripe.accountLinks.create({
+          account: account_id,
+          refresh_url: `${baseUrl}/settings`,
+          return_url: `${baseUrl}/settings`,
+          type: 'account_onboarding',
+          collect: 'eventually_due',
+        });
+        remediationLink = accountLink.url;
+      } catch (linkError) {
+        console.error('Error creating account link:', linkError);
+        throw new Error(`Failed to create account link: ${linkError.message}`);
+      }
     }
     
     console.log('Account status retrieved:', {
