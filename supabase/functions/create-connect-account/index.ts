@@ -81,8 +81,6 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    const [year, month, day] = onboardingData.dateOfBirth.split('-').map(Number);
-
     // Get client IP and validate format
     let clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
                   req.headers.get('cf-connecting-ip') || 
@@ -97,54 +95,32 @@ serve(async (req) => {
     const origin = req.headers.get('origin') || 'https://app.example.com';
     const businessUrl = `${origin}/properties`;
 
-    // Create Stripe Custom account with full requirements
+    // Create Stripe Custom account with minimal requirements
     const accountParams = {
       type: 'custom',
       country: 'US',
       email: onboardingData.email || userProfile.email,
       business_type: 'individual',
-      individual: {
-        email: onboardingData.email || userProfile.email,
-        first_name: onboardingData.firstName || userProfile.first_name,
-        last_name: onboardingData.lastName || userProfile.last_name,
-        phone: onboardingData.phone,
-        address: {
-          line1: onboardingData.addressLine1,
-          city: onboardingData.city,
-          state: onboardingData.state,
-          postal_code: onboardingData.postalCode,
-          country: 'US',
-        },
-        dob: {
-          day,
-          month,
-          year,
-        },
-        ssn_last_4: onboardingData.ssnLast4,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+      tos_acceptance: {
+        date: Math.floor(Date.now() / 1000),
+        ip: clientIp,
       },
       business_profile: {
         mcc: '6513', // Real Estate
         product_description: 'Property rental payments',
         url: businessUrl,
       },
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
       settings: {
-        payments: {
-          statement_descriptor: onboardingData.statementDescriptor,
-        },
         payouts: {
           schedule: {
             interval: 'manual'
           }
         }
-      },
-      tos_acceptance: {
-        date: Math.floor(Date.now() / 1000),
-        ip: clientIp,
-      },
+      }
     };
 
     let account;
@@ -165,12 +141,11 @@ serve(async (req) => {
 
     console.log('Stripe account created:', account.id);
 
-    // Update profile with the new account ID and onboarding data
+    // Update profile with the new account ID
     const { error: updateError } = await supabaseClient
       .from("profiles")
       .update({ 
         stripe_connect_account_id: account.id,
-        stripe_onboarding_data: onboardingData,
         onboarding_status: 'in_progress',
         updated_at: new Date().toISOString()
       })
@@ -186,7 +161,7 @@ serve(async (req) => {
       throw new Error('Failed to update profile with Stripe account ID');
     }
 
-    // Create account link with proper collection options
+    // Create account link for collecting required information
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
       refresh_url: `${origin}/settings?refresh=true`,
@@ -194,7 +169,7 @@ serve(async (req) => {
       type: 'account_onboarding',
       collect: 'eventually_due',
       collection_options: {
-        fields: ['currently_due', 'eventually_due']
+        fields: ['currently_due', 'eventually_due'],
       }
     });
 

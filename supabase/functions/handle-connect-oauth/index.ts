@@ -35,10 +35,12 @@ serve(async (req) => {
       throw new Error('No connected account ID received');
     }
 
-    // Get the connected account details
-    const account = await stripe.accounts.retrieve(connectedAccountId);
+    // Get the connected account details - explicitly request required fields
+    const account = await stripe.accounts.retrieve(connectedAccountId, {
+      expand: ['capabilities', 'requirements']
+    });
 
-    // Update the user's profile with the connected account ID
+    // Update the user's profile with the connected account ID and status
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -57,11 +59,16 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Return the account status and requirements
+    // Only return non-sensitive information
     return new Response(
       JSON.stringify({
         accountId: connectedAccountId,
-        requirements: account.requirements,
+        requirements: {
+          currently_due: account.requirements?.currently_due || [],
+          eventually_due: account.requirements?.eventually_due || [],
+          pending_verification: account.requirements?.pending_verification || [],
+        },
+        capabilities: account.capabilities,
         payoutsEnabled: account.payouts_enabled,
         detailsSubmitted: account.details_submitted,
         chargesEnabled: account.charges_enabled,
