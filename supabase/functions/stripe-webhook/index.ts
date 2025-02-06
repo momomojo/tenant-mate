@@ -67,13 +67,23 @@ serve(async (req) => {
           requirements: account.requirements,
         });
         
-        // Update the property's Stripe account status
+        // Update the property's Stripe account status with new fields
         const { error } = await supabaseClient
           .from('property_stripe_accounts')
           .update({ 
             status: account.details_submitted ? 'completed' : 'pending',
             verification_status: account.charges_enabled && account.payouts_enabled ? 'verified' : 'pending',
+            verification_requirements: account.requirements,
+            verification_errors: account.requirements?.errors || null,
+            last_webhook_received_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            stripe_onboarding_data: {
+              details_submitted: account.details_submitted,
+              charges_enabled: account.charges_enabled,
+              payouts_enabled: account.payouts_enabled,
+              capabilities: account.capabilities,
+            },
+            onboarding_completed_at: account.details_submitted ? new Date().toISOString() : null,
           })
           .eq('stripe_connect_account_id', account.id);
 
@@ -91,6 +101,7 @@ serve(async (req) => {
             charges_enabled: account.charges_enabled,
             payouts_enabled: account.payouts_enabled,
             details_submitted: account.details_submitted,
+            requirements: account.requirements,
           }
         });
 

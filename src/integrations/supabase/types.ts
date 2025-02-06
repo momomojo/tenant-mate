@@ -319,6 +319,13 @@ export type Database = {
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_id"]
           },
+          {
+            foreignKeyName: "payment_configs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
+            referencedColumns: ["property_id"]
+          },
         ]
       }
       payment_methods: {
@@ -475,6 +482,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "property_stripe_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_property_stripe_account_id_fkey"
+            columns: ["property_stripe_account_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "payment_transactions_rent_payment_id_fkey"
@@ -669,6 +683,13 @@ export type Database = {
             referencedColumns: ["property_id"]
           },
           {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
+            referencedColumns: ["property_id"]
+          },
+          {
             foreignKeyName: "property_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
@@ -689,33 +710,48 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          last_webhook_received_at: string | null
+          onboarding_completed_at: string | null
           property_id: string
           property_manager_id: string
           status: string | null
           stripe_connect_account_id: string | null
+          stripe_onboarding_data: Json | null
           updated_at: string | null
+          verification_errors: Json | null
+          verification_requirements: Json | null
           verification_status: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          last_webhook_received_at?: string | null
+          onboarding_completed_at?: string | null
           property_id: string
           property_manager_id: string
           status?: string | null
           stripe_connect_account_id?: string | null
+          stripe_onboarding_data?: Json | null
           updated_at?: string | null
+          verification_errors?: Json | null
+          verification_requirements?: Json | null
           verification_status?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          last_webhook_received_at?: string | null
+          onboarding_completed_at?: string | null
           property_id?: string
           property_manager_id?: string
           status?: string | null
           stripe_connect_account_id?: string | null
+          stripe_onboarding_data?: Json | null
           updated_at?: string | null
+          verification_errors?: Json | null
+          verification_requirements?: Json | null
           verification_status?: string | null
         }
         Relationships: [
@@ -731,6 +767,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "property_stripe_accounts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
             referencedColumns: ["property_id"]
           },
           {
@@ -976,6 +1019,13 @@ export type Database = {
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_id"]
           },
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
+            referencedColumns: ["property_id"]
+          },
         ]
       }
     }
@@ -1007,6 +1057,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
             referencedColumns: ["property_id"]
           },
           {
@@ -1069,6 +1126,13 @@ export type Database = {
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_id"]
           },
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_stripe_status_view"
+            referencedColumns: ["property_id"]
+          },
         ]
       }
       payment_reports: {
@@ -1123,6 +1187,24 @@ export type Database = {
             referencedColumns: ["property_manager_id"]
           },
         ]
+      }
+      property_stripe_status_view: {
+        Row: {
+          account_id: string | null
+          last_webhook_received_at: string | null
+          manager_email: string | null
+          manager_first_name: string | null
+          manager_last_name: string | null
+          onboarding_completed_at: string | null
+          property_id: string | null
+          property_name: string | null
+          status: string | null
+          stripe_connect_account_id: string | null
+          verification_errors: Json | null
+          verification_requirements: Json | null
+          verification_status: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
