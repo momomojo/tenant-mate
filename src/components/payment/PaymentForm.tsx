@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuthenticatedUser } from '@/hooks/useAuthenticatedUser';
+import { usePaymentService } from '@/hooks/usePaymentService';
+import { useAutoPayment } from '@/hooks/useAutoPayment';
+import { AutoPayToggle } from './AutoPayToggle';
+import { PaymentError } from './PaymentError';
 
 interface PaymentFormProps {
   unitId: string;
@@ -16,25 +18,24 @@ interface PaymentFormProps {
 }
 
 export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [autoPayEnabled, setAutoPayEnabled] = useState(false);
   const [monthlyRent, setMonthlyRent] = useState<number | null>(null);
   const [stripeConnectError, setStripeConnectError] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  const { user, isLoading: isAuthLoading } = useAuthenticatedUser();
+  const { isLoading: isPaymentLoading, createCheckoutSession, createPortalSession } = usePaymentService();
+  const { isEnabled: autoPayEnabled, isLoading: isAutoPayLoading, toggleAutoPay } = 
+    useAutoPayment(unitId, user?.id);
 
-  useEffect(() => {
-    checkAuth();
-    checkAutoPayStatus();
-    fetchMonthlyRent();
-  }, []);
+  React.useEffect(() => {
+    if (user?.id) {
+      fetchMonthlyRent();
+    }
+  }, [user]);
 
   const fetchMonthlyRent = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Use the property_manager_assignments view to get all the necessary information
+      // Get the property_manager_assignments view to get all the necessary information
       const { data: assignment, error: assignmentError } = await supabase
         .from('property_manager_assignments')
         .select('*')
@@ -86,91 +87,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     }
   };
 
-  const checkAuth = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Auth error:', error);
-        throw error;
-      }
-      
-      if (!session) {
-        toast.error("Please login to make a payment");
-        navigate("/auth");
-        return;
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        console.error('User verification error:', userError);
-        await supabase.auth.signOut();
-        navigate("/auth");
-        return;
-      }
-
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error('Auth error:', error);
-      toast.error("Authentication error. Please login again.");
-      navigate("/auth");
-    }
-  };
-
-  const checkAutoPayStatus = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('automatic_payments')
-        .select('is_enabled')
-        .eq('tenant_id', user.id)
-        .eq('unit_id', unitId)
-        .maybeSingle();
-
-      if (error) throw error;
-      setAutoPayEnabled(data?.is_enabled || false);
-    } catch (error) {
-      console.error('Error checking autopay status:', error);
-    }
-  };
-
-  const handleAutoPayToggle = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const newStatus = !autoPayEnabled;
-      
-      const { error } = await supabase
-        .from('automatic_payments')
-        .upsert({
-          tenant_id: user.id,
-          unit_id: unitId,
-          is_enabled: newStatus
-        }, {
-          onConflict: 'tenant_id,unit_id'
-        });
-
-      if (error) throw error;
-      
-      setAutoPayEnabled(newStatus);
-      toast.success(newStatus ? 'Automatic payments enabled' : 'Automatic payments disabled');
-    } catch (error) {
-      console.error('Error toggling autopay:', error);
-      toast.error('Failed to update automatic payment settings');
-    }
-  };
-
   const handlePayment = async () => {
-    if (!isAuthenticated) {
-      toast.error("Please login to make a payment");
-      navigate("/auth");
-      return;
-    }
-
     if (!monthlyRent) {
       toast.error("Unable to process payment. Monthly rent amount not found.");
       return;
@@ -182,86 +99,32 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     }
 
     try {
-      setIsLoading(true);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("No active session");
-      }
-
-      const response = await supabase.functions.invoke("create-checkout-session", {
-        method: 'POST',
-        body: {
-          amount: monthlyRent,
-          unit_id: unitId,
-          setup_future_payments: autoPayEnabled
-        }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      const { url } = response.data;
+      const url = await createCheckoutSession(monthlyRent, unitId, autoPayEnabled);
       if (url) {
         window.location.href = url;
       }
     } catch (error: any) {
-      console.error("Payment error:", error);
       if (error.message.includes("No active session")) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
       } else {
         toast.error("Failed to initiate payment. Please try again later.");
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleCustomerPortal = async () => {
-    if (!isAuthenticated) {
-      toast.error("Please login to access your payment settings");
-      navigate("/auth");
-      return;
-    }
-
     try {
-      setIsLoading(true);
-      console.log("Initiating customer portal request");
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("No active session");
+      const url = await createPortalSession(window.location.origin + "/payments");
+      if (url) {
+        window.location.href = url;
       }
-
-      const requestBody = { return_url: window.location.origin + "/payments" };
-      console.log("Sending portal request with:", requestBody);
-
-      const response = await supabase.functions.invoke("create-portal-session", {
-        method: 'POST',
-        body: requestBody  // supabase.functions.invoke handles JSON.stringify internally
-      });
-
-      console.log("Portal session response:", response);
-
-      if (response.error) {
-        throw new Error(response.error.message || "Failed to create portal session");
-      }
-
-      const { url } = response.data;
-      if (!url) {
-        throw new Error("No portal URL received");
-      }
-
-      window.location.href = url;
-    } catch (error: any) {
-      console.error("Portal session error:", error);
+    } catch (error) {
       toast.error("Failed to access payment settings. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const isLoading = isAuthLoading || isPaymentLoading || isAutoPayLoading;
 
   return (
     <Card>
@@ -273,12 +136,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       </CardHeader>
       <CardContent className="space-y-4">
         {stripeConnectError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {stripeConnectError}
-            </AlertDescription>
-          </Alert>
+          <PaymentError message={stripeConnectError} />
         )}
         <div className="space-y-2">
           <Label htmlFor="amount">Monthly Rent Amount</Label>
@@ -290,18 +148,15 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
             className="bg-muted"
           />
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="autopay"
-            checked={autoPayEnabled}
-            onCheckedChange={handleAutoPayToggle}
-          />
-          <Label htmlFor="autopay">Enable automatic monthly payments</Label>
-        </div>
+        <AutoPayToggle
+          enabled={autoPayEnabled}
+          onToggle={toggleAutoPay}
+          disabled={isLoading || Boolean(stripeConnectError)}
+        />
         <Button
           variant="outline"
           onClick={handleCustomerPortal}
-          disabled={isLoading || !isAuthenticated || Boolean(stripeConnectError)}
+          disabled={isLoading || !user || Boolean(stripeConnectError)}
           className="w-full"
         >
           Manage Payment Settings
@@ -310,7 +165,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       <CardFooter>
         <Button 
           onClick={handlePayment} 
-          disabled={isLoading || !isAuthenticated || !monthlyRent || Boolean(stripeConnectError)}
+          disabled={isLoading || !user || !monthlyRent || Boolean(stripeConnectError)}
           className="w-full"
         >
           {isLoading ? "Processing..." : `Pay $${monthlyRent || 0}`}
