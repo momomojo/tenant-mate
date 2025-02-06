@@ -54,17 +54,30 @@ serve(async (req) => {
 
     console.log('Creating portal session for customer:', customerId);
 
-    // Create portal session config
-    const portalConfig: any = {
+    // Get the portal configuration ID from the database
+    const { data: configs, error: configError } = await supabaseClient
+      .from('stripe_configurations')
+      .select('portal_configuration_id')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (configError) {
+      console.error('Error fetching portal configuration:', configError);
+      throw new Error('Failed to fetch portal configuration');
+    }
+
+    // Create portal session config with origin URL
+    const origin = new URL(req.url).origin;
+    console.log('Return URL origin:', origin);
+
+    const portalConfig = {
       customer: customerId,
-      return_url: `${req.headers.get('origin')}/payments`,
+      return_url: `${origin}/payments`,
+      configuration: configs.portal_configuration_id
     };
 
-    // Only add configuration if it exists
-    const configId = Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID');
-    if (configId) {
-      portalConfig.configuration = configId;
-    }
+    console.log('Creating portal session with config:', portalConfig);
 
     // Create a portal session
     const { url } = await stripe.billingPortal.sessions.create(portalConfig);
