@@ -95,7 +95,7 @@ serve(async (req) => {
     const origin = req.headers.get('origin') || 'https://app.example.com';
     const businessUrl = `${origin}/properties`;
 
-    // Create Stripe Custom account with minimal requirements
+    // Create Stripe Custom account with minimal requirements for test mode
     const accountParams = {
       type: 'custom',
       country: 'US',
@@ -169,7 +169,7 @@ serve(async (req) => {
       type: 'account_onboarding',
       collect: 'eventually_due',
       collection_options: {
-        fields: ['currently_due', 'eventually_due'],
+        fields: ['currently_due', 'eventually_due']
       }
     });
 
@@ -196,3 +196,4 @@ serve(async (req) => {
     );
   }
 });
+
