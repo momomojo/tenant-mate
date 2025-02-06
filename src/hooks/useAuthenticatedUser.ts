@@ -23,8 +23,12 @@ export function useAuthenticatedUser() {
       }
       
       if (!session) {
-        toast.error("Please login to make a payment");
-        navigate("/auth");
+        // Only show error toast if we're not on the auth page
+        if (!window.location.pathname.includes('/auth')) {
+          toast.error("Please login to continue");
+          navigate("/auth");
+        }
+        setIsLoading(false);
         return;
       }
 
@@ -40,8 +44,14 @@ export function useAuthenticatedUser() {
       setUser(user);
     } catch (error) {
       console.error('Auth error:', error);
-      toast.error("Authentication error. Please login again.");
-      navigate("/auth");
+      // Clear any stale session data
+      await supabase.auth.signOut();
+      
+      // Only show error toast if we're not on the auth page
+      if (!window.location.pathname.includes('/auth')) {
+        toast.error("Authentication error. Please login again.");
+        navigate("/auth");
+      }
     } finally {
       setIsLoading(false);
     }
