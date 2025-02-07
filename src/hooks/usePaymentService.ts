@@ -2,20 +2,22 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Json } from '@/integrations/supabase/types';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
 interface ValidationResult {
   validation_status: ValidationStatus | null;
-  validation_details: Json | null;
-  validation_errors: Json | null;
+  validation_details: Record<string, unknown> | null;
+  validation_errors: Record<string, unknown> | null;
 }
 
-// Custom response type to avoid deep type instantiation
-interface SupabaseQueryResponse<T> {
-  data: T | null;
-  error: { message: string } | null;
+interface CheckoutResponse {
+  url: string;
+  payment_id: string;
+}
+
+interface PortalResponse {
+  url: string;
 }
 
 export function usePaymentService() {
@@ -31,7 +33,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle() as SupabaseQueryResponse<ValidationResult>;
+        .maybeSingle();
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -39,26 +41,22 @@ export function usePaymentService() {
         throw new Error('Unable to validate payment processing');
       }
 
-      if (validationData?.validation_status === 'failed') {
+      const validation = validationData as ValidationResult;
+      if (validation?.validation_status === 'failed') {
         setValidationStatus('failed');
-        // Safely extract error message from validation_details
-        const details = validationData.validation_details as { message?: string } | null;
+        const details = validation.validation_details as { message?: string } | null;
         throw new Error(details?.message || 'Payment validation failed');
       }
 
-      setValidationStatus(validationData?.validation_status || 'pending');
+      setValidationStatus(validation?.validation_status || 'pending');
 
       // Create the checkout session
-      const response = await supabase.functions.invoke("create-checkout-session", {
-        method: 'POST',
+      const response = await supabase.functions.invoke<CheckoutResponse>("create-checkout-session", {
         body: JSON.stringify({
           amount,
           unit_id: unitId,
           setup_future_payments: setupFuturePayments
-        }),
-        headers: {
-          "Content-Type": "application/json"
-        }
+        })
       });
 
       if (response.error) {
@@ -94,12 +92,8 @@ export function usePaymentService() {
     try {
       setIsLoading(true);
       
-      const response = await supabase.functions.invoke("create-portal-session", {
-        method: 'POST',
-        body: JSON.stringify({ return_url: returnUrl }),
-        headers: {
-          "Content-Type": "application/json"
-        }
+      const response = await supabase.functions.invoke<PortalResponse>("create-portal-session", {
+        body: JSON.stringify({ return_url: returnUrl })
       });
 
       if (response.error) {

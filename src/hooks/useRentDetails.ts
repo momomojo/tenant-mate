@@ -48,8 +48,13 @@ export function useRentDetails(unitId: string, user: User | null) {
         return;
       }
 
-      // Check if property manager has Stripe Connect set up
-      if (!assignment.stripe_connect_account_id) {
+      // Check if company has Stripe Connect set up
+      const { data: stripeAccount, error: stripeError } = await supabase
+        .from('company_stripe_accounts')
+        .select('*')
+        .single();
+
+      if (stripeError || !stripeAccount) {
         setRentDetails(prev => ({
           ...prev,
           stripeConnectError: "Your property manager hasn't set up payments yet. Please contact them to enable online payments."
