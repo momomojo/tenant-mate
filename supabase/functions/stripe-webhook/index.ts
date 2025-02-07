@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -38,7 +39,8 @@ serve(async (req) => {
     let event: Stripe.Event;
     
     try {
-      event = stripe.webhooks.constructEvent(
+      // Use constructEventAsync instead of constructEvent
+      event = await stripe.webhooks.constructEventAsync(
         body,
         signature,
         webhookSecret
@@ -67,9 +69,9 @@ serve(async (req) => {
           requirements: account.requirements,
         });
         
-        // Update the property's Stripe account status with new fields
+        // Update the company's Stripe account status with new fields
         const { error } = await supabaseClient
-          .from('property_stripe_accounts')
+          .from('company_stripe_accounts')
           .update({ 
             status: account.details_submitted ? 'completed' : 'pending',
             verification_status: account.charges_enabled && account.payouts_enabled ? 'verified' : 'pending',
@@ -88,7 +90,7 @@ serve(async (req) => {
           .eq('stripe_connect_account_id', account.id);
 
         if (error) {
-          console.error('Error updating property stripe account:', error);
+          console.error('Error updating company stripe account:', error);
           throw error;
         }
 
