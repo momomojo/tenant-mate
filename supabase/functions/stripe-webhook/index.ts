@@ -292,6 +292,110 @@ serve(async (req) => {
         break;
       }
 
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log('Payment intent succeeded:', paymentIntent.id);
+
+        // Get the transaction and payment records
+        const { data: transaction, error: transactionError } = await supabaseClient
+          .from('payment_transactions')
+          .update({ 
+            status: 'succeeded',
+            updated_at: new Date().toISOString()
+          })
+          .eq('stripe_payment_intent_id', paymentIntent.id)
+          .select()
+          .single();
+
+        if (transactionError) {
+          console.error('Error updating transaction:', transactionError);
+          throw transactionError;
+        }
+
+        // Update the rent payment status
+        const { error: paymentError } = await supabaseClient
+          .from('rent_payments')
+          .update({ 
+            status: 'paid',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', transaction.rent_payment_id);
+
+        if (paymentError) {
+          console.error('Error updating payment:', paymentError);
+          throw paymentError;
+        }
+
+        // Log the payment event
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'payment_succeeded',
+          p_entity_type: 'payment',
+          p_entity_id: transaction.rent_payment_id,
+          p_changes: {
+            payment_intent_id: paymentIntent.id,
+            amount: paymentIntent.amount,
+            status: 'succeeded'
+          }
+        });
+
+        break;
+      }
+
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log('Payment intent failed:', paymentIntent.id);
+
+        const lastError = paymentIntent.last_payment_error;
+        
+        // Update transaction and payment status
+        const { data: transaction, error: transactionError } = await supabaseClient
+          .from('payment_transactions')
+          .update({ 
+            status: 'failed',
+            validation_errors: {
+              message: lastError?.message || 'Payment failed',
+              code: lastError?.code || 'unknown'
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('stripe_payment_intent_id', paymentIntent.id)
+          .select()
+          .single();
+
+        if (transactionError) {
+          console.error('Error updating transaction:', transactionError);
+          throw transactionError;
+        }
+
+        // Update the rent payment status
+        const { error: paymentError } = await supabaseClient
+          .from('rent_payments')
+          .update({ 
+            status: 'failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', transaction.rent_payment_id);
+
+        if (paymentError) {
+          console.error('Error updating payment:', paymentError);
+          throw paymentError;
+        }
+
+        // Log the payment failure
+        await supabaseClient.rpc('log_payment_event', {
+          p_event_type: 'payment_failed',
+          p_entity_type: 'payment',
+          p_entity_id: transaction.rent_payment_id,
+          p_changes: {
+            payment_intent_id: paymentIntent.id,
+            error: lastError || 'Unknown error',
+            status: 'failed'
+          }
+        });
+
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }

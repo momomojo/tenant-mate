@@ -421,6 +421,88 @@ export type Database = {
           },
         ]
       }
+      payment_routing_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_manager_id: string | null
+          new_stripe_account_id: string | null
+          payment_transaction_id: string
+          previous_manager_id: string | null
+          previous_stripe_account_id: string | null
+          routing_errors: Json | null
+          routing_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_manager_id?: string | null
+          new_stripe_account_id?: string | null
+          payment_transaction_id: string
+          previous_manager_id?: string | null
+          previous_stripe_account_id?: string | null
+          routing_errors?: Json | null
+          routing_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_manager_id?: string | null
+          new_stripe_account_id?: string | null
+          payment_transaction_id?: string
+          previous_manager_id?: string | null
+          previous_stripe_account_id?: string | null
+          routing_errors?: Json | null
+          routing_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_routing_history_new_manager_id_fkey"
+            columns: ["new_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_routing_history_new_manager_id_fkey"
+            columns: ["new_manager_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+          {
+            foreignKeyName: "payment_routing_history_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_reports"
+            referencedColumns: ["transaction_id"]
+          },
+          {
+            foreignKeyName: "payment_routing_history_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_routing_history_previous_manager_id_fkey"
+            columns: ["previous_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_routing_history_previous_manager_id_fkey"
+            columns: ["previous_manager_id"]
+            isOneToOne: false
+            referencedRelation: "property_manager_assignments"
+            referencedColumns: ["property_manager_id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount: number
@@ -430,10 +512,13 @@ export type Database = {
           property_manager_id: string | null
           property_stripe_account_id: string | null
           rent_payment_id: string | null
+          routing_attempts: number | null
           status: Database["public"]["Enums"]["payment_status"] | null
           stripe_customer_id: string | null
           stripe_payment_intent_id: string | null
           updated_at: string
+          validation_errors: Json | null
+          validation_status: string | null
         }
         Insert: {
           amount: number
@@ -443,10 +528,13 @@ export type Database = {
           property_manager_id?: string | null
           property_stripe_account_id?: string | null
           rent_payment_id?: string | null
+          routing_attempts?: number | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: string | null
         }
         Update: {
           amount?: number
@@ -456,10 +544,13 @@ export type Database = {
           property_manager_id?: string | null
           property_stripe_account_id?: string | null
           rent_payment_id?: string | null
+          routing_attempts?: number | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: string | null
         }
         Relationships: [
           {
