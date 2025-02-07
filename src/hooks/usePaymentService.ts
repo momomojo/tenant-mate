@@ -41,14 +41,17 @@ export function usePaymentService() {
         throw new Error('Unable to validate payment processing');
       }
 
-      const validation = validationData as ValidationResult;
-      if (validation?.validation_status === 'failed') {
+      // Type assertion with proper validation
+      const validation = validationData as ValidationResult | null;
+      if (!validation) {
+        setValidationStatus('pending');
+      } else if (validation.validation_status === 'failed') {
         setValidationStatus('failed');
         const details = validation.validation_details as { message?: string } | null;
         throw new Error(details?.message || 'Payment validation failed');
+      } else {
+        setValidationStatus(validation.validation_status || 'pending');
       }
-
-      setValidationStatus(validation?.validation_status || 'pending');
 
       // Create the checkout session
       const response = await supabase.functions.invoke<CheckoutResponse>("create-checkout-session", {
