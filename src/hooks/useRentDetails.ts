@@ -52,7 +52,8 @@ export function useRentDetails(unitId: string, user: User | null) {
       const { data: stripeAccount, error: stripeError } = await supabase
         .from('company_stripe_accounts')
         .select('*')
-        .single();
+        .eq('status', 'completed')
+        .maybeSingle();
 
       if (stripeError || !stripeAccount) {
         setRentDetails(prev => ({
