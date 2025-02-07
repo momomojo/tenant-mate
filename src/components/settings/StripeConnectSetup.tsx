@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -275,6 +276,9 @@ export const StripeConnectSetup = () => {
   const requirements = accountStatus?.requirements ? getUniqueRequirements() : {};
   const hasRequirements = Object.keys(requirements).length > 0;
   const selectedAccount = propertyAccounts?.find(a => a.property_id === selectedProperty);
+  
+  // Changed this line to always show the setup button if there's no stripe_connect_account_id
+  const showSetupButton = !selectedAccount?.stripe_connect_account_id;
   const isVerified = selectedAccount?.status === 'completed' && selectedAccount?.verification_status === 'verified';
 
   return (
