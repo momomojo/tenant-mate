@@ -4,13 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 
-interface ValidationError {
-  message: string;
-  code?: string;
+interface ValidationResult {
+  status: 'pending' | 'success' | 'failed';
+  error?: string;
+  details?: Json;
+  timestamp: string;
+  attempt: number;
 }
 
 interface PaymentValidationResult {
   validation_status: string | null;
+  validation_details: ValidationResult | null;
   validation_errors: Json | null;
 }
 
@@ -24,9 +28,9 @@ export function usePaymentService() {
       // First validate the payment can be processed
       const { data: validationData, error: validationError } = await supabase
         .from('payment_transactions')
-        .select('validation_status, validation_errors')
+        .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .single() as { data: PaymentValidationResult | null, error: Error | null };
+        .maybeSingle() as { data: PaymentValidationResult | null, error: Error | null };
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -34,8 +38,8 @@ export function usePaymentService() {
       }
 
       if (validationData?.validation_status === 'failed') {
-        const errors = validationData.validation_errors as unknown as ValidationError;
-        throw new Error(errors?.message || 'Payment validation failed');
+        const details = validationData.validation_details as ValidationResult;
+        throw new Error(details?.error || 'Payment validation failed');
       }
 
       // Create the checkout session
@@ -60,7 +64,8 @@ export function usePaymentService() {
         p_changes: {
           amount,
           unit_id: unitId,
-          setup_future_payments: setupFuturePayments
+          setup_future_payments: setupFuturePayments,
+          validation_details: validationData?.validation_details
         }
       });
 

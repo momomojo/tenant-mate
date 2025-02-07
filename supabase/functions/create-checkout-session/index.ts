@@ -77,7 +77,7 @@ serve(async (req) => {
       throw new Error('Failed to fetch payment details');
     }
 
-    // Validate Stripe account status
+    // Get and validate Stripe account status
     const { data: stripeAccount, error: stripeAccountError } = await supabaseAdmin
       .from('property_stripe_accounts')
       .select('*')
@@ -87,10 +87,15 @@ serve(async (req) => {
       .single();
 
     if (stripeAccountError || !stripeAccount) {
+      console.error('Error fetching Stripe account:', stripeAccountError);
       throw new Error('Property manager has not completed Stripe setup');
     }
 
     if (stripeAccount.status !== 'completed' || stripeAccount.verification_status !== 'verified') {
+      console.error('Invalid Stripe account status:', {
+        status: stripeAccount.status,
+        verification_status: stripeAccount.verification_status
+      });
       throw new Error('Property manager\'s Stripe account is not fully verified');
     }
 
@@ -144,7 +149,7 @@ serve(async (req) => {
     const platformFeePercentage = 0.05; // 5% platform fee
     const applicationFee = Math.round(amount * platformFeePercentage * 100); // Convert to cents
 
-    // Create payment transaction record
+    // Create payment transaction record with validation
     const { data: transaction, error: transactionError } = await supabaseAdmin
       .from('payment_transactions')
       .insert({
@@ -153,7 +158,7 @@ serve(async (req) => {
         property_manager_id: assignment.property_manager_id,
         property_stripe_account_id: stripeAccount.id,
         stripe_customer_id: customerId,
-        validation_status: 'success',
+        validation_status: 'pending',
         routing_attempts: 0
       })
       .select()
