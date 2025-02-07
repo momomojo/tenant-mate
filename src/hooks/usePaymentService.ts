@@ -5,10 +5,18 @@ import { toast } from 'sonner';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
+// Define a more specific type for validation errors and details
+type ValidationRecord = {
+  message?: string;
+  code?: string;
+  details?: string;
+  [key: string]: any;
+};
+
 interface ValidationResult {
   validation_status: ValidationStatus | null;
-  validation_details: Record<string, unknown> | null;
-  validation_errors: Record<string, unknown> | null;
+  validation_details: ValidationRecord | null;
+  validation_errors: ValidationRecord | null;
 }
 
 interface CheckoutResponse {
@@ -47,7 +55,7 @@ export function usePaymentService() {
         const validation = validationData as ValidationResult;
         if (validation.validation_status === 'failed') {
           setValidationStatus('failed');
-          const errorDetails = validation.validation_errors as { message?: string } | null;
+          const errorDetails = validation.validation_errors;
           throw new Error(errorDetails?.message || 'Payment validation failed');
         } else {
           setValidationStatus(validation.validation_status || 'pending');
