@@ -152,6 +152,24 @@ export const StripeConnectSetup = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
       
+      // Check for terminated accounts and clean them up if needed
+      const { data: existingAccount } = await supabase
+        .from('company_stripe_accounts')
+        .select('*')
+        .eq('status', 'terminated')
+        .maybeSingle();
+
+      if (existingAccount) {
+        const { error: deleteError } = await supabase
+          .from('company_stripe_accounts')
+          .delete()
+          .eq('id', existingAccount.id);
+
+        if (deleteError) {
+          console.error('Error cleaning up terminated account:', deleteError);
+        }
+      }
+      
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
         body: { userId: user.id },
@@ -226,7 +244,7 @@ export const StripeConnectSetup = () => {
                 requirements,
                 status: companyStripeAccount.status,
                 verificationStatus: companyStripeAccount.verification_status,
-                lastUpdated: undefined
+                lastUpdated: companyStripeAccount.updated_at
               }}
             />
             
@@ -261,3 +279,4 @@ export const StripeConnectSetup = () => {
     </Card>
   );
 };
+

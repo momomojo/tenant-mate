@@ -63,6 +63,7 @@ export type Database = {
           id: string
           status: string | null
           stripe_connect_account_id: string | null
+          termination_date: string | null
           updated_at: string | null
           verification_errors: Json | null
           verification_requirements: Json | null
@@ -73,6 +74,7 @@ export type Database = {
           id?: string
           status?: string | null
           stripe_connect_account_id?: string | null
+          termination_date?: string | null
           updated_at?: string | null
           verification_errors?: Json | null
           verification_requirements?: Json | null
@@ -83,6 +85,7 @@ export type Database = {
           id?: string
           status?: string | null
           stripe_connect_account_id?: string | null
+          termination_date?: string | null
           updated_at?: string | null
           verification_errors?: Json | null
           verification_requirements?: Json | null
