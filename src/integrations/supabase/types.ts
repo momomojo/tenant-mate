@@ -416,6 +416,7 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_payment_intent_id: string | null
           updated_at: string
+          validation_details: Json | null
           validation_errors: Json | null
           validation_status: string | null
         }
@@ -432,6 +433,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           updated_at?: string
+          validation_details?: Json | null
           validation_errors?: Json | null
           validation_status?: string | null
         }
@@ -448,6 +450,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           updated_at?: string
+          validation_details?: Json | null
           validation_errors?: Json | null
           validation_status?: string | null
         }

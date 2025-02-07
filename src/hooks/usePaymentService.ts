@@ -41,16 +41,17 @@ export function usePaymentService() {
         throw new Error('Unable to validate payment processing');
       }
 
-      // Type assertion with proper validation
-      const validation = validationData as ValidationResult | null;
-      if (!validation) {
+      if (!validationData) {
         setValidationStatus('pending');
-      } else if (validation.validation_status === 'failed') {
-        setValidationStatus('failed');
-        const details = validation.validation_details as { message?: string } | null;
-        throw new Error(details?.message || 'Payment validation failed');
       } else {
-        setValidationStatus(validation.validation_status || 'pending');
+        const validation = validationData as ValidationResult;
+        if (validation.validation_status === 'failed') {
+          setValidationStatus('failed');
+          const errorDetails = validation.validation_errors as { message?: string } | null;
+          throw new Error(errorDetails?.message || 'Payment validation failed');
+        } else {
+          setValidationStatus(validation.validation_status || 'pending');
+        }
       }
 
       // Create the checkout session
