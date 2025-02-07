@@ -2,20 +2,14 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
 interface ValidationResult {
-  status: ValidationStatus;
-  error?: string;
-  timestamp: string;
-  attempt: number;
-}
-
-interface PaymentValidationResult {
   validation_status: ValidationStatus | null;
-  validation_details: Record<string, any> | null;
-  validation_errors: Record<string, any> | null;
+  validation_details: Json | null;
+  validation_errors: Json | null;
 }
 
 export function usePaymentService() {
@@ -31,7 +25,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle() as { data: PaymentValidationResult | null, error: Error | null };
+        .maybeSingle() as { data: ValidationResult | null, error: Error | null };
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -50,10 +44,13 @@ export function usePaymentService() {
       // Create the checkout session
       const response = await supabase.functions.invoke("create-checkout-session", {
         method: 'POST',
-        body: {
+        body: JSON.stringify({
           amount,
           unit_id: unitId,
           setup_future_payments: setupFuturePayments
+        }),
+        headers: {
+          "Content-Type": "application/json"
         }
       });
 
@@ -92,7 +89,10 @@ export function usePaymentService() {
       
       const response = await supabase.functions.invoke("create-portal-session", {
         method: 'POST',
-        body: { return_url: returnUrl }
+        body: JSON.stringify({ return_url: returnUrl }),
+        headers: {
+          "Content-Type": "application/json"
+        }
       });
 
       if (response.error) {
