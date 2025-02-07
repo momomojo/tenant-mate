@@ -12,6 +12,9 @@ import { useAutoPayment } from '@/hooks/useAutoPayment';
 import { useRentDetails } from '@/hooks/useRentDetails';
 import { AutoPayToggle } from './AutoPayToggle';
 import { PaymentError } from './PaymentError';
+import { Progress } from "@/components/ui/progress";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PaymentFormProps {
   unitId: string;
@@ -21,7 +24,7 @@ interface PaymentFormProps {
 export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps) {
   const navigate = useNavigate();
   const { user, isLoading: isAuthLoading } = useAuthenticatedUser();
-  const { isLoading: isPaymentLoading, createCheckoutSession, createPortalSession } = usePaymentService();
+  const { isLoading: isPaymentLoading, createCheckoutSession, createPortalSession, validationStatus } = usePaymentService();
   const { isEnabled: autoPayEnabled, isLoading: isAutoPayLoading, toggleAutoPay } = 
     useAutoPayment(unitId, user?.id);
   const { monthlyRent, stripeConnectError } = useRentDetails(unitId, user);
@@ -46,8 +49,6 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (error.message.includes("No active session")) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
-      } else {
-        toast.error("Failed to initiate payment. Please try again later.");
       }
     }
   };
@@ -58,12 +59,48 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (url) {
         window.open(url, '_blank');
       }
-    } catch (error) {
-      toast.error("Failed to access payment settings. Please try again.");
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to access payment portal');
     }
   };
 
   const isLoading = isAuthLoading || isPaymentLoading || isAutoPayLoading;
+
+  const getValidationStatusDisplay = () => {
+    if (!validationStatus) return null;
+
+    switch (validationStatus) {
+      case 'pending':
+        return (
+          <Alert className="bg-yellow-500/15 text-yellow-500 border-yellow-500/50">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>
+              Validating payment processing...
+            </AlertDescription>
+          </Alert>
+        );
+      case 'success':
+        return (
+          <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>
+              Payment processing is ready
+            </AlertDescription>
+          </Alert>
+        );
+      case 'failed':
+        return (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Unable to process payments at this time
+            </AlertDescription>
+          </Alert>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Card>
@@ -77,6 +114,18 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         {stripeConnectError && (
           <PaymentError message={stripeConnectError} />
         )}
+        
+        {getValidationStatusDisplay()}
+
+        {isLoading && (
+          <div className="space-y-2">
+            <Progress value={45} className="w-full" />
+            <p className="text-sm text-muted-foreground text-center">
+              Processing your request...
+            </p>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="amount">Monthly Rent Amount</Label>
           <Input
@@ -87,11 +136,13 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
             className="bg-muted"
           />
         </div>
+
         <AutoPayToggle
           enabled={autoPayEnabled}
           onToggle={toggleAutoPay}
           disabled={isLoading || Boolean(stripeConnectError)}
         />
+
         <Button
           variant="outline"
           onClick={handleCustomerPortal}
@@ -107,7 +158,14 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
           disabled={isLoading || !user || !monthlyRent || Boolean(stripeConnectError)}
           className="w-full"
         >
-          {isLoading ? "Processing..." : `Pay $${monthlyRent || defaultAmount || 0}`}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Pay $${monthlyRent || defaultAmount || 0}`
+          )}
         </Button>
       </CardFooter>
     </Card>

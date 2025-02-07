@@ -2,24 +2,25 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Json } from '@/integrations/supabase/types';
+
+type ValidationStatus = 'pending' | 'success' | 'failed';
 
 interface ValidationResult {
-  status: 'pending' | 'success' | 'failed';
+  status: ValidationStatus;
   error?: string;
-  details?: Json;
   timestamp: string;
   attempt: number;
 }
 
 interface PaymentValidationResult {
-  validation_status: string | null;
-  validation_details: ValidationResult | null;
-  validation_errors: Json | null;
+  validation_status: ValidationStatus | null;
+  validation_details: Record<string, any> | null;
+  validation_errors: Record<string, any> | null;
 }
 
 export function usePaymentService() {
   const [isLoading, setIsLoading] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus | null>(null);
 
   const createCheckoutSession = async (amount: number, unitId: string, setupFuturePayments: boolean) => {
     try {
@@ -34,13 +35,17 @@ export function usePaymentService() {
 
       if (validationError) {
         console.error('Validation error:', validationError);
+        setValidationStatus('failed');
         throw new Error('Unable to validate payment processing');
       }
 
       if (validationData?.validation_status === 'failed') {
-        const details = validationData.validation_details as ValidationResult;
+        setValidationStatus('failed');
+        const details = validationData.validation_details;
         throw new Error(details?.error || 'Payment validation failed');
       }
+
+      setValidationStatus(validationData?.validation_status || 'pending');
 
       // Create the checkout session
       const response = await supabase.functions.invoke("create-checkout-session", {
@@ -53,8 +58,11 @@ export function usePaymentService() {
       });
 
       if (response.error) {
+        setValidationStatus('failed');
         throw new Error(response.error.message);
       }
+
+      setValidationStatus('success');
 
       // Log the successful checkout initiation
       await supabase.rpc('log_payment_event', {
@@ -64,8 +72,7 @@ export function usePaymentService() {
         p_changes: {
           amount,
           unit_id: unitId,
-          setup_future_payments: setupFuturePayments,
-          validation_details: validationData?.validation_details
+          setup_future_payments: setupFuturePayments
         }
       });
 
@@ -104,6 +111,7 @@ export function usePaymentService() {
 
   return {
     isLoading,
+    validationStatus,
     createCheckoutSession,
     createPortalSession
   };
