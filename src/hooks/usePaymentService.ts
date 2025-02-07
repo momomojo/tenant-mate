@@ -18,14 +18,7 @@ export function usePaymentService() {
       // First validate the payment can be processed
       const { data: validationData, error: validationError } = await supabase
         .from('payment_transactions')
-        .select(`
-          validation_status,
-          validation_errors,
-          property_stripe_accounts!inner(
-            verification_status,
-            status
-          )
-        `)
+        .select('validation_status, validation_errors, property_stripe_accounts!inner(verification_status, status)')
         .eq('unit_id', unitId)
         .single();
 
@@ -35,7 +28,8 @@ export function usePaymentService() {
       }
 
       if (validationData?.validation_status === 'failed') {
-        const errors = validationData.validation_errors as ValidationError;
+        // First cast to unknown, then to ValidationError to satisfy TypeScript
+        const errors = validationData.validation_errors as unknown as ValidationError;
         throw new Error(errors?.message || 'Payment validation failed');
       }
 
