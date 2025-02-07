@@ -49,20 +49,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "automatic_payments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "automatic_payments_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["unit_id"]
-          },
-          {
             foreignKeyName: "automatic_payments_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -70,6 +56,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      company_stripe_accounts: {
+        Row: {
+          created_at: string | null
+          id: string
+          status: string | null
+          stripe_connect_account_id: string | null
+          updated_at: string | null
+          verification_errors: Json | null
+          verification_requirements: Json | null
+          verification_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          stripe_connect_account_id?: string | null
+          updated_at?: string | null
+          verification_errors?: Json | null
+          verification_requirements?: Json | null
+          verification_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          stripe_connect_account_id?: string | null
+          updated_at?: string | null
+          verification_errors?: Json | null
+          verification_requirements?: Json | null
+          verification_status?: string | null
+        }
+        Relationships: []
       }
       deleted_tenant_units: {
         Row: {
@@ -120,13 +139,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "deleted_tenant_units_deleted_by_fkey"
-            columns: ["deleted_by"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
             foreignKeyName: "deleted_tenant_units_original_id_fkey"
             columns: ["original_id"]
             isOneToOne: false
@@ -139,20 +151,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deleted_tenant_units_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "deleted_tenant_units_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "deleted_tenant_units_unit_id_fkey"
@@ -206,20 +204,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "maintenance_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "maintenance_requests_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["unit_id"]
-          },
-          {
             foreignKeyName: "maintenance_requests_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -266,13 +250,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -337,13 +314,6 @@ export type Database = {
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_id"]
           },
-          {
-            foreignKeyName: "payment_configs_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
         ]
       }
       payment_methods: {
@@ -387,13 +357,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_methods_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -439,96 +402,14 @@ export type Database = {
           },
         ]
       }
-      payment_routing_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          new_manager_id: string | null
-          new_stripe_account_id: string | null
-          payment_transaction_id: string
-          previous_manager_id: string | null
-          previous_stripe_account_id: string | null
-          routing_errors: Json | null
-          routing_status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          new_manager_id?: string | null
-          new_stripe_account_id?: string | null
-          payment_transaction_id: string
-          previous_manager_id?: string | null
-          previous_stripe_account_id?: string | null
-          routing_errors?: Json | null
-          routing_status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          new_manager_id?: string | null
-          new_stripe_account_id?: string | null
-          payment_transaction_id?: string
-          previous_manager_id?: string | null
-          previous_stripe_account_id?: string | null
-          routing_errors?: Json | null
-          routing_status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_routing_history_new_manager_id_fkey"
-            columns: ["new_manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_routing_history_new_manager_id_fkey"
-            columns: ["new_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "payment_routing_history_payment_transaction_id_fkey"
-            columns: ["payment_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "payment_reports"
-            referencedColumns: ["transaction_id"]
-          },
-          {
-            foreignKeyName: "payment_routing_history_payment_transaction_id_fkey"
-            columns: ["payment_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "payment_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_routing_history_previous_manager_id_fkey"
-            columns: ["previous_manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_routing_history_previous_manager_id_fkey"
-            columns: ["previous_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-        ]
-      }
       payment_transactions: {
         Row: {
           amount: number
+          company_stripe_account_id: string | null
           created_at: string
           id: string
           payment_method: string | null
           property_manager_id: string | null
-          property_stripe_account_id: string | null
           rent_payment_id: string | null
           routing_attempts: number | null
           status: Database["public"]["Enums"]["payment_status"] | null
@@ -540,11 +421,11 @@ export type Database = {
         }
         Insert: {
           amount: number
+          company_stripe_account_id?: string | null
           created_at?: string
           id?: string
           payment_method?: string | null
           property_manager_id?: string | null
-          property_stripe_account_id?: string | null
           rent_payment_id?: string | null
           routing_attempts?: number | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -556,11 +437,11 @@ export type Database = {
         }
         Update: {
           amount?: number
+          company_stripe_account_id?: string | null
           created_at?: string
           id?: string
           payment_method?: string | null
           property_manager_id?: string | null
-          property_stripe_account_id?: string | null
           rent_payment_id?: string | null
           routing_attempts?: number | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -572,32 +453,18 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "payment_transactions_company_stripe_account_id_fkey"
+            columns: ["company_stripe_account_id"]
+            isOneToOne: false
+            referencedRelation: "company_stripe_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payment_transactions_property_manager_id_fkey"
             columns: ["property_manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_transactions_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "payment_transactions_property_stripe_account_id_fkey"
-            columns: ["property_stripe_account_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_transactions_property_stripe_account_id_fkey"
-            columns: ["property_stripe_account_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "payment_transactions_rent_payment_id_fkey"
@@ -631,9 +498,7 @@ export type Database = {
           postal_code: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           state: string | null
-          stripe_connect_account_id: string | null
           stripe_customer_id: string | null
-          stripe_onboarding_data: Json | null
           updated_at: string
         }
         Insert: {
@@ -651,9 +516,7 @@ export type Database = {
           postal_code?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           state?: string | null
-          stripe_connect_account_id?: string | null
           stripe_customer_id?: string | null
-          stripe_onboarding_data?: Json | null
           updated_at?: string
         }
         Update: {
@@ -671,9 +534,7 @@ export type Database = {
           postal_code?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           state?: string | null
-          stripe_connect_account_id?: string | null
           stripe_customer_id?: string | null
-          stripe_onboarding_data?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -723,25 +584,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "properties_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
             foreignKeyName: "properties_property_manager_id_fkey"
             columns: ["property_manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "properties_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -792,112 +639,11 @@ export type Database = {
             referencedColumns: ["property_id"]
           },
           {
-            foreignKeyName: "property_documents_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
-          {
             foreignKeyName: "property_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "property_documents_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-        ]
-      }
-      property_stripe_accounts: {
-        Row: {
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          last_webhook_received_at: string | null
-          onboarding_completed_at: string | null
-          property_id: string
-          property_manager_id: string
-          status: string | null
-          stripe_connect_account_id: string | null
-          stripe_onboarding_data: Json | null
-          updated_at: string | null
-          verification_errors: Json | null
-          verification_requirements: Json | null
-          verification_status: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_webhook_received_at?: string | null
-          onboarding_completed_at?: string | null
-          property_id: string
-          property_manager_id: string
-          status?: string | null
-          stripe_connect_account_id?: string | null
-          stripe_onboarding_data?: Json | null
-          updated_at?: string | null
-          verification_errors?: Json | null
-          verification_requirements?: Json | null
-          verification_status?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_webhook_received_at?: string | null
-          onboarding_completed_at?: string | null
-          property_id?: string
-          property_manager_id?: string
-          status?: string | null
-          stripe_connect_account_id?: string | null
-          stripe_onboarding_data?: Json | null
-          updated_at?: string | null
-          verification_errors?: Json | null
-          verification_requirements?: Json | null
-          verification_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "property_stripe_accounts_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "property_stripe_accounts_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_id"]
-          },
-          {
-            foreignKeyName: "property_stripe_accounts_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
-          {
-            foreignKeyName: "property_stripe_accounts_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "property_stripe_accounts_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -948,20 +694,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rent_payments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "rent_payments_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "rent_payments_unit_id_fkey"
@@ -1063,20 +795,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tenant_units_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
-            foreignKeyName: "tenant_units_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["unit_id"]
-          },
-          {
             foreignKeyName: "tenant_units_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -1128,13 +846,6 @@ export type Database = {
             referencedRelation: "property_manager_assignments"
             referencedColumns: ["property_id"]
           },
-          {
-            foreignKeyName: "units_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
         ]
       }
     }
@@ -1169,25 +880,11 @@ export type Database = {
             referencedColumns: ["property_id"]
           },
           {
-            foreignKeyName: "property_documents_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
-          {
             foreignKeyName: "property_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "property_documents_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -1215,13 +912,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "rent_payments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-          {
             foreignKeyName: "units_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
@@ -1233,13 +923,6 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_id"]
-          },
-          {
-            foreignKeyName: "units_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
             referencedColumns: ["property_id"]
           },
         ]
@@ -1299,25 +982,11 @@ export type Database = {
             referencedColumns: ["property_id"]
           },
           {
-            foreignKeyName: "payment_configs_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
-          {
             foreignKeyName: "properties_property_manager_id_fkey"
             columns: ["property_manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "properties_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
           },
         ]
       }
@@ -1331,7 +1000,6 @@ export type Database = {
           property_id: string | null
           property_manager_id: string | null
           property_name: string | null
-          stripe_connect_account_id: string | null
           tenant_email: string | null
           tenant_first_name: string | null
           tenant_id: string | null
@@ -1341,8 +1009,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "tenant_units_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "properties_property_manager_id_fkey"
+            columns: ["property_manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1351,28 +1019,17 @@ export type Database = {
             foreignKeyName: "tenant_units_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
           },
         ]
-      }
-      property_stripe_status_view: {
-        Row: {
-          account_id: string | null
-          last_webhook_received_at: string | null
-          manager_email: string | null
-          manager_first_name: string | null
-          manager_last_name: string | null
-          onboarding_completed_at: string | null
-          property_id: string | null
-          property_name: string | null
-          status: string | null
-          stripe_connect_account_id: string | null
-          verification_errors: Json | null
-          verification_requirements: Json | null
-          verification_status: string | null
-        }
-        Relationships: []
       }
     }
     Functions: {

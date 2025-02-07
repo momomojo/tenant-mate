@@ -7,12 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { StripeOnboardingForm } from "./StripeOnboardingForm";
 import { Progress } from "@/components/ui/progress";
-import { StripeRequirementGroup } from "./components/StripeRequirementGroup";
 import { StripeAccountStatus } from "./components/StripeAccountStatus";
 import { StripeAccountActions } from "./components/StripeAccountActions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AccountStatus {
   requirements: {
@@ -28,56 +25,12 @@ interface AccountStatus {
   remediationLink?: string;
 }
 
-interface PropertyStripeAccount {
-  id: string;
-  property_id: string;
-  property_name: string;
-  stripe_connect_account_id: string | null;
-  status: string;
-  verification_status: string;
-  is_active: boolean;
-  verification_requirements?: any;
-  verification_errors?: any;
-  last_webhook_received_at?: string;
-}
-
-const groupRequirements = (requirements: string[]) => {
-  const groups: { [key: string]: string[] } = {
-    'Personal Information': [],
-    'Address': [],
-    'Identity Verification': [],
-    'Business Details': [],
-    'Other': [],
-  };
-
-  requirements.forEach(req => {
-    if (req.includes('address')) {
-      groups['Address'].push(req);
-    } else if (req.includes('dob') || req.includes('ssn') || req.includes('id_number')) {
-      groups['Identity Verification'].push(req);
-    } else if (req.includes('first_name') || req.includes('last_name') || req.includes('email') || req.includes('phone')) {
-      groups['Personal Information'].push(req);
-    } else if (req.includes('business') || req.includes('external_account')) {
-      groups['Business Details'].push(req);
-    } else {
-      groups['Other'].push(req);
-    }
-  });
-
-  return Object.fromEntries(
-    Object.entries(groups).filter(([_, reqs]) => reqs.length > 0)
-  );
-};
-
 export const StripeConnectSetup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null);
-  const [showOnboardingForm, setShowOnboardingForm] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const property_id = searchParams.get('property_id');
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
@@ -96,65 +49,52 @@ export const StripeConnectSetup = () => {
     },
   });
 
-  const { data: propertyAccounts, isLoading: accountsLoading, refetch: refetchAccounts } = useQuery({
-    queryKey: ["propertyStripeAccounts"],
+  const { data: companyStripeAccount, isLoading: accountLoading, refetch: refetchAccount } = useQuery({
+    queryKey: ["companyStripeAccount"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
       const { data, error } = await supabase
-        .from("property_stripe_accounts")
-        .select(`
-          *,
-          property:properties(
-            id,
-            name
-          )
-        `)
-        .eq("property_manager_id", user.id)
-        .eq("is_active", true);
+        .from("company_stripe_accounts")
+        .select("*")
+        .eq("status", "completed")
+        .single();
 
-      if (error) throw error;
-      return data.map(account => ({
-        ...account,
-        property_id: account.property.id,
-        property_name: account.property.name
-      }));
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
     },
     enabled: !!profile?.id
   });
 
   useEffect(() => {
     const fetchAccountStatus = async () => {
-      if (!selectedProperty) return;
-      
-      const account = propertyAccounts?.find(a => a.property_id === selectedProperty);
-      if (!account?.stripe_connect_account_id) return;
+      if (!companyStripeAccount?.stripe_connect_account_id) return;
       
       try {
         const { data, error } = await supabase.functions.invoke('get-connect-account-status', {
-          body: { account_id: account.stripe_connect_account_id }
+          body: { account_id: companyStripeAccount.stripe_connect_account_id }
         });
 
         if (error) throw error;
         setAccountStatus(data);
         
         if (data.chargesEnabled && data.payoutsEnabled) {
-          const wasOnboardingIncomplete = account.status !== 'completed';
+          const wasOnboardingIncomplete = companyStripeAccount.status !== 'completed';
           
           if (wasOnboardingIncomplete) {
             const { error: updateError } = await supabase
-              .from('property_stripe_accounts')
+              .from('company_stripe_accounts')
               .update({ 
                 status: 'completed',
                 verification_status: 'verified',
                 updated_at: new Date().toISOString()
               })
-              .eq('id', account.id);
+              .eq('id', companyStripeAccount.id);
               
             if (!updateError) {
-              toast.success("Stripe account verification completed! You can now accept payments for this property.");
-              await refetchAccounts();
+              toast.success("Stripe account verification completed! You can now accept payments.");
+              await refetchAccount();
             }
           }
         }
@@ -166,34 +106,33 @@ export const StripeConnectSetup = () => {
 
     fetchAccountStatus();
     const interval = setInterval(() => {
-      if (selectedProperty && propertyAccounts?.find(a => 
-        a.property_id === selectedProperty && 
-        (a.status !== 'completed' || a.verification_status !== 'verified')
-      )) {
+      if (companyStripeAccount && 
+        (companyStripeAccount.status !== 'completed' || 
+         companyStripeAccount.verification_status !== 'verified')
+      ) {
         fetchAccountStatus();
       }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [selectedProperty, propertyAccounts]);
+  }, [companyStripeAccount]);
 
   useEffect(() => {
     const handleOAuthReturn = async () => {
-      if (!code || !state || !property_id) return;
+      if (!code || !state) return;
 
       const toastId = toast.loading("Completing Stripe Connect setup...");
       try {
         setIsLoading(true);
         const { data, error } = await supabase.functions.invoke('handle-connect-oauth', {
           method: 'POST',
-          body: { code, state, property_id },
+          body: { code, state },
         });
 
         if (error) throw error;
 
         setAccountStatus(data);
-        setSelectedProperty(property_id);
-        await refetchAccounts();
+        await refetchAccount();
         toast.success("Successfully connected to Stripe! Please complete any remaining verification steps.", { id: toastId });
       } catch (error) {
         console.error('Error handling OAuth return:', error);
@@ -204,16 +143,18 @@ export const StripeConnectSetup = () => {
     };
 
     handleOAuthReturn();
-  }, [code, state, property_id, refetchAccounts]);
+  }, [code, state, refetchAccount]);
 
-  const setupStripeConnect = async (propertyId: string, onboardingData?: any) => {
+  const setupStripeConnect = async () => {
     const toastId = toast.loading("Setting up Stripe Connect...");
     try {
       setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
       
       const { data, error } = await supabase.functions.invoke('create-connect-account', {
         method: 'POST',
-        body: { propertyId, onboardingData },
+        body: { userId: user.id },
       });
 
       if (error) throw error;
@@ -233,161 +174,89 @@ export const StripeConnectSetup = () => {
     }
   };
 
-  const getUniqueRequirements = () => {
-    if (!accountStatus?.requirements) return {};
-    return groupRequirements([
-      ...accountStatus.requirements.currently_due,
-      ...accountStatus.requirements.eventually_due,
-      ...accountStatus.requirements.past_due,
-    ]);
-  };
-
-  const getOnboardingProgress = (account: PropertyStripeAccount) => {
-    if (!accountStatus) return 25;
-    const total = 4;
-    let completed = 1;
-    if (account.stripe_connect_account_id) completed++;
-    if (account.status === 'completed') completed++;
-    if (account.verification_status === 'verified') completed++;
-    return (completed / total) * 100;
-  };
-
   const openStripeDashboard = (accountId: string) => {
     if (!accountId) return;
     window.open(`https://dashboard.stripe.com/connect/accounts/${accountId}`, '_blank');
   };
 
-  const handleRequirementClick = (requirement: string) => {
+  const handleRequirementClick = () => {
     if (accountStatus?.remediationLink) {
       window.open(accountStatus.remediationLink, '_blank');
-    } else {
-      const account = propertyAccounts?.find(a => a.property_id === selectedProperty);
-      if (account?.stripe_connect_account_id) {
-        openStripeDashboard(account.stripe_connect_account_id);
-      }
+    } else if (companyStripeAccount?.stripe_connect_account_id) {
+      openStripeDashboard(companyStripeAccount.stripe_connect_account_id);
     }
   };
 
-  if (profileLoading || accountsLoading) return null;
+  if (profileLoading || accountLoading) return null;
 
   // Only check for property_manager role
   if (profile?.role !== 'property_manager') return null;
 
-  const requirements = accountStatus?.requirements ? getUniqueRequirements() : {};
-  const hasRequirements = Object.keys(requirements).length > 0;
-  const selectedAccount = propertyAccounts?.find(a => a.property_id === selectedProperty);
+  const requirements = accountStatus?.requirements ? {
+    ...accountStatus.requirements,
+    past_due: accountStatus.requirements.past_due || [],
+    eventually_due: accountStatus.requirements.eventually_due || [],
+    currently_due: accountStatus.requirements.currently_due || [],
+  } : null;
   
-  // Changed this line to always show the setup button if there's no stripe_connect_account_id
-  const showSetupButton = !selectedAccount?.stripe_connect_account_id;
-  const isVerified = selectedAccount?.status === 'completed' && selectedAccount?.verification_status === 'verified';
+  const hasRequirements = requirements && (
+    requirements.past_due.length > 0 || 
+    requirements.eventually_due.length > 0 || 
+    requirements.currently_due.length > 0
+  );
+  
+  const isVerified = companyStripeAccount?.status === 'completed' && 
+                     companyStripeAccount?.verification_status === 'verified';
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Payment Processing Setup</CardTitle>
         <CardDescription>
-          Set up Stripe Connect to accept rent payments securely for each of your properties.
+          Set up Stripe Connect to accept rent payments securely.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs 
-          value={selectedProperty || 'overview'} 
-          onValueChange={setSelectedProperty}
-          className="w-full"
-        >
-          <TabsList className="w-full">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            {propertyAccounts?.map((account) => (
-              <TabsTrigger key={account.property_id} value={account.property_id}>
-                {account.property_name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="overview">
-            <div className="grid gap-4 md:grid-cols-2">
-              {propertyAccounts?.map((account) => (
-                <Card key={account.property_id}>
-                  <CardHeader>
-                    <CardTitle>{account.property_name}</CardTitle>
-                    <Progress value={getOnboardingProgress(account)} className="h-2" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Status: {account.status === 'completed' ? '✅ Ready' : '⏳ Setup needed'}
-                      </p>
-                      <Button 
-                        onClick={() => setSelectedProperty(account.property_id)}
-                        variant={account.status === 'completed' ? 'outline' : 'default'}
-                      >
-                        {account.status === 'completed' ? 'View Details' : 'Complete Setup'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          {propertyAccounts?.map((account) => (
-            <TabsContent key={account.property_id} value={account.property_id}>
-              <div className="space-y-4">
-                {account.stripe_connect_account_id ? (
-                  <>
-                    <StripeAccountStatus 
-                      isVerified={isVerified} 
-                      hasRequirements={hasRequirements}
-                      propertyName={account.property_name}
-                      verificationDetails={{
-                        requirements: accountStatus?.requirements,
-                        status: account.status,
-                        verificationStatus: account.verification_status,
-                        lastUpdated: account.last_webhook_received_at
-                      }}
-                    />
-                    
-                    {hasRequirements && Object.entries(requirements).map(([category, reqs], index) => (
-                      <StripeRequirementGroup
-                        key={category}
-                        category={category}
-                        requirements={reqs}
-                        pastDueRequirements={accountStatus?.requirements.past_due || []}
-                        isLastGroup={index === Object.entries(requirements).length - 1}
-                        onItemClick={handleRequirementClick}
-                      />
-                    ))}
-
-                    <StripeAccountActions
-                      isVerified={isVerified}
-                      isLoading={isLoading}
-                      remediationLink={accountStatus?.remediationLink}
-                      onDashboardOpen={() => account.stripe_connect_account_id && openStripeDashboard(account.stripe_connect_account_id)}
-                      onSetupComplete={() => setupStripeConnect(account.property_id)}
-                    />
-                  </>
-                ) : (
-                  <div className="space-y-4">
-                    <Button 
-                      onClick={() => setupStripeConnect(account.property_id)}
-                      disabled={isLoading}
-                      className="w-full"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        'Start Payment Setup'
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+        {companyStripeAccount?.stripe_connect_account_id ? (
+          <>
+            <StripeAccountStatus 
+              isVerified={isVerified} 
+              hasRequirements={!!hasRequirements}
+              verificationDetails={{
+                requirements,
+                status: companyStripeAccount.status,
+                verificationStatus: companyStripeAccount.verification_status,
+                lastUpdated: undefined
+              }}
+            />
+            
+            <StripeAccountActions
+              isVerified={isVerified}
+              isLoading={isLoading}
+              remediationLink={accountStatus?.remediationLink}
+              onDashboardOpen={() => companyStripeAccount.stripe_connect_account_id && 
+                openStripeDashboard(companyStripeAccount.stripe_connect_account_id)}
+              onSetupComplete={handleRequirementClick}
+            />
+          </>
+        ) : (
+          <div className="space-y-4">
+            <Button 
+              onClick={setupStripeConnect}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Start Payment Setup'
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

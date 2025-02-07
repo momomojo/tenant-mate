@@ -9,14 +9,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Starting create-connect-account function');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Starting create-connect-account function');
-    
-    const { onboardingData } = await req.json();
+    const { userId } = await req.json();
     const isTestMode = Deno.env.get('NODE_ENV') !== 'production';
     
     const supabaseClient = createClient(
@@ -47,39 +47,16 @@ serve(async (req) => {
       throw new Error(`Failed to fetch profile: ${profileError.message}`);
     }
 
-    let userProfile = profile;
+    // Check if a company Stripe account already exists
+    const { data: existingAccount, error: accountError } = await supabaseClient
+      .from('company_stripe_accounts')
+      .select('*')
+      .single();
 
-    if (!userProfile) {
-      console.log('No profile found, creating new profile...');
-      const { data: newProfile, error: createError } = await supabaseClient
-        .from("profiles")
-        .insert({
-          id: user.id,
-          email: user.email,
-          first_name: onboardingData?.firstName || user.user_metadata?.first_name || '',
-          last_name: onboardingData?.lastName || user.user_metadata?.last_name || '',
-          role: 'property_manager'
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('Profile creation error:', createError);
-        throw new Error(`Failed to create profile: ${createError.message}`);
-      }
-
-      userProfile = newProfile;
+    if (existingAccount?.stripe_connect_account_id) {
+      console.log('Company already has a Stripe Connect account:', existingAccount.stripe_connect_account_id);
+      throw new Error('Company already has a Stripe Connect account');
     }
-
-    if (userProfile.stripe_connect_account_id) {
-      console.log('User already has a Stripe Connect account:', userProfile.stripe_connect_account_id);
-      throw new Error('Stripe Connect account already exists');
-    }
-
-    console.log('Creating Stripe Connect account...');
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2023-10-16',
-    });
 
     // Get client IP and validate format
     let clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
@@ -93,14 +70,18 @@ serve(async (req) => {
     }
 
     const origin = req.headers.get('origin') || 'https://app.example.com';
-    const businessUrl = `${origin}/properties`;
+
+    // Initialize Stripe
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16',
+    });
 
     // Create Stripe Custom account with minimal requirements for test mode
     const accountParams = {
       type: 'custom',
       country: 'US',
-      email: onboardingData.email || userProfile.email,
-      business_type: 'individual',
+      email: profile.email,
+      business_type: 'company',
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
@@ -112,7 +93,7 @@ serve(async (req) => {
       business_profile: {
         mcc: '6513', // Real Estate
         product_description: 'Property rental payments',
-        url: businessUrl,
+        url: origin,
       },
       settings: {
         payouts: {
@@ -141,24 +122,23 @@ serve(async (req) => {
 
     console.log('Stripe account created:', account.id);
 
-    // Update profile with the new account ID
-    const { error: updateError } = await supabaseClient
-      .from("profiles")
-      .update({ 
+    // Create company_stripe_accounts record
+    const { error: insertError } = await supabaseClient
+      .from('company_stripe_accounts')
+      .insert({
         stripe_connect_account_id: account.id,
-        onboarding_status: 'in_progress',
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", user.id);
+        status: 'pending',
+        verification_status: 'pending',
+      });
 
-    if (updateError) {
-      console.error('Profile update error:', updateError);
+    if (insertError) {
+      console.error('Error creating company stripe account record:', insertError);
       try {
         await stripe.accounts.del(account.id);
       } catch (deleteError) {
-        console.error('Failed to delete Stripe account after profile update failure:', deleteError);
+        console.error('Failed to delete Stripe account after record creation failure:', deleteError);
       }
-      throw new Error('Failed to update profile with Stripe account ID');
+      throw new Error('Failed to create company stripe account record');
     }
 
     // Create account link for collecting required information
@@ -168,9 +148,6 @@ serve(async (req) => {
       return_url: `${origin}/settings?setup=complete`,
       type: 'account_onboarding',
       collect: 'eventually_due',
-      collection_options: {
-        fields: ['currently_due', 'eventually_due']
-      }
     });
 
     console.log('Account link created successfully');
@@ -191,9 +168,8 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: 400,
       }
     );
   }
 });
-
