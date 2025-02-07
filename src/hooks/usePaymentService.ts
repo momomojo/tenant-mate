@@ -8,6 +8,15 @@ interface ValidationError {
   code?: string;
 }
 
+interface ValidationData {
+  validation_status: string | null;
+  validation_errors: ValidationError | null;
+  property_stripe_accounts: {
+    verification_status: string;
+    status: string;
+  } | null;
+}
+
 export function usePaymentService() {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,7 +27,7 @@ export function usePaymentService() {
       // First validate the payment can be processed
       const { data: validationData, error: validationError } = await supabase
         .from('payment_transactions')
-        .select('validation_status, validation_errors, property_stripe_accounts!inner(verification_status, status)')
+        .select('validation_status, validation_errors')
         .eq('unit_id', unitId)
         .single();
 
@@ -28,7 +37,6 @@ export function usePaymentService() {
       }
 
       if (validationData?.validation_status === 'failed') {
-        // First cast to unknown, then to ValidationError to satisfy TypeScript
         const errors = validationData.validation_errors as unknown as ValidationError;
         throw new Error(errors?.message || 'Payment validation failed');
       }
