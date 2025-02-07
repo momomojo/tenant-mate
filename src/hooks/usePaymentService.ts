@@ -3,6 +3,11 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface ValidationError {
+  message: string;
+  code?: string;
+}
+
 export function usePaymentService() {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +35,7 @@ export function usePaymentService() {
       }
 
       if (validationData?.validation_status === 'failed') {
-        const errors = validationData.validation_errors;
+        const errors = validationData.validation_errors as ValidationError;
         throw new Error(errors?.message || 'Payment validation failed');
       }
 
