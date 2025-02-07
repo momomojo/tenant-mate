@@ -2,19 +2,16 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 interface ValidationError {
   message: string;
   code?: string;
 }
 
-interface ValidationData {
+interface PaymentValidationResult {
   validation_status: string | null;
-  validation_errors: ValidationError | null;
-  property_stripe_accounts: {
-    verification_status: string;
-    status: string;
-  } | null;
+  validation_errors: Json | null;
 }
 
 export function usePaymentService() {
@@ -29,7 +26,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_errors')
         .eq('unit_id', unitId)
-        .single();
+        .single() as { data: PaymentValidationResult | null, error: Error | null };
 
       if (validationError) {
         console.error('Validation error:', validationError);
