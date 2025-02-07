@@ -1,3 +1,4 @@
+
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StripeConnectSetup } from "@/components/settings/StripeConnectSetup";
 import { Settings2, CreditCard, Building2, Bell, Shield, DollarSign } from "lucide-react";
-import { PaymentSettings } from "@/components/settings/PaymentSettings";
 
 interface ProfileFormData {
   firstName: string;
@@ -211,7 +211,28 @@ const Settings = () => {
                   {profile?.role === 'property_manager' && (
                     <>
                       <StripeConnectSetup />
-                      <PaymentSettings />
+                      
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Payment Settings</CardTitle>
+                          <CardDescription>
+                            Configure payment preferences for your properties
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Default Late Fee Percentage</Label>
+                              <Input type="number" placeholder="5" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Grace Period (Days)</Label>
+                              <Input type="number" placeholder="5" />
+                            </div>
+                            <Button>Save Payment Settings</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </>
                   )}
                 </div>

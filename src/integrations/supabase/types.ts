@@ -278,48 +278,30 @@ export type Database = {
       }
       payment_configs: {
         Row: {
-          allow_partial_payments: boolean | null
-          automatic_late_fees: boolean | null
           created_at: string
           due_day_of_month: number | null
           grace_period_days: number | null
           id: string
           late_fee_percentage: number | null
-          minimum_payment_percentage: number | null
-          payment_methods: Json | null
-          platform_fee_visible: boolean | null
           property_id: string | null
-          rent_due_day: number | null
           updated_at: string
         }
         Insert: {
-          allow_partial_payments?: boolean | null
-          automatic_late_fees?: boolean | null
           created_at?: string
           due_day_of_month?: number | null
           grace_period_days?: number | null
           id?: string
           late_fee_percentage?: number | null
-          minimum_payment_percentage?: number | null
-          payment_methods?: Json | null
-          platform_fee_visible?: boolean | null
           property_id?: string | null
-          rent_due_day?: number | null
           updated_at?: string
         }
         Update: {
-          allow_partial_payments?: boolean | null
-          automatic_late_fees?: boolean | null
           created_at?: string
           due_day_of_month?: number | null
           grace_period_days?: number | null
           id?: string
           late_fee_percentage?: number | null
-          minimum_payment_percentage?: number | null
-          payment_methods?: Json | null
-          platform_fee_visible?: boolean | null
           property_id?: string | null
-          rent_due_day?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1261,65 +1243,6 @@ export type Database = {
           unit_number: string | null
         }
         Relationships: []
-      }
-      payment_settings_view: {
-        Row: {
-          allow_partial_payments: boolean | null
-          automatic_late_fees: boolean | null
-          created_at: string | null
-          due_day_of_month: number | null
-          grace_period_days: number | null
-          id: string | null
-          late_fee_percentage: number | null
-          manager_email: string | null
-          manager_first_name: string | null
-          manager_last_name: string | null
-          minimum_payment_percentage: number | null
-          payment_methods: Json | null
-          platform_fee_visible: boolean | null
-          property_id: string | null
-          property_manager_id: string | null
-          property_name: string | null
-          rent_due_day: number | null
-          updated_at: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_configs_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_configs_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_id"]
-          },
-          {
-            foreignKeyName: "payment_configs_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "property_stripe_status_view"
-            referencedColumns: ["property_id"]
-          },
-          {
-            foreignKeyName: "properties_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "properties_property_manager_id_fkey"
-            columns: ["property_manager_id"]
-            isOneToOne: false
-            referencedRelation: "property_manager_assignments"
-            referencedColumns: ["property_manager_id"]
-          },
-        ]
       }
       property_manager_assignments: {
         Row: {
