@@ -12,6 +12,12 @@ interface ValidationResult {
   validation_errors: Json | null;
 }
 
+// Custom response type to avoid deep type instantiation
+interface SupabaseQueryResponse<T> {
+  data: T | null;
+  error: { message: string } | null;
+}
+
 export function usePaymentService() {
   const [isLoading, setIsLoading] = useState(false);
   const [validationStatus, setValidationStatus] = useState<ValidationStatus | null>(null);
@@ -25,7 +31,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle() as { data: ValidationResult | null, error: Error | null };
+        .maybeSingle() as SupabaseQueryResponse<ValidationResult>;
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -35,8 +41,9 @@ export function usePaymentService() {
 
       if (validationData?.validation_status === 'failed') {
         setValidationStatus('failed');
-        const details = validationData.validation_details;
-        throw new Error(details?.error || 'Payment validation failed');
+        // Safely extract error message from validation_details
+        const details = validationData.validation_details as { message?: string } | null;
+        throw new Error(details?.message || 'Payment validation failed');
       }
 
       setValidationStatus(validationData?.validation_status || 'pending');
