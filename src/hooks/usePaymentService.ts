@@ -13,12 +13,6 @@ interface ValidationDetails {
   details?: Record<string, any>;
 }
 
-interface ValidationError {
-  message: string;
-  code?: string;
-  details?: string;
-}
-
 interface CheckoutResponse {
   url: string;
   payment_id: string;
@@ -26,12 +20,6 @@ interface CheckoutResponse {
 
 interface PortalResponse {
   url: string;
-}
-
-interface PaymentValidationResponse {
-  validation_status: ValidationStatus;
-  validation_details?: ValidationDetails;
-  validation_errors?: { message: string; code?: string; details?: string } | null;
 }
 
 export function usePaymentService() {
@@ -58,23 +46,29 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        const validation = validationData as unknown as PaymentValidationResponse;
-        const status = validation.validation_status;
+        const status = validationData.validation_status as ValidationStatus;
+        const errors = validationData.validation_errors as { message: string } | null;
         
-        if (status === 'failed' && validation.validation_errors) {
+        if (status === 'failed' && errors?.message) {
           setValidationStatus('failed');
-          throw new Error(validation.validation_errors.message || 'Payment validation failed');
+          throw new Error(errors.message || 'Payment validation failed');
         }
         
         setValidationStatus(status);
       }
 
-      // Create the checkout session
+      // Calculate total amount including platform fee (5%)
+      const platformFeePercentage = 0.05; // 5%
+      const platformFee = Math.round(amount * platformFeePercentage);
+      const totalAmount = amount + platformFee;
+
+      // Create the checkout session with platform fee
       const response = await supabase.functions.invoke<CheckoutResponse>("create-checkout-session", {
         body: JSON.stringify({
-          amount,
+          amount: totalAmount,
           unit_id: unitId,
-          setup_future_payments: setupFuturePayments
+          setup_future_payments: setupFuturePayments,
+          platform_fee: platformFee
         })
       });
 
@@ -91,7 +85,8 @@ export function usePaymentService() {
         p_entity_type: 'payment',
         p_entity_id: response.data.payment_id,
         p_changes: {
-          amount,
+          amount: totalAmount,
+          platform_fee: platformFee,
           unit_id: unitId,
           setup_future_payments: setupFuturePayments
         }
