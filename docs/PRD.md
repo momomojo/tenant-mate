@@ -1,4 +1,3 @@
-
 # Property Management System PRD with Stripe Connect Integration
 
 ## 1. Product Overview
@@ -45,63 +44,48 @@ Payment processing is a critical feature that leverages Stripe Connect for:
 - Custom Payment Configurations: Supporting property-specific payment rules including late fee calculation.
 - Payment History Tracking: Maintaining an audit-ready ledger of all transactions.
 
-#### 3.3.2. Stripe Connect Integration Details
-**Objectives:**
+#### 3.3.2. Stripe Connect Integration and Multi-Tenant Payment Flow
 
-- Secure Onboarding: Enable property managers (or landlords) to connect their bank accounts via the Stripe Connect OAuth flow.
-- Seamless Payments: Allow tenants to pay rent with various payment methods (credit/debit cards, bank transfers) without exposing sensitive data.
-- Real-Time Transaction Updates: Provide immediate feedback and status updates through webhooks and an integrated dashboard.
-- Compliance & Security: Ensure all transactions comply with PCI-DSS standards, with sensitive data managed entirely by Stripe.
+**Objectives:**
+- **Secure and Individual Onboarding:** Each property manager must connect their bank account individually via the Stripe Connect OAuth flow. The system stores only a non-sensitive reference (the Stripe connected account ID) for each manager.
+- **Destination Charges for Seamless Payments:** Tenants pay rent by providing their payment details. The charge is processed using Stripe's destination charge feature, directing funds (after platform fee deductions) to the specific property manager's connected account.
+- **Real-Time Transaction Updates:** Webhooks from Stripe immediately update payment statuses and trigger the recording of transactions in the system ledger.
+- **Compliance & Security:** All payments are processed using Stripe's PCI-DSS compliant systems. Sensitive data is never stored locally.
 
 **User Stories & Use Cases:**
 
 *Property Manager Onboarding:*
-- User Story: As a property manager, I want to securely connect my bank account via Stripe so that I can receive rent payouts automatically.
-- Flow: Initiate the OAuth process → Complete account linking via Stripe → Save connected account reference (without storing sensitive data locally).
+- **User Story:** As a property manager, I want to securely link my bank account via Stripe so that I can receive rent payouts directly.
+- **Flow:** Click "Connect with Stripe" → Initiate OAuth process → Complete account linking → Save the connected account reference in the system.
 
 *Tenant Payment:*
-- User Story: As a tenant, I want to pay my rent online securely so that my payment is automatically recorded and reflected in the system.
-- Flow: Tenant enters payment details → System initiates a charge through the Stripe API → Webhook confirms successful payment → Transaction recorded in the ledger.
+- **User Story:** As a tenant, I want to pay my rent online securely, ensuring my payment is processed correctly and reflected in the system.
+- **Flow:** Tenant submits payment details → System creates a destination charge in Stripe using the respective property manager's connected account as the destination → Stripe processes the payment → Webhook confirms and records the transaction.
 
-*Disbursement to Property Managers:*
-- User Story: As a property manager, I want automatic disbursement of funds (after deducting fees) to my connected bank account.
-- Flow: Successful tenant payment triggers scheduling of payout via Stripe → Dashboard displays payout status → Webhook updates the transaction status.
+*Automated Disbursement:*
+- **User Story:** As a property manager, I want funds to be automatically disbursed to my connected bank account after deducting applicable fees.
+- **Flow:** Upon tenant payment confirmation via webhook, the system schedules a payout to the manager, and the dashboard displays the current payout status.
 
 *Handling Refunds/Disputes:*
-- User Story: As a property manager, I need to manage refunds or disputes in case of tenant payment issues.
-- Flow: Initiate a refund or dispute via Stripe API → Update payment status and notify relevant parties.
+- **User Story:** As a property manager, I need to manage refunds or disputes in situations of tenant payment issues.
+- **Flow:** Initiate a refund or dispute via the Stripe API → Update the payment status and notify both tenant and manager accordingly.
 
-**Functional & Technical Requirements:**
+**Payment Flow Diagram:**
 
-*OAuth Integration & Connected Accounts:*
-- Implement Stripe Connect OAuth flow.
-- Use /v1/accounts endpoint for account creation and management.
-- Store only non-sensitive references to connected accounts.
-
-*Payment Transaction Processing:*
-- Use /v1/charges for initiating tenant payments.
-- Ensure Stripe handles sensitive payment data.
-- Automate platform fee calculation and deduction before disbursement.
-
-*Webhook Handling:*
-- Configure webhook endpoints to listen for events such as charge.succeeded, payout.paid, and charge.refunded.
-- Implement robust error handling and fallback strategies (e.g., retry logic, user notifications, and escalation procedures).
-
-*Security & Compliance:*
-- Ensure compliance with PCI-DSS standards.
-- Use TLS encryption for data in transit.
-- Implement secure storage practices for non-sensitive data.
-- Regular security audits and vulnerability scanning.
-
-*Testing & Quality Assurance:*
-- Define and execute unit, integration, performance, and end-to-end tests.
-- Utilize Stripe's sandbox environment for simulated transactions and edge-case scenarios.
-- Validate error handling, retry mechanisms, and fallback procedures.
-
-*Monitoring & Logging:*
-- Log all API interactions and webhook events.
-- Use a centralized monitoring tool to review transaction logs and performance metrics.
-- Provide a clear dashboard for property managers to track payment statuses and historical data.
+```mermaid
+flowchart TD
+    A[Property Manager clicks "Connect with Stripe"]
+    A --> B[Initiate OAuth Flow]
+    B --> C[Stripe returns connected account info]
+    C --> D[Store account reference in database]
+    
+    E[Tenant enters rent payment details]
+    E --> F[Submit Payment Form]
+    F --> G[Call Stripe Charge API with destination set to manager's account]
+    G --> H[Stripe processes payment]
+    H --> I[Stripe triggers webhook on payment success]
+    I --> J[Record transaction in ledger & schedule payout]
+```
 
 ### 3.4. Maintenance
 - Request Submission: Allow tenants to submit maintenance requests.
