@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -12,8 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const paymentId = url.searchParams.get('paymentId');
+    const { paymentId } = await req.json();
 
     if (!paymentId) {
       throw new Error('Payment ID is required');
@@ -21,10 +21,10 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Get the user from the auth header
+    // Authenticate the user
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabaseClient.auth.getUser(token);
@@ -33,145 +33,102 @@ serve(async (req) => {
       throw new Error('Not authenticated');
     }
 
-    // Get payment details with related information
+    // Get payment details from the payment_history_view
     const { data: payment, error: paymentError } = await supabaseClient
-      .from('rent_payments')
-      .select(`
-        *,
-        unit:units(
-          unit_number,
-          property:properties(
-            name,
-            address
-          )
-        ),
-        tenant:profiles(
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .from('payment_history_view')
+      .select('*')
       .eq('id', paymentId)
       .single();
 
-    if (paymentError) throw paymentError;
-    if (!payment) throw new Error('Payment not found');
+    if (paymentError || !payment) {
+      throw new Error('Payment not found');
+    }
 
-    // Format the payment date
-    const paymentDate = new Date(payment.payment_date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Verify the user has access to this payment
+    if (payment.tenant_id !== user.id) {
+      const { data: propertyManager } = await supabaseClient
+        .from('properties')
+        .select('property_manager_id')
+        .eq('id', payment.property_id)
+        .single();
 
-    // Generate receipt HTML with improved styling
+      if (!propertyManager || propertyManager.property_manager_id !== user.id) {
+        throw new Error('Unauthorized');
+      }
+    }
+
+    // Generate receipt HTML
     const receiptHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="UTF-8">
+          <title>Payment Receipt</title>
           <style>
             body {
               font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
               max-width: 800px;
               margin: 0 auto;
               padding: 20px;
             }
             .receipt {
               border: 1px solid #ddd;
-              padding: 30px;
-              border-radius: 8px;
-              background: #fff;
+              padding: 20px;
+              margin-top: 20px;
             }
             .header {
               text-align: center;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 2px solid #eee;
-            }
-            .logo {
-              font-size: 24px;
-              font-weight: bold;
-              color: #2563eb;
-              margin-bottom: 10px;
-            }
-            .receipt-id {
-              color: #666;
-              font-size: 14px;
-            }
-            .details {
-              margin-bottom: 30px;
-            }
-            .section {
               margin-bottom: 20px;
             }
-            .section-title {
-              font-weight: bold;
-              margin-bottom: 10px;
-              color: #1f2937;
+            .details {
+              margin-bottom: 20px;
             }
             .amount {
               font-size: 24px;
               font-weight: bold;
-              color: #2563eb;
               text-align: center;
-              padding: 20px;
-              background: #f8fafc;
-              border-radius: 6px;
               margin: 20px 0;
-            }
-            .footer {
-              text-align: center;
-              font-size: 14px;
-              color: #666;
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 1px solid #eee;
             }
           </style>
         </head>
         <body>
           <div class="receipt">
             <div class="header">
-              <div class="logo">${payment.unit.property.name}</div>
-              <div class="receipt-id">Receipt #${payment.invoice_number}</div>
+              <h1>Payment Receipt</h1>
+              <p>Receipt #: ${payment.invoice_number}</p>
             </div>
-            
             <div class="details">
-              <div class="section">
-                <div class="section-title">Property Details</div>
-                <p>${payment.unit.property.address}</p>
-                <p>Unit ${payment.unit.unit_number}</p>
-              </div>
-              
-              <div class="section">
-                <div class="section-title">Tenant Information</div>
-                <p>${payment.tenant.first_name} ${payment.tenant.last_name}</p>
-                <p>${payment.tenant.email}</p>
-              </div>
-              
-              <div class="section">
-                <div class="section-title">Payment Details</div>
-                <p>Date: ${paymentDate}</p>
-                <p>Payment Method: ${payment.payment_method || 'N/A'}</p>
-                <p>Status: ${payment.status}</p>
-              </div>
-              
-              <div class="amount">
-                Amount Paid: $${payment.amount.toFixed(2)}
-              </div>
+              <p><strong>Property:</strong> ${payment.property_name}</p>
+              <p><strong>Unit:</strong> ${payment.unit_number}</p>
+              <p><strong>Date:</strong> ${new Date(payment.payment_date).toLocaleDateString()}</p>
+              <p><strong>Payment Method:</strong> ${payment.payment_method || 'N/A'}</p>
             </div>
-            
-            <div class="footer">
+            <div class="amount">
+              Amount Paid: $${payment.amount}
+            </div>
+            <hr>
+            <div style="text-align: center; margin-top: 20px;">
               <p>Thank you for your payment!</p>
-              <p>This is an automatically generated receipt.</p>
             </div>
           </div>
         </body>
       </html>
     `;
+
+    // Create a new receipt record
+    const { data: receipt, error: receiptError } = await supabaseClient
+      .from('payment_receipts')
+      .insert({
+        payment_id: paymentId,
+        receipt_number: `RCP-${payment.invoice_number}`,
+        receipt_url: null // We'll update this with actual storage URL in a future iteration
+      })
+      .select()
+      .single();
+
+    if (receiptError) {
+      throw receiptError;
+    }
 
     return new Response(
       receiptHtml,

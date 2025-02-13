@@ -1,8 +1,13 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign } from "lucide-react";
-import { PaymentReceipt } from "@/components/payment/PaymentReceipt";
+import { Button } from "@/components/ui/button";
+import { DollarSign, Download, Printer } from "lucide-react";
 import { LateFeeDisplay } from "@/components/payment/LateFeeDisplay";
+import { usePaymentHistory } from "@/hooks/usePaymentHistory";
+import { useEffect, useState } from "react";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
+import { toast } from "sonner";
 
 interface PaymentHistoryProps {
   payments: Array<{
@@ -11,7 +16,7 @@ interface PaymentHistoryProps {
     payment_date: string;
     status: string;
     payment_method: string | null;
-    invoice_number?: number; // Made optional since it might not always be present
+    invoice_number?: number;
     unit: {
       unit_number: string;
       property_id: string;
@@ -20,6 +25,26 @@ interface PaymentHistoryProps {
 }
 
 export function PaymentHistory({ payments }: PaymentHistoryProps) {
+  const { user } = useAuthenticatedUser();
+  const { generateReceipt } = usePaymentHistory(user?.id);
+  const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
+
+  const handleDownload = async (paymentId: string) => {
+    try {
+      setGeneratingReceipt(paymentId);
+      const receiptUrl = await generateReceipt(paymentId);
+      if (receiptUrl) {
+        window.open(receiptUrl, '_blank');
+      }
+    } finally {
+      setGeneratingReceipt(null);
+    }
+  };
+
+  const handlePrint = (paymentId: string) => {
+    window.print();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -71,10 +96,27 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
               />
               
               {payment.status === "paid" && (
-                <PaymentReceipt payment={{
-                  ...payment,
-                  invoice_number: payment.invoice_number || 0 // Provide a default value
-                }} />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleDownload(payment.id)}
+                    disabled={generatingReceipt === payment.id}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {generatingReceipt === payment.id ? "Generating..." : "Download Receipt"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 print:hidden"
+                    onClick={() => handlePrint(payment.id)}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                </div>
               )}
             </div>
           ))}
