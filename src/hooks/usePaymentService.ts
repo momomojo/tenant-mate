@@ -6,8 +6,19 @@ import type { Database } from '@/integrations/supabase/types';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
-// Define what we expect from the payment_transactions table
-type PaymentTransaction = Database['public']['Tables']['payment_transactions']['Row'];
+// Define the validation error structure
+interface ValidationError {
+  message?: string;
+  code?: string;
+  details?: unknown;
+}
+
+// Define what we expect from the validation query
+interface ValidationQueryResult {
+  validation_status: string | null;
+  validation_details: Record<string, unknown> | null;
+  validation_errors: ValidationError | null;
+}
 
 interface CheckoutResponse {
   url: string;
@@ -31,7 +42,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle<Pick<PaymentTransaction, 'validation_status' | 'validation_details' | 'validation_errors'>>();
+        .maybeSingle<ValidationQueryResult>();
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -42,9 +53,11 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        if (validationData.validation_status === 'failed' && validationData.validation_errors?.message) {
+        const errorMessage = (validationData.validation_errors as ValidationError)?.message;
+        
+        if (validationData.validation_status === 'failed' && errorMessage) {
           setValidationStatus('failed');
-          throw new Error(validationData.validation_errors.message);
+          throw new Error(errorMessage);
         }
         
         setValidationStatus(validationData.validation_status as ValidationStatus);
