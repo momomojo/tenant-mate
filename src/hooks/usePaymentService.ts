@@ -6,14 +6,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
-type PaymentTransaction = Database['public']['Tables']['payment_transactions']['Row'];
-
-// Define what we expect from our query
-type ValidationQueryFields = {
-  validation_status: PaymentTransaction['validation_status'];
-  validation_details: PaymentTransaction['validation_details'];
-  validation_errors: PaymentTransaction['validation_errors'];
-}
+type PaymentTransactionRow = Database['public']['Tables']['payment_transactions']['Row'];
 
 interface CheckoutResponse {
   url: string;
@@ -37,7 +30,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle();
+        .single();
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -48,15 +41,14 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        const typedData = validationData as ValidationQueryFields;
-        const errorObj = typedData.validation_errors as { message?: string } | null;
+        const errorObj = validationData.validation_errors as { message?: string } | null;
         
-        if (typedData.validation_status === 'failed' && errorObj?.message) {
+        if (validationData.validation_status === 'failed' && errorObj?.message) {
           setValidationStatus('failed');
           throw new Error(errorObj.message);
         }
         
-        setValidationStatus(typedData.validation_status as ValidationStatus);
+        setValidationStatus(validationData.validation_status as ValidationStatus);
       }
 
       // Calculate total amount including platform fee (5%)
