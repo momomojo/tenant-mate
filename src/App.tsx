@@ -12,7 +12,6 @@ import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 import Documents from "@/pages/Documents";
 import Payments from "@/pages/Payments";
-import Settings from "@/pages/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,7 +37,6 @@ function App() {
             <Route path="/tenants/:id" element={<TenantProfile />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/payments" element={<Payments />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />

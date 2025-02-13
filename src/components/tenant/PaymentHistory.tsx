@@ -11,7 +11,6 @@ interface PaymentHistoryProps {
     payment_date: string;
     status: string;
     payment_method: string | null;
-    invoice_number?: number; // Made optional since it might not always be present
     unit: {
       unit_number: string;
       property_id: string;
@@ -46,11 +45,6 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                   <p className="text-sm text-muted-foreground">
                     Method: {payment.payment_method || "N/A"}
                   </p>
-                  {payment.invoice_number && (
-                    <p className="text-sm text-muted-foreground">
-                      Invoice #: {payment.invoice_number}
-                    </p>
-                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-semibold text-white">
@@ -71,10 +65,7 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
               />
               
               {payment.status === "paid" && (
-                <PaymentReceipt payment={{
-                  ...payment,
-                  invoice_number: payment.invoice_number || 0 // Provide a default value
-                }} />
+                <PaymentReceipt payment={payment} />
               )}
             </div>
           ))}

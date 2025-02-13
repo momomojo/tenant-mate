@@ -1,104 +1,96 @@
-
-import React from 'react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { useAuthenticatedUser } from '@/hooks/useAuthenticatedUser';
-import { usePaymentService } from '@/hooks/usePaymentService';
-import { useAutoPayment } from '@/hooks/useAutoPayment';
-import { useRentDetails } from '@/hooks/useRentDetails';
-import { AutoPayToggle } from './AutoPayToggle';
-import { PaymentError } from './PaymentError';
-import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   unitId: string;
-  amount?: number;
+  amount: number;
 }
 
-export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps) {
+export function PaymentForm({ unitId, amount }: PaymentFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
-  const { user, isLoading: isAuthLoading } = useAuthenticatedUser();
-  const { isLoading: isPaymentLoading, createCheckoutSession, createPortalSession, validationStatus } = usePaymentService();
-  const { isEnabled: autoPayEnabled, isLoading: isAutoPayLoading, toggleAutoPay } = 
-    useAutoPayment(unitId, user?.id);
-  const { monthlyRent, stripeConnectError } = useRentDetails(unitId, user);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Auth error:', error);
+        throw error;
+      }
+      
+      if (!session) {
+        toast.error("Please login to make a payment");
+        navigate("/auth");
+        return;
+      }
+
+      // Verify the session is still valid
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('User verification error:', userError);
+        await supabase.auth.signOut();
+        navigate("/auth");
+        return;
+      }
+
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Auth error:', error);
+      toast.error("Authentication error. Please login again.");
+      navigate("/auth");
+    }
+  };
 
   const handlePayment = async () => {
-    if (!monthlyRent) {
-      toast.error("Unable to process payment. Monthly rent amount not found.");
-      return;
-    }
-
-    if (stripeConnectError) {
-      toast.error(stripeConnectError);
+    if (!isAuthenticated) {
+      toast.error("Please login to make a payment");
+      navigate("/auth");
       return;
     }
 
     try {
-      const url = await createCheckoutSession(monthlyRent, unitId, autoPayEnabled);
-      if (url) {
-        window.open(url, '_blank');
+      setIsLoading(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
       }
-    } catch (error: any) {
-      if (error.message.includes("No active session")) {
+      
+      const response = await supabase.functions.invoke('create-checkout-session', {
+        body: { amount, unit_id: unitId }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { url } = response.data;
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      if (error.message.includes('No active session')) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
+      } else {
+        toast.error("Failed to initiate payment");
       }
-    }
-  };
-
-  const handleCustomerPortal = async () => {
-    try {
-      const url = await createPortalSession(window.location.origin + "/payments");
-      if (url) {
-        window.open(url, '_blank');
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to access payment portal');
-    }
-  };
-
-  const isLoading = isAuthLoading || isPaymentLoading || isAutoPayLoading;
-
-  const getValidationStatusDisplay = () => {
-    if (!validationStatus) return null;
-
-    switch (validationStatus) {
-      case 'pending':
-        return (
-          <Alert className="bg-yellow-500/15 text-yellow-500 border-yellow-500/50">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <AlertDescription>
-              Validating payment processing...
-            </AlertDescription>
-          </Alert>
-        );
-      case 'success':
-        return (
-          <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>
-              Payment processing is ready
-            </AlertDescription>
-          </Alert>
-        );
-      case 'failed':
-        return (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Unable to process payments at this time
-            </AlertDescription>
-          </Alert>
-        );
-      default:
-        return null;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -111,61 +103,24 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {stripeConnectError && (
-          <PaymentError message={stripeConnectError} />
-        )}
-        
-        {getValidationStatusDisplay()}
-
-        {isLoading && (
-          <div className="space-y-2">
-            <Progress value={45} className="w-full" />
-            <p className="text-sm text-muted-foreground text-center">
-              Processing your request...
-            </p>
-          </div>
-        )}
-
         <div className="space-y-2">
-          <Label htmlFor="amount">Monthly Rent Amount</Label>
+          <Label htmlFor="amount">Amount</Label>
           <Input
             id="amount"
-            value={monthlyRent || defaultAmount || 0}
+            value={amount}
             readOnly
             type="number"
             className="bg-muted"
           />
         </div>
-
-        <AutoPayToggle
-          enabled={autoPayEnabled}
-          onToggle={toggleAutoPay}
-          disabled={isLoading || Boolean(stripeConnectError)}
-        />
-
-        <Button
-          variant="outline"
-          onClick={handleCustomerPortal}
-          disabled={isLoading || !user || Boolean(stripeConnectError)}
-          className="w-full"
-        >
-          Manage Payment Settings
-        </Button>
       </CardContent>
       <CardFooter>
         <Button 
           onClick={handlePayment} 
-          disabled={isLoading || !user || !monthlyRent || Boolean(stripeConnectError)}
+          disabled={isLoading || !isAuthenticated}
           className="w-full"
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            `Pay $${monthlyRent || defaultAmount || 0}`
-          )}
+          {isLoading ? "Processing..." : `Pay $${amount}`}
         </Button>
       </CardFooter>
     </Card>
