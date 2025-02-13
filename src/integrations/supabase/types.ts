@@ -405,6 +405,54 @@ export type Database = {
           },
         ]
       }
+      payment_routing_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_manager_id: string | null
+          new_stripe_account_id: string | null
+          payment_transaction_id: string | null
+          previous_manager_id: string | null
+          previous_stripe_account_id: string | null
+          routing_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_manager_id?: string | null
+          new_stripe_account_id?: string | null
+          payment_transaction_id?: string | null
+          previous_manager_id?: string | null
+          previous_stripe_account_id?: string | null
+          routing_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_manager_id?: string | null
+          new_stripe_account_id?: string | null
+          payment_transaction_id?: string | null
+          previous_manager_id?: string | null
+          previous_stripe_account_id?: string | null
+          routing_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_routing_history_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_reports"
+            referencedColumns: ["transaction_id"]
+          },
+          {
+            foreignKeyName: "payment_routing_history_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount: number
@@ -1086,6 +1134,7 @@ export type Database = {
         | "refunded"
       setting_type: "boolean" | "number" | "string"
       user_role: "admin" | "property_manager" | "tenant"
+      verification_status: "pending" | "verified" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
