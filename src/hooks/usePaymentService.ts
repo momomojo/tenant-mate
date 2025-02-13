@@ -28,6 +28,12 @@ interface PortalResponse {
   url: string;
 }
 
+interface PaymentValidationResponse {
+  validation_status: ValidationStatus;
+  validation_details?: ValidationDetails;
+  validation_errors?: { message: string; code?: string; details?: string } | null;
+}
+
 export function usePaymentService() {
   const [isLoading, setIsLoading] = useState(false);
   const [validationStatus, setValidationStatus] = useState<ValidationStatus | null>(null);
@@ -52,20 +58,15 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        // Type-safe validation status handling
-        const status = validationData.validation_status as ValidationStatus;
+        const validation = validationData as unknown as PaymentValidationResponse;
+        const status = validation.validation_status;
         
-        // Handle validation errors with proper type checking
-        const errors = validationData.validation_errors;
-        if (typeof errors === 'object' && errors !== null && 'message' in errors) {
-          const validationError = errors as ValidationError;
-          if (status === 'failed') {
-            setValidationStatus('failed');
-            throw new Error(validationError.message || 'Payment validation failed');
-          }
+        if (status === 'failed' && validation.validation_errors) {
+          setValidationStatus('failed');
+          throw new Error(validation.validation_errors.message || 'Payment validation failed');
         }
         
-        setValidationStatus(status || 'pending');
+        setValidationStatus(status);
       }
 
       // Create the checkout session
