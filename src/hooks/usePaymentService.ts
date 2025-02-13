@@ -5,12 +5,21 @@ import { toast } from 'sonner';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
-interface ValidationDetails {
-  timestamp?: string;
-  status?: string;
-  stripe_account_id?: string;
-  error?: string;
-  details?: Record<string, any>;
+// Explicitly define the validation data structure
+interface PaymentValidationData {
+  validation_status: ValidationStatus;
+  validation_details: {
+    timestamp?: string;
+    status?: string;
+    stripe_account_id?: string;
+    error?: string;
+    details?: Record<string, unknown>;
+  } | null;
+  validation_errors: {
+    message: string;
+    code?: string;
+    details?: string;
+  } | null;
 }
 
 interface CheckoutResponse {
@@ -46,15 +55,14 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        const status = validationData.validation_status as ValidationStatus;
-        const errors = validationData.validation_errors as { message: string } | null;
+        const data = validationData as PaymentValidationData;
         
-        if (status === 'failed' && errors?.message) {
+        if (data.validation_status === 'failed' && data.validation_errors?.message) {
           setValidationStatus('failed');
-          throw new Error(errors.message || 'Payment validation failed');
+          throw new Error(data.validation_errors.message);
         }
         
-        setValidationStatus(status);
+        setValidationStatus(data.validation_status);
       }
 
       // Calculate total amount including platform fee (5%)
