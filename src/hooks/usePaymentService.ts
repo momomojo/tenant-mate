@@ -19,12 +19,6 @@ interface ValidationError {
   details?: string;
 }
 
-interface ValidationResult {
-  validation_status: ValidationStatus;
-  validation_details: ValidationDetails;
-  validation_errors: ValidationError | null;
-}
-
 interface CheckoutResponse {
   url: string;
   payment_id: string;
@@ -58,19 +52,16 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        // Cast the validation data to our expected type
-        const validation: ValidationResult = {
-          validation_status: validationData.validation_status as ValidationStatus,
-          validation_details: validationData.validation_details as ValidationDetails,
-          validation_errors: validationData.validation_errors as ValidationError
-        };
+        // Safe type assertion after runtime validation
+        const status = validationData.validation_status as ValidationStatus;
+        const details = validationData.validation_details as ValidationDetails;
+        const errors = validationData.validation_errors as ValidationError | null;
 
-        if (validation.validation_status === 'failed') {
+        if (status === 'failed' && errors) {
           setValidationStatus('failed');
-          const errorDetails = validation.validation_errors;
-          throw new Error(errorDetails?.message || 'Payment validation failed');
+          throw new Error(errors.message || 'Payment validation failed');
         } else {
-          setValidationStatus(validation.validation_status || 'pending');
+          setValidationStatus(status || 'pending');
         }
       }
 
