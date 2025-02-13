@@ -5,12 +5,12 @@ import { toast } from 'sonner';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
-// Define specific types for validation details and errors
 interface ValidationDetails {
   timestamp?: string;
-  processor?: string;
-  method?: string;
-  reason?: string;
+  status?: string;
+  stripe_account_id?: string;
+  error?: string;
+  details?: Record<string, any>;
 }
 
 interface ValidationError {
@@ -20,8 +20,8 @@ interface ValidationError {
 }
 
 interface ValidationResult {
-  validation_status: ValidationStatus | null;
-  validation_details: ValidationDetails | null;
+  validation_status: ValidationStatus;
+  validation_details: ValidationDetails;
   validation_errors: ValidationError | null;
 }
 
@@ -58,7 +58,13 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        const validation = validationData as ValidationResult;
+        // Cast the validation data to our expected type
+        const validation: ValidationResult = {
+          validation_status: validationData.validation_status as ValidationStatus,
+          validation_details: validationData.validation_details as ValidationDetails,
+          validation_errors: validationData.validation_errors as ValidationError
+        };
+
         if (validation.validation_status === 'failed') {
           setValidationStatus('failed');
           const errorDetails = validation.validation_errors;
