@@ -52,17 +52,20 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        // Safe type assertion after runtime validation
+        // Type-safe validation status handling
         const status = validationData.validation_status as ValidationStatus;
-        const details = validationData.validation_details as ValidationDetails;
-        const errors = validationData.validation_errors as ValidationError | null;
-
-        if (status === 'failed' && errors) {
-          setValidationStatus('failed');
-          throw new Error(errors.message || 'Payment validation failed');
-        } else {
-          setValidationStatus(status || 'pending');
+        
+        // Handle validation errors with proper type checking
+        const errors = validationData.validation_errors;
+        if (typeof errors === 'object' && errors !== null && 'message' in errors) {
+          const validationError = errors as ValidationError;
+          if (status === 'failed') {
+            setValidationStatus('failed');
+            throw new Error(validationError.message || 'Payment validation failed');
+          }
         }
+        
+        setValidationStatus(status || 'pending');
       }
 
       // Create the checkout session
