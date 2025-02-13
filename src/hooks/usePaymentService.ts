@@ -2,25 +2,12 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
-// Explicitly define the validation data structure
-interface PaymentValidationData {
-  validation_status: ValidationStatus;
-  validation_details: {
-    timestamp?: string;
-    status?: string;
-    stripe_account_id?: string;
-    error?: string;
-    details?: Record<string, unknown>;
-  } | null;
-  validation_errors: {
-    message: string;
-    code?: string;
-    details?: string;
-  } | null;
-}
+// Define what we expect from the payment_transactions table
+type PaymentTransaction = Database['public']['Tables']['payment_transactions']['Row'];
 
 interface CheckoutResponse {
   url: string;
@@ -44,7 +31,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle();
+        .maybeSingle<Pick<PaymentTransaction, 'validation_status' | 'validation_details' | 'validation_errors'>>();
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -55,14 +42,12 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        const data = validationData as PaymentValidationData;
-        
-        if (data.validation_status === 'failed' && data.validation_errors?.message) {
+        if (validationData.validation_status === 'failed' && validationData.validation_errors?.message) {
           setValidationStatus('failed');
-          throw new Error(data.validation_errors.message);
+          throw new Error(validationData.validation_errors.message);
         }
         
-        setValidationStatus(data.validation_status);
+        setValidationStatus(validationData.validation_status as ValidationStatus);
       }
 
       // Calculate total amount including platform fee (5%)
