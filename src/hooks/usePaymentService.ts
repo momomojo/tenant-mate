@@ -5,18 +5,24 @@ import { toast } from 'sonner';
 
 type ValidationStatus = 'pending' | 'success' | 'failed';
 
-// Define a more specific type for validation errors and details
-type ValidationRecord = {
-  message?: string;
+// Define specific types for validation details and errors
+interface ValidationDetails {
+  timestamp?: string;
+  processor?: string;
+  method?: string;
+  reason?: string;
+}
+
+interface ValidationError {
+  message: string;
   code?: string;
   details?: string;
-  [key: string]: any;
-};
+}
 
 interface ValidationResult {
   validation_status: ValidationStatus | null;
-  validation_details: ValidationRecord | null;
-  validation_errors: ValidationRecord | null;
+  validation_details: ValidationDetails | null;
+  validation_errors: ValidationError | null;
 }
 
 interface CheckoutResponse {
