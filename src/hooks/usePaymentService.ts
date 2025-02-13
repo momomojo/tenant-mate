@@ -14,7 +14,7 @@ interface ValidationError {
 }
 
 // Define what we expect from the validation query
-interface ValidationQueryResult {
+type ValidationQueryResult = {
   validation_status: string | null;
   validation_details: Record<string, unknown> | null;
   validation_errors: ValidationError | null;
@@ -42,7 +42,7 @@ export function usePaymentService() {
         .from('payment_transactions')
         .select('validation_status, validation_details, validation_errors')
         .eq('unit_id', unitId)
-        .maybeSingle<ValidationQueryResult>();
+        .maybeSingle();
 
       if (validationError) {
         console.error('Validation error:', validationError);
@@ -53,14 +53,15 @@ export function usePaymentService() {
       if (!validationData) {
         setValidationStatus('pending');
       } else {
-        const errorMessage = (validationData.validation_errors as ValidationError)?.message;
+        const typedData = validationData as ValidationQueryResult;
+        const errorMessage = (typedData.validation_errors as ValidationError)?.message;
         
-        if (validationData.validation_status === 'failed' && errorMessage) {
+        if (typedData.validation_status === 'failed' && errorMessage) {
           setValidationStatus('failed');
           throw new Error(errorMessage);
         }
         
-        setValidationStatus(validationData.validation_status as ValidationStatus);
+        setValidationStatus(typedData.validation_status as ValidationStatus);
       }
 
       // Calculate total amount including platform fee (5%)
