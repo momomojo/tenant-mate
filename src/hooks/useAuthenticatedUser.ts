@@ -11,6 +11,7 @@ export function useAuthenticatedUser() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('useAuthenticatedUser hook initialized');
     checkAuth();
 
     // Subscribe to auth state changes
@@ -18,10 +19,12 @@ export function useAuthenticatedUser() {
       console.log('Auth state change in hook:', event);
       
       if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
         setUser(null);
         setProfile(null);
         navigate('/auth');
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('User signed in or token refreshed:', session?.user?.email);
         if (session?.user) {
           setUser(session.user);
           await fetchUserProfile(session.user.id);
@@ -30,12 +33,14 @@ export function useAuthenticatedUser() {
     });
 
     return () => {
+      console.log('useAuthenticatedUser hook cleanup');
       subscription.unsubscribe();
     };
   }, [navigate]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for ID:', userId);
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("*")
@@ -48,10 +53,12 @@ export function useAuthenticatedUser() {
       }
 
       if (profile) {
+        console.log('Profile fetched successfully:', profile);
         setProfile(profile);
         return profile;
       }
       
+      console.warn('No profile found for user ID:', userId);
       return null;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
