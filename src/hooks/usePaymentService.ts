@@ -8,85 +8,47 @@ type ValidationStatus = 'pending' | 'success' | 'failed';
 
 type PaymentTransactionRow = Database['public']['Tables']['payment_transactions']['Row'];
 
-interface CheckoutResponse {
-  url: string;
-  payment_id: string;
-}
-
-interface PortalResponse {
-  url: string;
-}
-
 export function usePaymentService() {
   const [isLoading, setIsLoading] = useState(false);
   const [validationStatus, setValidationStatus] = useState<ValidationStatus | null>(null);
 
-  const createCheckoutSession = async (amount: number, unitId: string, setupFuturePayments: boolean) => {
+  const createPaymentRecord = async (amount: number, unitId: string) => {
     try {
       setIsLoading(true);
       
-      // First validate the payment can be processed
-      const { data: validationData, error: validationError } = await supabase
-        .from('payment_transactions')
-        .select('validation_status, validation_details, validation_errors')
-        .eq('unit_id', unitId)
+      // Create a simple payment record without Stripe
+      const { data: payment, error: paymentError } = await supabase
+        .from('rent_payments')
+        .insert({
+          tenant_id: (await supabase.auth.getUser()).data.user?.id,
+          unit_id: unitId,
+          amount,
+          status: 'pending',
+          payment_method: 'manual'
+        })
+        .select()
         .single();
 
-      if (validationError) {
-        console.error('Validation error:', validationError);
-        setValidationStatus('failed');
-        throw new Error('Unable to validate payment processing');
+      if (paymentError) {
+        console.error("Payment creation error:", paymentError);
+        toast.error('Failed to create payment record');
+        throw paymentError;
       }
 
-      if (!validationData) {
-        setValidationStatus('pending');
-      } else {
-        const errorObj = validationData.validation_errors as { message?: string } | null;
-        
-        if (validationData.validation_status === 'failed' && errorObj?.message) {
-          setValidationStatus('failed');
-          throw new Error(errorObj.message);
-        }
-        
-        setValidationStatus(validationData.validation_status as ValidationStatus);
-      }
-
-      // Calculate total amount including platform fee (5%)
-      const platformFeePercentage = 0.05; // 5%
-      const platformFee = Math.round(amount * platformFeePercentage);
-      const totalAmount = amount + platformFee;
-
-      // Create the checkout session with platform fee
-      const response = await supabase.functions.invoke<CheckoutResponse>("create-checkout-session", {
-        body: JSON.stringify({
-          amount: totalAmount,
-          unit_id: unitId,
-          setup_future_payments: setupFuturePayments,
-          platform_fee: platformFee
-        })
-      });
-
-      if (response.error) {
-        setValidationStatus('failed');
-        throw new Error(response.error.message);
-      }
-
-      setValidationStatus('success');
-
-      // Log the successful checkout initiation
+      // Log the payment initiation
       await supabase.rpc('log_payment_event', {
-        p_event_type: 'checkout_initiated',
+        p_event_type: 'payment_initiated',
         p_entity_type: 'payment',
-        p_entity_id: response.data.payment_id,
+        p_entity_id: payment.id,
         p_changes: {
-          amount: totalAmount,
-          platform_fee: platformFee,
+          amount,
           unit_id: unitId,
-          setup_future_payments: setupFuturePayments
+          method: 'manual'
         }
       });
 
-      return response.data.url;
+      toast.success('Payment record created successfully');
+      return payment.id;
     } catch (error: any) {
       console.error("Payment error:", error);
       toast.error(error.message || 'Failed to process payment');
@@ -96,22 +58,17 @@ export function usePaymentService() {
     }
   };
 
-  const createPortalSession = async (returnUrl: string) => {
+  const viewPaymentSettings = async () => {
     try {
       setIsLoading(true);
       
-      const response = await supabase.functions.invoke<PortalResponse>("create-portal-session", {
-        body: JSON.stringify({ return_url: returnUrl })
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      return response.data.url;
+      // Simply return a confirmation - in a real app, you might
+      // redirect to a payment settings page
+      toast.info('Payment settings feature is not available in this version');
+      return true;
     } catch (error: any) {
-      console.error("Portal session error:", error);
-      toast.error(error.message || 'Failed to access payment portal');
+      console.error("Payment settings error:", error);
+      toast.error(error.message || 'Failed to access payment settings');
       throw error;
     } finally {
       setIsLoading(false);
@@ -121,7 +78,7 @@ export function usePaymentService() {
   return {
     isLoading,
     validationStatus,
-    createCheckoutSession,
-    createPortalSession
+    createPaymentRecord,
+    viewPaymentSettings
   };
 }

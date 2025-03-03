@@ -1,22 +1,18 @@
+
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { PaymentHistory } from "@/components/tenant/PaymentHistory";
+import { PaymentHistory } from "@/components/payment/PaymentHistory";
 import { PaymentForm } from "@/components/payment/PaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search } from "lucide-react";
+import { DollarSign, Filter, Calendar, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 
 const Payments = () => {
-  const [searchParams] = useSearchParams();
-  const success = searchParams.get("success");
-  const canceled = searchParams.get("canceled");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
@@ -101,15 +97,6 @@ const Payments = () => {
     },
   });
 
-  useEffect(() => {
-    if (success) {
-      toast.success("Payment successful!");
-    }
-    if (canceled) {
-      toast.error("Payment canceled.");
-    }
-  }, [success, canceled]);
-
   const filteredPayments = payments?.filter(payment => 
     payment.unit.unit_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.status.toLowerCase().includes(searchTerm.toLowerCase())
@@ -124,23 +111,11 @@ const Payments = () => {
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
         <div className="flex-1 p-6 space-y-6">
-          {success && (
-            <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                Payment successful! Your payment has been processed.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {canceled && (
-            <Alert className="bg-red-500/15 text-red-500 border-red-500/50">
-              <XCircle className="h-4 w-4" />
-              <AlertDescription>
-                Payment was canceled. Please try again if you wish to complete the payment.
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert>
+            <AlertDescription>
+              Stripe integration has been removed. Payment processing is now limited to creating payment records only.
+            </AlertDescription>
+          </Alert>
 
           {/* Active Units and Rent Due */}
           {activeUnits && activeUnits.length > 0 && (
@@ -234,6 +209,6 @@ const Payments = () => {
       </div>
     </SidebarProvider>
   );
-};
+}
 
 export default Payments;

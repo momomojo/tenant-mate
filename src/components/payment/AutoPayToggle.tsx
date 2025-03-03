@@ -1,6 +1,6 @@
 
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import React from 'react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AutoPayToggleProps {
   enabled: boolean;
@@ -10,14 +10,10 @@ interface AutoPayToggleProps {
 
 export function AutoPayToggle({ enabled, onToggle, disabled }: AutoPayToggleProps) {
   return (
-    <div className="flex items-center space-x-2">
-      <Switch
-        id="autopay"
-        checked={enabled}
-        onCheckedChange={onToggle}
-        disabled={disabled}
-      />
-      <Label htmlFor="autopay">Enable automatic monthly payments</Label>
-    </div>
+    <Alert>
+      <AlertDescription>
+        Automatic payments have been disabled as Stripe integration has been removed.
+      </AlertDescription>
+    </Alert>
   );
 }
