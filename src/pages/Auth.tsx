@@ -31,8 +31,8 @@ type UserRole = Database["public"]["Enums"]["user_role"];
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required").optional().or(z.literal("")),
-  lastName: z.string().min(1, "Last name is required").optional().or(z.literal("")),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   role: z.enum(['admin', 'property_manager', 'tenant'] as const).optional(),
 });
 
@@ -59,6 +59,7 @@ const Auth = () => {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session);
         if (session) {
           navigate("/dashboard");
         }
@@ -92,17 +93,8 @@ const Auth = () => {
     setIsLoading(true);
     try {
       if (mode === "signup") {
-        console.log("Attempting signup with:", {
-          email: values.email,
-          password: values.password,
-          data: {
-            first_name: values.firstName,
-            last_name: values.lastName,
-            role: values.role,
-          },
-        });
-        
-        const { error } = await supabase.auth.signUp({
+        // Ensure we're sending the role as a string that matches our enum values
+        const userData = {
           email: values.email,
           password: values.password,
           options: {
@@ -112,7 +104,11 @@ const Auth = () => {
               role: values.role || "tenant",
             },
           },
-        });
+        };
+        
+        console.log("Sending signup data to Supabase:", userData);
+        
+        const { error } = await supabase.auth.signUp(userData);
         
         if (error) {
           console.error("Signup error:", error);
