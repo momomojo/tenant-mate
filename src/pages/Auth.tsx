@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -23,9 +24,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Home } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
 
-type UserRole = Database["public"]["Enums"]["user_role"];
+// Removed the user_role type import since it's causing issues
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
