@@ -1,3 +1,4 @@
+
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,6 +13,7 @@ import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 import Documents from "@/pages/Documents";
 import Payments from "@/pages/Payments";
+import StripeOnboarding from "@/pages/StripeOnboarding";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +39,7 @@ function App() {
             <Route path="/tenants/:id" element={<TenantProfile />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/payments" element={<Payments />} />
+            <Route path="/stripe-onboarding" element={<StripeOnboarding />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
