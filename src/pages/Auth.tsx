@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -30,8 +31,8 @@ type UserRole = Database["public"]["Enums"]["user_role"];
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+  firstName: z.string().min(1, "First name is required").optional().or(z.literal("")),
+  lastName: z.string().min(1, "Last name is required").optional().or(z.literal("")),
   role: z.enum(['admin', 'property_manager', 'tenant'] as const).optional(),
 });
 
@@ -70,6 +71,7 @@ const Auth = () => {
   }, [navigate]);
 
   const handleAuthError = (error: any) => {
+    console.error("Auth error:", error);
     if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
       toast({
         variant: "destructive",
@@ -86,21 +88,37 @@ const Auth = () => {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("Form submitted:", values, "Mode:", mode);
     setIsLoading(true);
     try {
       if (mode === "signup") {
+        console.log("Attempting signup with:", {
+          email: values.email,
+          password: values.password,
+          data: {
+            first_name: values.firstName,
+            last_name: values.lastName,
+            role: values.role,
+          },
+        });
+        
         const { error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
           options: {
             data: {
-              first_name: values.firstName,
-              last_name: values.lastName,
-              role: values.role,
+              first_name: values.firstName || "",
+              last_name: values.lastName || "",
+              role: values.role || "tenant",
             },
           },
         });
-        if (error) throw error;
+        
+        if (error) {
+          console.error("Signup error:", error);
+          throw error;
+        }
+        
         toast({
           title: "Success!",
           description: "Please check your email to verify your account before signing in.",
@@ -114,6 +132,7 @@ const Auth = () => {
         if (error) throw error;
       }
     } catch (error: any) {
+      console.error("Auth error caught:", error);
       handleAuthError(error);
     } finally {
       setIsLoading(false);
