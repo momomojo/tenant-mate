@@ -17,20 +17,43 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     headers: {
       'Content-Type': 'application/json'
     }
+  },
+  db: {
+    schema: 'public'
   }
 });
 
 // Add session refresh handler
 supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-    // Clear local storage on sign out or token refresh
-    if (event === 'SIGNED_OUT') {
-      localStorage.removeItem('supabase.auth.token');
-    }
-    
+  console.log('Auth state changed:', event);
+  
+  if (event === 'SIGNED_OUT') {
+    // Clear local storage on sign out
+    localStorage.removeItem('supabase.auth.token');
+    console.log('User signed out, session cleared');
+  } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     // Update the auth state
     if (session) {
       localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+      console.log('Session updated:', session.user?.email);
     }
   }
 });
+
+// Helper function to check if user is authenticated
+export const isAuthenticated = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return !!session;
+};
+
+// Helper function to get current user
+export const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+};
+
+// Helper function to refresh session
+export const refreshSession = async () => {
+  const { data: { session } } = await supabase.auth.refreshSession();
+  return session;
+};

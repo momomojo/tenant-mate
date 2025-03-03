@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -21,17 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Home } from "lucide-react";
 
-// Removed the user_role type import since it's causing issues
+// Define user role type
+type UserRole = 'admin' | 'property_manager' | 'tenant';
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+  firstName: z.string().min(1, "First name is required").optional().or(z.literal('')),
+  lastName: z.string().min(1, "Last name is required").optional().or(z.literal('')),
   role: z.enum(['admin', 'property_manager', 'tenant'] as const).optional(),
 });
 
@@ -42,7 +42,6 @@ const Auth = () => {
     searchParams.get("mode") === "signup" ? "signup" : "signin"
   );
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,9 +55,20 @@ const Auth = () => {
   });
 
   useEffect(() => {
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      }
+    };
+    
+    checkSession();
+
+    // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (session) {
+        if (event === 'SIGNED_IN' && session) {
           navigate("/dashboard");
         }
       }
@@ -70,18 +80,17 @@ const Auth = () => {
   }, [navigate]);
 
   const handleAuthError = (error: any) => {
+    console.error("Auth error:", error);
+    
     if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
-      toast({
-        variant: "destructive",
-        title: "Email Not Verified",
-        description: "Please check your email and click the verification link before signing in.",
-      });
+      toast.error("Email Not Verified - Please check your email and click the verification link before signing in.");
+    } else if (error.message.includes('Invalid login credentials')) {
+      toast.error("Invalid email or password. Please try again.");
+    } else if (error.message.includes('User already registered')) {
+      toast.error("This email is already registered. Please sign in instead.");
+      setMode("signin");
     } else {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
+      toast.error(error.message || "An error occurred during authentication");
     }
   };
 
@@ -89,7 +98,14 @@ const Auth = () => {
     setIsLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        // Validate required fields for signup
+        if (!values.firstName || !values.lastName) {
+          toast.error("First name and last name are required for signup");
+          setIsLoading(false);
+          return;
+        }
+        
+        const { data, error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
           options: {
@@ -98,20 +114,29 @@ const Auth = () => {
               last_name: values.lastName,
               role: values.role,
             },
+            emailRedirectTo: `${window.location.origin}/auth?mode=signin`,
           },
         });
+        
         if (error) throw error;
-        toast({
-          title: "Success!",
-          description: "Please check your email to verify your account before signing in.",
-        });
-        setMode("signin");
+        
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          toast.error("This email is already registered. Please sign in instead.");
+          setMode("signin");
+        } else {
+          toast.success("Success! Please check your email to verify your account before signing in.");
+          setMode("signin");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: values.email,
           password: values.password,
         });
+        
         if (error) throw error;
+        
+        // Successful login will be handled by the auth state change listener
+        toast.success("Login successful!");
       }
     } catch (error: any) {
       handleAuthError(error);
