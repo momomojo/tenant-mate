@@ -1,55 +1,72 @@
-
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { PaymentHistory } from "@/components/payment/PaymentHistory";
+import { PaymentHistory } from "@/components/tenant/PaymentHistory";
 import { PaymentForm } from "@/components/payment/PaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Filter, Calendar, Search } from "lucide-react";
+import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 
 const Payments = () => {
+  const [searchParams] = useSearchParams();
+  const success = searchParams.get("success");
+  const canceled = searchParams.get("canceled");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
-  // Get user's active units and their rent amounts
-  const { data: activeUnits, isLoading: isLoadingUnits } = useQuery({
-    queryKey: ["activeUnits"],
+  // Get user role and active unit
+  const { data: userInfo } = useQuery({
+    queryKey: ["userRole"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      const { data: units, error } = await supabase
-        .from('tenant_units')
-        .select(`
-          id,
-          unit:units (
-            id,
-            unit_number,
-            monthly_rent,
-            property:properties (
-              name
-            )
-          )
-        `)
-        .eq('tenant_id', user.id)
-        .eq('status', 'active');
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-      if (error) {
-        console.error('Error fetching units:', error);
-        throw error;
+      // If user is a tenant, get their active unit
+      let activeUnit = null;
+      if (profile?.role === 'tenant') {
+        const { data: tenantUnit } = await supabase
+          .from('tenant_units')
+          .select(`
+            unit_id,
+            unit:units (id, unit_number, monthly_rent)
+          `)
+          .eq('tenant_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        activeUnit = tenantUnit?.unit;
       }
 
-      return units;
+      return {
+        role: profile?.role,
+        activeUnit
+      };
     },
   });
 
-  // Get payment history using the new hook
+  useEffect(() => {
+    if (success) {
+      toast.success("Payment successful!");
+    }
+    if (canceled) {
+      toast.error("Payment canceled.");
+    }
+  }, [success, canceled]);
+
   const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments", statusFilter, dateFilter],
     queryFn: async () => {
@@ -57,14 +74,30 @@ const Payments = () => {
       if (!user) throw new Error("No user found");
 
       let query = supabase
-        .from('payment_history_view')
-        .select('*')
-        .eq('tenant_id', user.id);
+        .from("rent_payments")
+        .select(`
+          id,
+          amount,
+          payment_date,
+          status,
+          payment_method,
+          invoice_number,
+          unit:units(
+            unit_number,
+            property_id
+          )
+        `);
+
+      // Apply role-based filters
+      if (userInfo?.role === 'tenant') {
+        query = query.eq("tenant_id", user.id);
+      }
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
 
+      // Apply date filter
       if (dateFilter === "thisMonth") {
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
@@ -80,6 +113,7 @@ const Payments = () => {
           .lte("payment_date", endOfLastMonth.toISOString());
       }
 
+      console.log('Fetching payments for user:', user.id);
       const { data, error } = await query.order("payment_date", { ascending: false });
 
       if (error) {
@@ -87,13 +121,8 @@ const Payments = () => {
         throw error;
       }
 
-      return data.map(payment => ({
-        ...payment,
-        unit: {
-          unit_number: payment.unit_number,
-          property_id: payment.property_id
-        }
-      }));
+      console.log('Fetched payments:', data);
+      return data;
     },
   });
 
@@ -102,7 +131,7 @@ const Payments = () => {
     payment.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoadingUnits || isLoadingPayments) {
+  if (isLoadingPayments) {
     return <div>Loading...</div>;
   }
 
@@ -111,48 +140,37 @@ const Payments = () => {
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
         <div className="flex-1 p-6 space-y-6">
-          <Alert>
-            <AlertDescription>
-              Stripe integration has been removed. Payment processing is now limited to creating payment records only.
-            </AlertDescription>
-          </Alert>
-
-          {/* Active Units and Rent Due */}
-          {activeUnits && activeUnits.length > 0 && (
-            <div className="grid gap-6 md:grid-cols-2">
-              {activeUnits.map((tenantUnit) => (
-                <Card key={tenantUnit.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5" />
-                        {tenantUnit.unit.property.name} - Unit {tenantUnit.unit.unit_number}
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Monthly Rent:</span>
-                        <span className="text-xl font-bold">${tenantUnit.unit.monthly_rent}</span>
-                      </div>
-                      <PaymentForm
-                        unitId={tenantUnit.unit.id}
-                        amount={tenantUnit.unit.monthly_rent}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {success && (
+            <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                Payment successful! Your payment has been processed.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {canceled && (
+            <Alert className="bg-red-500/15 text-red-500 border-red-500/50">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>
+                Payment was canceled. Please try again if you wish to complete the payment.
+              </AlertDescription>
+            </Alert>
           )}
 
-          {/* Payment History */}
+          {/* Show payment form only for tenants with active units */}
+          {userInfo?.role === 'tenant' && userInfo.activeUnit && (
+            <PaymentForm
+              unitId={userInfo.activeUnit.id}
+              amount={userInfo.activeUnit.monthly_rent}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Payment History
+                Payments
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -198,7 +216,7 @@ const Payments = () => {
                 ) : (
                   <Alert>
                     <AlertDescription>
-                      No payment history found.
+                      No payments found. {userInfo?.role === 'tenant' && "Use the payment form above to make a payment."}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -209,6 +227,6 @@ const Payments = () => {
       </div>
     </SidebarProvider>
   );
-}
+};
 
 export default Payments;

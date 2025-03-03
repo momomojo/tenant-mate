@@ -13,16 +13,14 @@ export function LateFeeDisplay({ amount, dueDate, propertyId }: LateFeeDisplayPr
   const { data: lateFeeInfo } = useQuery({
     queryKey: ["lateFee", amount, dueDate, propertyId],
     queryFn: async () => {
-      // Get payment config for grace period info, using maybeSingle() instead of single()
-      const { data: config } = await supabase
+      // Get payment config for grace period info
+      const { data: config, error: configError } = await supabase
         .from('payment_configs')
         .select('*')
         .eq('property_id', propertyId)
-        .maybeSingle();
+        .single();
 
-      // Use default values if no config exists
-      const gracePeriodDays = config?.grace_period_days ?? 5;
-      const lateFeePercentage = config?.late_fee_percentage ?? 5;
+      if (configError) throw configError;
 
       // Calculate late fee
       const { data: lateFee, error } = await supabase.rpc('calculate_late_fee', {
@@ -37,8 +35,8 @@ export function LateFeeDisplay({ amount, dueDate, propertyId }: LateFeeDisplayPr
 
       return {
         lateFee,
-        gracePeriod: gracePeriodDays,
-        lateFeePercentage: lateFeePercentage,
+        gracePeriod: config?.grace_period_days || 5,
+        lateFeePercentage: config?.late_fee_percentage || 5,
         daysLate
       };
     },

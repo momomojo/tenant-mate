@@ -12,7 +12,6 @@ import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
 import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { UnitsTable } from "@/components/property/UnitsTable";
-import { PropertyManagerInfo } from "@/components/property/PropertyManagerInfo";
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -20,22 +19,6 @@ const PropertyDetails = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
   const [isAssigningTenant, setIsAssigningTenant] = useState(false);
-
-  const { data: userRole } = useQuery({
-    queryKey: ["userRole"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      
-      return profile?.role;
-    },
-  });
 
   const { data: property, isLoading: isLoadingProperty, refetch } = useQuery({
     queryKey: ["property", id],
@@ -55,18 +38,6 @@ const PropertyDetails = () => {
                 email
               )
             )
-          ),
-          property_manager:property_manager_id(
-            id,
-            first_name,
-            last_name,
-            email
-          ),
-          creator:created_by(
-            id,
-            first_name,
-            last_name,
-            email
           )
         `)
         .eq("id", id)
@@ -161,13 +132,6 @@ const PropertyDetails = () => {
                 </div>
               </div>
             </div>
-
-            {userRole === 'admin' && (
-              <PropertyManagerInfo 
-                property={property}
-                onUpdate={refetch}
-              />
-            )}
 
             <PropertyOverview property={property} />
 
