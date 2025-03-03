@@ -24,9 +24,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Home } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type UserRole = Database["public"]["Enums"]["user_role"];
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -73,7 +70,15 @@ const Auth = () => {
 
   const handleAuthError = (error: any) => {
     console.error("Auth error:", error);
-    if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
+    
+    // Check if it's a database error related to user_role
+    if (error.message.includes('Database error saving new user')) {
+      toast({
+        variant: "destructive",
+        title: "Registration Error",
+        description: "There was a problem with the database. Please try again later or contact support.",
+      });
+    } else if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
       toast({
         variant: "destructive",
         title: "Email Not Verified",
@@ -93,27 +98,33 @@ const Auth = () => {
     setIsLoading(true);
     try {
       if (mode === "signup") {
-        // Ensure we're sending the role as a string that matches our enum values
+        // Ensure we're sending the role as a string
+        const cleanedData = {
+          first_name: values.firstName || "",
+          last_name: values.lastName || "",
+          role: values.role || "tenant"
+        };
+        
+        console.log("Cleaned user metadata:", cleanedData);
+        
         const userData = {
           email: values.email,
           password: values.password,
           options: {
-            data: {
-              first_name: values.firstName || "",
-              last_name: values.lastName || "",
-              role: values.role || "tenant",
-            },
+            data: cleanedData
           },
         };
         
         console.log("Sending signup data to Supabase:", userData);
         
-        const { error } = await supabase.auth.signUp(userData);
+        const { data, error } = await supabase.auth.signUp(userData);
         
         if (error) {
           console.error("Signup error:", error);
           throw error;
         }
+        
+        console.log("Signup response:", data);
         
         toast({
           title: "Success!",
