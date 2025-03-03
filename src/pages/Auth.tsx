@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -24,15 +25,12 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Home } from "lucide-react";
 
-// Define user role type
-type UserRole = 'admin' | 'property_manager' | 'tenant';
-
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   firstName: z.string().min(1, "First name is required").optional().or(z.literal('')),
   lastName: z.string().min(1, "Last name is required").optional().or(z.literal('')),
-  role: z.enum(['admin', 'property_manager', 'tenant'] as const).optional(),
+  role: z.enum(['admin', 'property_manager', 'tenant']).optional(),
 });
 
 const Auth = () => {
@@ -105,6 +103,7 @@ const Auth = () => {
           return;
         }
         
+        // Send the role as a string rather than trying to use the enum type directly
         const { data, error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
