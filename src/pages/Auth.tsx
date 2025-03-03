@@ -103,7 +103,9 @@ const Auth = () => {
           return;
         }
         
-        // Send the role as a string rather than trying to use the enum type directly
+        // Ensure role is one of the valid enum values
+        const role = values.role || 'tenant';
+        
         const { data, error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
@@ -111,7 +113,7 @@ const Auth = () => {
             data: {
               first_name: values.firstName,
               last_name: values.lastName,
-              role: values.role,
+              role: role, // Send as a string - will be cast to enum in database function
             },
             emailRedirectTo: `${window.location.origin}/auth?mode=signin`,
           },
