@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,13 +20,58 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
   const [monthlyRent, setMonthlyRent] = useState<number | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    checkAuth();
-    checkAutoPayStatus();
-    fetchMonthlyRent();
-  }, []);
+  const checkAuth = useCallback(async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-  const fetchMonthlyRent = async () => {
+      if (error) {
+        console.error('Auth error:', error);
+        throw error;
+      }
+
+      if (!session) {
+        toast.error("Please login to make a payment");
+        navigate("/auth");
+        return;
+      }
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('User verification error:', userError);
+        await supabase.auth.signOut();
+        navigate("/auth");
+        return;
+      }
+
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Auth error:', error);
+      toast.error("Authentication error. Please login again.");
+      navigate("/auth");
+    }
+  }, [navigate]);
+
+  const checkAutoPayStatus = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('automatic_payments')
+        .select('is_enabled')
+        .eq('tenant_id', user.id)
+        .eq('unit_id', unitId)
+        .single();
+
+      if (error) throw error;
+      setAutoPayEnabled(data?.is_enabled || false);
+    } catch (error) {
+      console.error('Error checking autopay status:', error);
+    }
+  }, [unitId]);
+
+  const fetchMonthlyRent = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -59,58 +104,13 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       console.error('Error fetching monthly rent:', error);
       toast.error('Failed to fetch monthly rent amount');
     }
-  };
+  }, [unitId, defaultAmount]);
 
-  const checkAuth = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Auth error:', error);
-        throw error;
-      }
-      
-      if (!session) {
-        toast.error("Please login to make a payment");
-        navigate("/auth");
-        return;
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        console.error('User verification error:', userError);
-        await supabase.auth.signOut();
-        navigate("/auth");
-        return;
-      }
-
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error('Auth error:', error);
-      toast.error("Authentication error. Please login again.");
-      navigate("/auth");
-    }
-  };
-
-  const checkAutoPayStatus = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('automatic_payments')
-        .select('is_enabled')
-        .eq('tenant_id', user.id)
-        .eq('unit_id', unitId)
-        .single();
-
-      if (error) throw error;
-      setAutoPayEnabled(data?.is_enabled || false);
-    } catch (error) {
-      console.error('Error checking autopay status:', error);
-    }
-  };
+  useEffect(() => {
+    checkAuth();
+    checkAutoPayStatus();
+    fetchMonthlyRent();
+  }, [checkAuth, checkAutoPayStatus, fetchMonthlyRent]);
 
   const handleAutoPayToggle = async () => {
     try {
@@ -118,7 +118,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (!user) return;
 
       const newStatus = !autoPayEnabled;
-      
+
       const { error } = await supabase
         .from('automatic_payments')
         .upsert({
@@ -130,7 +130,7 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         });
 
       if (error) throw error;
-      
+
       setAutoPayEnabled(newStatus);
       toast.success(newStatus ? 'Automatic payments enabled' : 'Automatic payments disabled');
     } catch (error) {
@@ -153,17 +153,17 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
 
     try {
       setIsLoading(true);
-      
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No active session');
       }
-      
+
       const response = await supabase.functions.invoke('create-checkout-session', {
-        body: { 
-          amount: monthlyRent, 
+        body: {
+          amount: monthlyRent,
           unit_id: unitId,
-          setup_future_payments: autoPayEnabled 
+          setup_future_payments: autoPayEnabled
         }
       });
 
@@ -175,9 +175,10 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
       if (url) {
         window.location.href = url;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Payment error:', error);
-      if (error.message.includes('No active session')) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('No active session')) {
         toast.error("Your session has expired. Please login again.");
         navigate("/auth");
       } else {
@@ -217,8 +218,8 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          onClick={handlePayment} 
+        <Button
+          onClick={handlePayment}
           disabled={isLoading || !isAuthenticated || !monthlyRent}
           className="w-full"
         >

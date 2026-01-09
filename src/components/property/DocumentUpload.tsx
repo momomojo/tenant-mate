@@ -44,7 +44,7 @@ export function DocumentUpload({ propertyId, onUploadComplete }: DocumentUploadP
 
       toast.success('Document uploaded successfully');
       onUploadComplete();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
       toast.error('Failed to upload document');
     } finally {

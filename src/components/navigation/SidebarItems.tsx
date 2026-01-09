@@ -2,13 +2,7 @@ import { Building2, Home, Users, Wrench, FileText, BarChart, Settings2, DollarSi
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-interface MenuItem {
-  title: string;
-  icon: any;
-  path: string;
-  roles?: string[];
-}
+import type { MenuItem } from "@/types";
 
 const fetchUserRole = async () => {
   try {
@@ -17,7 +11,7 @@ const fetchUserRole = async () => {
       console.error("No user found");
       throw new Error("No user found");
     }
-    
+
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("role")
@@ -58,57 +52,57 @@ export const useMenuItems = () => {
   }
 
   const allMenuItems: MenuItem[] = [
-    { 
-      title: "Dashboard", 
-      icon: Home, 
+    {
+      title: "Dashboard",
+      icon: Home,
       path: "/dashboard",
-      roles: ["admin", "property_manager", "tenant"] 
+      roles: ["admin", "property_manager", "tenant"]
     },
-    { 
-      title: "Properties", 
-      icon: Building2, 
+    {
+      title: "Properties",
+      icon: Building2,
       path: "/properties",
-      roles: ["admin", "property_manager"] 
+      roles: ["admin", "property_manager"]
     },
-    { 
-      title: "Tenants", 
-      icon: Users, 
+    {
+      title: "Tenants",
+      icon: Users,
       path: "/tenants",
-      roles: ["admin", "property_manager"] 
+      roles: ["admin", "property_manager"]
     },
-    { 
-      title: "Maintenance", 
-      icon: Wrench, 
+    {
+      title: "Maintenance",
+      icon: Wrench,
       path: "/maintenance",
-      roles: ["admin", "property_manager", "tenant"] 
+      roles: ["admin", "property_manager", "tenant"]
     },
-    { 
-      title: "Documents", 
-      icon: FileText, 
+    {
+      title: "Documents",
+      icon: FileText,
       path: "/documents",
-      roles: ["admin", "property_manager", "tenant"] 
+      roles: ["admin", "property_manager", "tenant"]
     },
-    { 
-      title: "Payments", 
-      icon: DollarSign, 
+    {
+      title: "Payments",
+      icon: DollarSign,
       path: "/payments",
-      roles: ["admin", "property_manager", "tenant"] 
+      roles: ["admin", "property_manager", "tenant"]
     },
-    { 
-      title: "Reports", 
-      icon: BarChart, 
+    {
+      title: "Reports",
+      icon: BarChart,
       path: "/reports",
-      roles: ["admin", "property_manager"] 
+      roles: ["admin", "property_manager"]
     },
-    { 
-      title: "Settings", 
-      icon: Settings2, 
+    {
+      title: "Settings",
+      icon: Settings2,
       path: "/settings",
-      roles: ["admin", "property_manager", "tenant"] 
+      roles: ["admin", "property_manager", "tenant"]
     },
   ];
 
-  const filteredItems = allMenuItems.filter(item => 
+  const filteredItems = allMenuItems.filter(item =>
     !item.roles || (userRole && item.roles.includes(userRole))
   );
 

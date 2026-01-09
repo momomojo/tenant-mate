@@ -4,9 +4,17 @@ import { useForm } from "react-hook-form";
 import { UnitForm, UnitFormData } from "./UnitForm";
 import { CurrentTenant } from "./CurrentTenant";
 import { DialogActions } from "./DialogActions";
+import type { UnitWithTenant, TenantProfile } from "@/types";
+import { formatTenantLabel } from "@/types";
+
+interface TenantUnitWithProfile {
+  id: string;
+  status: string | null;
+  profiles?: TenantProfile | null;
+}
 
 interface UnitUpdateFormProps {
-  unit: any;
+  unit: UnitWithTenant;
   onClose: () => void;
   onUnitUpdated: () => void;
 }
@@ -20,15 +28,6 @@ export function UnitUpdateForm({ unit, onClose, onUnitUpdated }: UnitUpdateFormP
       status: unit?.status || "vacant",
     },
   });
-
-  const formatTenantLabel = (tenant: any): string => {
-    if (!tenant) return "-";
-    const name = [tenant.first_name, tenant.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    return name || tenant.email || "-";
-  };
 
   const handleEndLease = async (tenantUnitId: string) => {
     try {
@@ -94,8 +93,10 @@ export function UnitUpdateForm({ unit, onClose, onUnitUpdated }: UnitUpdateFormP
   };
 
   const activeTenantUnit = unit?.tenant_units?.find(
-    (tu: any) => tu.status === "active"
+    (tu: TenantUnitWithProfile) => tu.status === "active"
   );
+
+  const currentTenant = activeTenantUnit?.profiles || null;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -104,9 +105,9 @@ export function UnitUpdateForm({ unit, onClose, onUnitUpdated }: UnitUpdateFormP
         control={control}
         isSubmitting={isSubmitting}
       />
-      {activeTenantUnit && (
+      {activeTenantUnit && currentTenant && (
         <CurrentTenant
-          tenant={activeTenantUnit.tenant}
+          tenant={currentTenant}
           onEndLease={() => handleEndLease(activeTenantUnit.id)}
           formatTenantLabel={formatTenantLabel}
         />

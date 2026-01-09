@@ -68,9 +68,9 @@ const Auth = () => {
     };
   }, [navigate]);
 
-  const handleAuthError = (error: any) => {
+  const handleAuthError = (error: { message: string }) => {
     console.error("Auth error:", error);
-    
+
     // Check if it's a database error related to user_role
     if (error.message.includes('Database error saving new user')) {
       toast({
@@ -104,9 +104,9 @@ const Auth = () => {
           last_name: values.lastName || "",
           role: values.role || "tenant"
         };
-        
+
         console.log("Cleaned user metadata:", cleanedData);
-        
+
         const userData = {
           email: values.email,
           password: values.password,
@@ -114,18 +114,18 @@ const Auth = () => {
             data: cleanedData
           },
         };
-        
+
         console.log("Sending signup data to Supabase:", userData);
-        
+
         const { data, error } = await supabase.auth.signUp(userData);
-        
+
         if (error) {
           console.error("Signup error:", error);
           throw error;
         }
-        
+
         console.log("Signup response:", data);
-        
+
         toast({
           title: "Success!",
           description: "Please check your email to verify your account before signing in.",
@@ -138,9 +138,9 @@ const Auth = () => {
         });
         if (error) throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Auth error caught:", error);
-      handleAuthError(error);
+      handleAuthError(error as { message: string });
     } finally {
       setIsLoading(false);
     }
@@ -266,8 +266,8 @@ const Auth = () => {
                 {isLoading
                   ? "Loading..."
                   : mode === "signin"
-                  ? "Sign In"
-                  : "Sign Up"}
+                    ? "Sign In"
+                    : "Sign Up"}
               </Button>
             </form>
           </Form>

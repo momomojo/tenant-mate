@@ -12,11 +12,13 @@ import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
 import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { UnitsTable } from "@/components/property/UnitsTable";
+import type { UnitWithTenant, TenantProfile } from "@/types";
+import { formatTenantLabel } from "@/types";
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [selectedUnit, setSelectedUnit] = useState<any>(null);
+  const [selectedUnit, setSelectedUnit] = useState<UnitWithTenant | null>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
   const [isAssigningTenant, setIsAssigningTenant] = useState(false);
 
@@ -31,7 +33,7 @@ const PropertyDetails = () => {
             *,
             tenant_units(
               *,
-              tenant:tenant_id(
+              profiles:tenant_id(
                 id,
                 first_name,
                 last_name,
@@ -58,25 +60,16 @@ const PropertyDetails = () => {
         .order("first_name");
 
       if (error) throw error;
-      return data;
+      return data as TenantProfile[];
     },
   });
 
-  const formatTenantLabel = (tenant: any): string => {
-    if (!tenant) return "-";
-    const name = [tenant.first_name, tenant.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    return name || tenant.email || "-";
-  };
-
-  const handleManageUnit = (unit: any) => {
+  const handleManageUnit = (unit: UnitWithTenant) => {
     setSelectedUnit(unit);
     setIsManagingUnit(true);
   };
 
-  const handleAssignTenant = (unit: any) => {
+  const handleAssignTenant = (unit: UnitWithTenant) => {
     setSelectedUnit(unit);
     setIsAssigningTenant(true);
   };
@@ -143,7 +136,7 @@ const PropertyDetails = () => {
 
               <Card className="bg-[#403E43] border-none">
                 <UnitsTable
-                  units={property.units}
+                  units={property.units || []}
                   onManageUnit={handleManageUnit}
                   onAssignTenant={handleAssignTenant}
                   formatTenantLabel={formatTenantLabel}

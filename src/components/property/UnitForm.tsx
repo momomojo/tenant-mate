@@ -8,9 +8,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Control, Controller } from "react-hook-form";
+import type { Unit } from "@/types";
 
 interface UnitFormProps {
-  unit: any;
+  unit: Unit | null;
   control: Control<UnitFormData>;
   isSubmitting: boolean;
 }
@@ -21,7 +22,7 @@ export interface UnitFormData {
   status: string;
 }
 
-export function UnitForm({ unit, control, isSubmitting }: UnitFormProps) {
+export function UnitForm({ control }: UnitFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">

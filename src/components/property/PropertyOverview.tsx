@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users } from "lucide-react";
+import type { PropertyWithUnits, Unit } from "@/types";
 
 interface PropertyOverviewProps {
-  property: any;
+  property: PropertyWithUnits;
 }
 
 export function PropertyOverview({ property }: PropertyOverviewProps) {
@@ -24,7 +25,7 @@ export function PropertyOverview({ property }: PropertyOverviewProps) {
           <div className="flex items-center gap-2 mt-2">
             <Users className="h-4 w-4 text-[#9b87f5]" />
             <span className="text-sm text-gray-300">
-              {property.units?.filter((unit: any) => unit.status === "occupied")
+              {property.units?.filter((unit: Unit) => unit.status === "occupied")
                 .length || 0}{" "}
               Occupied Units
             </span>

@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import type { TenantProfile } from "@/types";
 
 interface CurrentTenantProps {
-  tenant: any;
+  tenant: TenantProfile | null;
   onEndLease: () => void;
-  formatTenantLabel: (tenant: any) => string;
+  formatTenantLabel: (tenant: TenantProfile | null) => string;
 }
 
 export function CurrentTenant({ tenant, onEndLease, formatTenantLabel }: CurrentTenantProps) {

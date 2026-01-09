@@ -7,12 +7,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { UnitWithTenant, TenantProfile } from "@/types";
+
+interface TenantUnitWithProfile {
+  id: string;
+  status: string | null;
+  profiles?: TenantProfile | null;
+}
 
 interface UnitsTableProps {
-  units: any[];
-  onManageUnit: (unit: any) => void;
-  onAssignTenant: (unit: any) => void;
-  formatTenantLabel: (tenant: any) => string;
+  units: UnitWithTenant[];
+  onManageUnit: (unit: UnitWithTenant) => void;
+  onAssignTenant: (unit: UnitWithTenant) => void;
+  formatTenantLabel: (tenant: TenantProfile | null | undefined) => string;
 }
 
 export function UnitsTable({
@@ -35,19 +42,18 @@ export function UnitsTable({
       <TableBody>
         {units?.map((unit) => {
           const activeTenantUnit = unit.tenant_units?.find(
-            (tu: any) => tu.status === "active"
+            (tu: TenantUnitWithProfile) => tu.status === "active"
           );
-          const currentTenant = activeTenantUnit?.tenant;
+          const currentTenant = activeTenantUnit?.profiles;
           return (
             <TableRow key={unit.id}>
               <TableCell className="text-white">{unit.unit_number}</TableCell>
               <TableCell>
                 <span
-                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                    unit.status === "occupied"
+                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${unit.status === "occupied"
                       ? "bg-green-100 text-green-700"
                       : "bg-yellow-100 text-yellow-700"
-                  }`}
+                    }`}
                 >
                   {unit.status || "vacant"}
                 </span>

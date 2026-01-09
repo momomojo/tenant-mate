@@ -20,6 +20,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import type { UnitWithTenant } from "@/types";
 
 interface TenantProfile {
   id: string;
@@ -29,7 +30,7 @@ interface TenantProfile {
 }
 
 interface AssignTenantDialogProps {
-  unit: any;
+  unit: UnitWithTenant;
   tenants: TenantProfile[];
   isOpen: boolean;
   onClose: () => void;

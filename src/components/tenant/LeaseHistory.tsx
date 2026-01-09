@@ -31,7 +31,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     queryKey: ["deletedLeases", tenantId],
     queryFn: async () => {
       console.log("Fetching deleted leases for tenant:", tenantId);
-      
+
       const { data, error } = await supabase
         .from("deleted_tenant_units")
         .select(`
@@ -65,8 +65,27 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
     },
   });
 
+  interface DeletedLease {
+    id: string;
+    unit_id: string;
+    lease_start_date: string;
+    lease_end_date: string;
+    status: string;
+    deleted_at: string;
+    deleted_by: {
+      first_name: string;
+      last_name: string;
+    };
+    unit: {
+      unit_number: string;
+      property: {
+        name: string;
+      };
+    };
+  }
+
   const restoreLeaseMutation = useMutation({
-    mutationFn: async (lease: any) => {
+    mutationFn: async (lease: DeletedLease) => {
       console.log("Attempting to restore lease:", lease);
       const { error: insertError } = await supabase
         .from("tenant_units")
@@ -101,21 +120,21 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
   const deleteLeaseMutation = useMutation({
     mutationFn: async (leaseId: string) => {
       console.log("Attempting to delete lease:", leaseId);
-      
+
       // First get the lease details before deletion
       const { data: leaseToDelete, error: fetchError } = await supabase
         .from("tenant_units")
         .select("*")
         .eq("id", leaseId)
         .single();
-        
+
       if (fetchError) {
         console.error("Error fetching lease to delete:", fetchError);
         throw fetchError;
       }
-      
+
       console.log("Lease to be deleted:", leaseToDelete);
-      
+
       // Now delete the lease - this should trigger the database trigger
       const { error: deleteError } = await supabase
         .from("tenant_units")
@@ -126,7 +145,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
         console.error("Error in delete mutation:", deleteError);
         throw deleteError;
       }
-      
+
       console.log("Lease deleted successfully");
     },
     onSuccess: () => {
@@ -163,7 +182,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
   });
 
   const renderLeaseTimeline = (
-    leaseData: any[],
+    leaseData: (LeaseHistoryProps['leases'][0] | DeletedLease)[] | null | undefined,
     isDeleted: boolean = false
   ) => {
     if (!leaseData || leaseData.length === 0) {

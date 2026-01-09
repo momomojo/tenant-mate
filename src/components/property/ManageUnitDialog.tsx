@@ -5,9 +5,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UnitUpdateForm } from "./UnitUpdateForm";
+import type { UnitWithTenant } from "@/types";
 
 interface ManageUnitDialogProps {
-  unit: any;
+  unit: UnitWithTenant | null;
   isOpen: boolean;
   onClose: () => void;
   onUnitUpdated: () => void;
@@ -19,6 +20,8 @@ export function ManageUnitDialog({
   onClose,
   onUnitUpdated,
 }: ManageUnitDialogProps) {
+  if (!unit) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
