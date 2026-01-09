@@ -1,13 +1,13 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { initStripeConnect, StripeConnect } from '@stripe/connect-js';
+import { loadConnectAndInitialize } from '@stripe/connect-js';
+import type { StripeConnectInstance } from '@stripe/connect-js';
 
 export const useStripeConnect = () => {
-  const [stripeConnect, setStripeConnect] = useState<StripeConnect | null>(null);
+  const [stripeConnect, setStripeConnect] = useState<StripeConnectInstance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const loadConnectAndInitialize = useCallback(async () => {
+  const initializeStripeConnect = useCallback(async () => {
     try {
       setIsLoading(true);
       const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
@@ -16,16 +16,16 @@ export const useStripeConnect = () => {
         throw new Error('Stripe publishable key is not set');
       }
 
-      const stripe = await initStripeConnect({
+      const stripe = loadConnectAndInitialize({
         publishableKey,
-        clientSecret: async () => {
+        fetchClientSecret: async () => {
           // This would fetch an account session from your backend
           const response = await fetch('/api/account-session');
           const { clientSecret } = await response.json();
           return clientSecret;
         },
         appearance: {
-          theme: 'night',
+          overlays: 'dialog',
           variables: {
             colorPrimary: '#6366f1',
           },
@@ -42,8 +42,8 @@ export const useStripeConnect = () => {
   }, []);
 
   useEffect(() => {
-    loadConnectAndInitialize();
-  }, [loadConnectAndInitialize]);
+    initializeStripeConnect();
+  }, [initializeStripeConnect]);
 
-  return { stripeConnect, isLoading, error, reload: loadConnectAndInitialize };
+  return { stripeConnect, isLoading, error, reload: initializeStripeConnect };
 };

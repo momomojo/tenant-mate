@@ -1,6 +1,6 @@
-
-import React, { useEffect, useState } from 'react';
-import { useConnect, ConnectAccountOnboarding } from '@stripe/react-connect-js';
+import React, { useState } from 'react';
+import { ConnectAccountOnboarding, ConnectComponentsProvider } from '@stripe/react-connect-js';
+import { loadConnectAndInitialize } from '@stripe/connect-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -11,30 +11,48 @@ interface StripeConnectProps {
 }
 
 const StripeConnect = ({ accountId, onboardingComplete }: StripeConnectProps) => {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [stripeConnectInstance, setStripeConnectInstance] = useState<ReturnType<typeof loadConnectAndInitialize> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const connect = useConnect();
 
-  const fetchAccountSession = async () => {
+  const initializeAndFetchSession = async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would be a fetch to your backend
-      const response = await fetch('/api/create-account-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.clientSecret) {
-        setClientSecret(data.clientSecret);
-      } else {
-        throw new Error(data.error || 'Failed to create account session');
+      const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
+      if (!publishableKey) {
+        throw new Error('Stripe publishable key is not set');
       }
+
+      const connectInstance = loadConnectAndInitialize({
+        publishableKey,
+        fetchClientSecret: async () => {
+          // Fetch the account session client secret from your backend
+          const response = await fetch('/api/create-account-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountId }),
+          });
+
+          const data = await response.json();
+
+          if (data.success && data.clientSecret) {
+            return data.clientSecret;
+          } else {
+            throw new Error(data.error || 'Failed to create account session');
+          }
+        },
+        appearance: {
+          overlays: 'dialog',
+          variables: {
+            colorPrimary: '#6366f1',
+          },
+        },
+      });
+
+      setStripeConnectInstance(connectInstance);
     } catch (error) {
-      console.error('Error fetching account session:', error);
+      console.error('Error initializing Stripe Connect:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -45,22 +63,14 @@ const StripeConnect = ({ accountId, onboardingComplete }: StripeConnectProps) =>
     }
   };
 
-  const handleOnboardingExit = (result: { sessionError?: { message: string } }) => {
-    if (result.sessionError) {
-      toast({
-        variant: 'destructive',
-        title: 'Onboarding Error',
-        description: result.sessionError.message,
-      });
-    } else {
-      toast({
-        title: 'Onboarding Complete',
-        description: 'Your Stripe account is now connected!',
-      });
-      
-      if (onboardingComplete) {
-        onboardingComplete();
-      }
+  const handleOnboardingExit = () => {
+    toast({
+      title: 'Onboarding Complete',
+      description: 'Your Stripe account is now connected!',
+    });
+
+    if (onboardingComplete) {
+      onboardingComplete();
     }
   };
 
@@ -73,19 +83,19 @@ const StripeConnect = ({ accountId, onboardingComplete }: StripeConnectProps) =>
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {clientSecret ? (
-          <ConnectAccountOnboarding
-            clientSecret={clientSecret}
-            appearance={{ theme: 'night' }}
-            onExit={handleOnboardingExit}
-          />
+        {stripeConnectInstance ? (
+          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+            <ConnectAccountOnboarding
+              onExit={handleOnboardingExit}
+            />
+          </ConnectComponentsProvider>
         ) : (
           <p>Click the button below to start the Stripe onboarding process.</p>
         )}
       </CardContent>
       <CardFooter>
-        {!clientSecret && (
-          <Button onClick={fetchAccountSession} disabled={isLoading}>
+        {!stripeConnectInstance && (
+          <Button onClick={initializeAndFetchSession} disabled={isLoading}>
             {isLoading ? 'Loading...' : 'Start Onboarding'}
           </Button>
         )}
