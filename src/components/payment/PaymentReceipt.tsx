@@ -4,6 +4,7 @@ import { Download, Printer } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LateFeeDisplay } from "./LateFeeDisplay";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentReceiptProps {
   payment: {
@@ -22,12 +23,33 @@ interface PaymentReceiptProps {
 export function PaymentReceipt({ payment }: PaymentReceiptProps) {
   const handleDownload = async () => {
     try {
-      const response = await fetch(`/api/generate-receipt?paymentId=${payment.id}`);
-      const blob = await response.blob();
+      // Get the Supabase URL and session for authenticated request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please log in to download receipt");
+        return;
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/generate-receipt?paymentId=${payment.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to generate receipt');
+      }
+
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `receipt-${payment.invoice_number}.pdf`;
+      a.download = `receipt-${payment.invoice_number}.html`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
