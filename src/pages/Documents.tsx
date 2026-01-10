@@ -151,11 +151,11 @@ const Documents = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <main className="flex-1 p-8">
-          <div className="flex flex-col gap-8">
-            <h1 className="text-2xl font-semibold text-white">Documents</h1>
+        <main className="flex-1 p-4 sm:p-8">
+          <div className="flex flex-col gap-6 sm:gap-8">
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Documents</h1>
 
-            <Card className="bg-[#403E43] border-none p-6">
+            <Card className="bg-[#403E43] border-none p-4 sm:p-6">
               <div className="space-y-6">
                 {renderDocumentHeader()}
                 {renderDocumentList()}

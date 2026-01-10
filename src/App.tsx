@@ -2,6 +2,7 @@
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { Routes, Route } from "react-router-dom";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -14,6 +15,10 @@ import Index from "@/pages/Index";
 import Documents from "@/pages/Documents";
 import Payments from "@/pages/Payments";
 import StripeOnboarding from "@/pages/StripeOnboarding";
+import Maintenance from "@/pages/Maintenance";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,9 +45,14 @@ function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/stripe-onboarding" element={<StripeOnboarding />} />
+            <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
+          <SonnerToaster position="top-right" richColors />
+          <OfflineIndicator />
         </div>
       </BrowserRouter>
     </QueryClientProvider>

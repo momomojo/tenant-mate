@@ -29,7 +29,7 @@ export function UnitsTable({
   formatTenantLabel,
 }: UnitsTableProps) {
   return (
-    <Table>
+    <Table className="min-w-[650px]">
       <TableHeader>
         <TableRow>
           <TableHead className="text-gray-300">Unit Number</TableHead>

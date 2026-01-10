@@ -139,7 +139,7 @@ const Payments = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <div className="flex-1 p-6 space-y-6">
+        <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {success && (
             <Alert className="bg-green-500/15 text-green-500 border-green-500/50">
               <CheckCircle2 className="h-4 w-4" />
@@ -188,7 +188,7 @@ const Payments = () => {
                     </div>
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <Filter className="h-4 w-4 mr-2" />
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
@@ -200,7 +200,7 @@ const Payments = () => {
                     </SelectContent>
                   </Select>
                   <Select value={dateFilter} onValueChange={setDateFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <Calendar className="h-4 w-4 mr-2" />
                       <SelectValue placeholder="Filter by date" />
                     </SelectTrigger>

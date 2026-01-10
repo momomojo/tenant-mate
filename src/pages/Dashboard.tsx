@@ -6,24 +6,33 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { PaymentAlerts } from "@/components/dashboard/PaymentAlerts";
+import { TopBar } from "@/components/layout/TopBar";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuthenticatedUser();
+
+  // Subscribe to real-time updates for dashboard data
+  useRealtimeSubscription({
+    tables: ["notifications", "maintenance_requests", "tenant_units", "rent_payments"],
+    userId: user?.id,
+  });
 
   const { data: userRole, isError: isRoleError, error: roleError, isLoading } = useQuery({
-    queryKey: ["userRole"],
+    queryKey: ["userRole", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
-      
+
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
-        
+
       if (error) {
         console.error("Error fetching user role:", error);
         throw error;
@@ -32,13 +41,66 @@ const Dashboard = () => {
       console.log("Fetched user role:", profile?.role);
       return profile?.role;
     },
+    enabled: !!user,
   });
 
-  // New query to fetch tenant's units and their total rent
-  const { data: tenantUnitsData, isError: isUnitsError } = useQuery({
-    queryKey: ["tenantUnits"],
+  // Property Manager Stats
+  const { data: pmStats } = useQuery({
+    queryKey: ["pmDashboardStats", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      // Get properties owned/managed by this user
+      const { data: properties, error: propError } = await supabase
+        .from("properties")
+        .select(`
+          id,
+          units (
+            id,
+            status,
+            tenant_units (
+              id,
+              status
+            )
+          )
+        `)
+        .or(`created_by.eq.${user.id},property_manager_id.eq.${user.id}`);
+
+      if (propError) throw propError;
+
+      // Calculate stats
+      const totalProperties = properties?.length || 0;
+      const totalUnits = properties?.reduce((sum, p) => sum + (p.units?.length || 0), 0) || 0;
+      const occupiedUnits = properties?.reduce((sum, p) => {
+        return sum + (p.units?.filter((u: any) => u.status === 'occupied').length || 0);
+      }, 0) || 0;
+      const activeTenants = properties?.reduce((sum, p) => {
+        return sum + (p.units?.reduce((uSum: number, u: any) => {
+          return uSum + (u.tenant_units?.filter((tu: any) => tu.status === 'active').length || 0);
+        }, 0) || 0);
+      }, 0) || 0;
+
+      // Get open maintenance requests
+      const { count: maintenanceCount } = await supabase
+        .from("maintenance_requests")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress"]);
+
+      return {
+        totalProperties,
+        totalUnits,
+        activeTenants,
+        openMaintenance: maintenanceCount || 0,
+        occupiedUnits,
+      };
+    },
+    enabled: userRole === 'property_manager' || userRole === 'admin',
+  });
+
+  // Tenant's units and their total rent
+  const { data: tenantUnitsData, isError: isUnitsError } = useQuery({
+    queryKey: ["tenantUnits", user?.id],
+    queryFn: async () => {
       if (!user) throw new Error("No user found");
 
       const { data, error } = await supabase
@@ -60,6 +122,44 @@ const Dashboard = () => {
       }
 
       return data;
+    },
+    enabled: userRole === 'tenant'
+  });
+
+  // Tenant maintenance requests count
+  const { data: tenantMaintenanceCount } = useQuery({
+    queryKey: ["tenantMaintenanceCount", user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("No user found");
+
+      const { count, error } = await supabase
+        .from('maintenance_requests')
+        .select("*", { count: "exact", head: true })
+        .eq('tenant_id', user.id)
+        .in("status", ["pending", "in_progress"]);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: userRole === 'tenant'
+  });
+
+  // Tenant documents count - using the document_access_view
+  const { data: tenantDocumentsCount } = useQuery({
+    queryKey: ["tenantDocumentsCount", user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("No user found");
+
+      // Tenants see property documents for their units
+      const { count, error } = await supabase
+        .from('document_access_view')
+        .select("*", { count: "exact", head: true });
+
+      if (error) {
+        console.error("Error fetching documents count:", error);
+        return 0;
+      }
+      return count || 0;
     },
     enabled: userRole === 'tenant'
   });
@@ -112,110 +212,115 @@ const Dashboard = () => {
 
   const getStatsByRole = () => {
     console.log("Getting stats for role:", userRole);
-    
+
+    // Calculate occupancy rate
+    const occupancyRate = pmStats?.totalUnits
+      ? Math.round((pmStats.occupiedUnits / pmStats.totalUnits) * 100)
+      : 0;
+
     switch (userRole) {
       case "property_manager":
         return [
           {
             title: "Total Properties",
-            value: "8",
+            value: String(pmStats?.totalProperties || 0),
             icon: Building2,
             description: "Properties under management",
-            trend: "+1",
+            trend: "Active",
             trendUp: true,
           },
           {
             title: "Total Units",
-            value: "32",
+            value: String(pmStats?.totalUnits || 0),
             icon: Home,
-            description: "Units across all properties",
-            trend: "+3",
-            trendUp: true,
+            description: `${pmStats?.occupiedUnits || 0} occupied`,
+            trend: `${occupancyRate}% occupancy`,
+            trendUp: occupancyRate >= 80,
           },
           {
             title: "Active Tenants",
-            value: "28",
+            value: String(pmStats?.activeTenants || 0),
             icon: Users,
             description: "Current tenants",
-            trend: "+2",
+            trend: "Active",
             trendUp: true,
           },
           {
             title: "Maintenance",
-            value: "5",
+            value: String(pmStats?.openMaintenance || 0),
             icon: Wrench,
             description: "Open requests",
-            trend: "-2",
-            trendUp: false,
+            trend: pmStats?.openMaintenance === 0 ? "All clear" : "Pending",
+            trendUp: pmStats?.openMaintenance === 0,
           },
         ];
       case "admin":
         return [
           {
-            title: "Total Revenue",
-            value: "$125,000",
-            icon: DollarSign,
-            description: "Monthly revenue",
-            trend: "+8.1%",
+            title: "Total Properties",
+            value: String(pmStats?.totalProperties || 0),
+            icon: Building2,
+            description: "Properties in system",
+            trend: "Active",
             trendUp: true,
           },
           {
             title: "Occupancy Rate",
-            value: "94%",
+            value: `${occupancyRate}%`,
             icon: Percent,
-            description: "Current occupancy",
-            trend: "+2.5%",
+            description: `${pmStats?.occupiedUnits || 0}/${pmStats?.totalUnits || 0} units`,
+            trend: occupancyRate >= 80 ? "Healthy" : "Below target",
+            trendUp: occupancyRate >= 80,
+          },
+          {
+            title: "Active Tenants",
+            value: String(pmStats?.activeTenants || 0),
+            icon: Users,
+            description: "Total tenants",
+            trend: "Active",
             trendUp: true,
           },
           {
-            title: "Properties",
-            value: "15",
-            icon: Building2,
-            description: "Total properties",
-            trend: "+1",
-            trendUp: true,
-          },
-          {
-            title: "Analytics",
-            value: "View",
-            icon: BarChart,
-            description: "Performance metrics",
-            trend: "Updated",
-            trendUp: true,
+            title: "Maintenance",
+            value: String(pmStats?.openMaintenance || 0),
+            icon: Wrench,
+            description: "Open requests",
+            trend: pmStats?.openMaintenance === 0 ? "All clear" : "Pending",
+            trendUp: pmStats?.openMaintenance === 0,
           },
         ];
       case "tenant":
         return [
           {
             title: "My Units",
-            value: getUnitNumbers() || "No units assigned",
+            value: getUnitNumbers() || "None",
             icon: Home,
-            description: "Current unit numbers",
-            trend: "Active",
-            trendUp: true,
+            description: tenantUnitsData?.length ? "Current unit numbers" : "No units assigned",
+            trend: tenantUnitsData?.length ? "Active" : "Contact manager",
+            trendUp: !!tenantUnitsData?.length,
           },
           {
             title: "Rent Due",
             value: `$${calculateTotalRent().toLocaleString()}`,
             icon: DollarSign,
             description: "Due on 1st of month",
-            trend: "5 days left",
+            trend: "Monthly",
             trendUp: true,
           },
           {
             title: "Maintenance",
-            value: "2",
+            value: String(tenantMaintenanceCount || 0),
             icon: Wrench,
             description: "Active requests",
-            trend: "1 in progress",
-            trendUp: true,
+            trend: tenantMaintenanceCount === 0 ? "All clear" : "In progress",
+            trendUp: tenantMaintenanceCount === 0,
           },
           {
             title: "Documents",
-            value: "4",
+            value: String(tenantDocumentsCount || 0),
             icon: FileText,
-            description: "Important documents",
-            trend: "All up to date",
+            description: "Your documents",
+            trend: "Available",
             trendUp: true,
           },
         ];
@@ -225,28 +330,25 @@ const Dashboard = () => {
     }
   };
 
+  const getDashboardTitle = () => {
+    if (userRole === "tenant") return "My Dashboard";
+    if (userRole === "property_manager") return "Property Manager Dashboard";
+    return "Admin Dashboard";
+  };
+
+  const getDashboardSubtitle = () => {
+    if (userRole === "tenant") return "Overview of your rental information";
+    if (userRole === "property_manager") return "Overview of your property portfolio";
+    return "System-wide performance overview";
+  };
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8 overflow-x-hidden">
           <div className="flex flex-col gap-6 sm:gap-8">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-white">
-                {userRole === "tenant"
-                  ? "My Dashboard"
-                  : userRole === "property_manager"
-                  ? "Property Manager Dashboard"
-                  : "Admin Dashboard"}
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-400">
-                {userRole === "tenant"
-                  ? "Overview of your rental information"
-                  : userRole === "property_manager"
-                  ? "Overview of your property portfolio"
-                  : "System-wide performance overview"}
-              </p>
-            </div>
+            <TopBar title={getDashboardTitle()} subtitle={getDashboardSubtitle()} />
 
             <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {getStatsByRole().map((stat) => (
