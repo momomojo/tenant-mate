@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -10,6 +11,17 @@ import { MaintenanceHistory } from "@/components/tenant/MaintenanceHistory";
 
 const TenantProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const { data: tenant, isLoading: isLoadingTenant } = useQuery({
     queryKey: ["tenant", id],
@@ -107,8 +119,8 @@ const TenantProfile = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <main className="flex-1 p-8">
-          <div className="mx-auto max-w-5xl space-y-6">
+        <main className="flex-1 p-4 sm:p-8">
+          <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
             <TenantInfo tenant={tenant.profile} />
             <LeaseHistory leases={tenant.leases} tenantId={id!} />
             <PaymentHistory payments={tenant.payments} />

@@ -6,7 +6,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AddUnitDialog } from "@/components/property/AddUnitDialog";
 import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
 import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
@@ -21,6 +21,16 @@ const PropertyDetails = () => {
   const [selectedUnit, setSelectedUnit] = useState<UnitWithTenant | null>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
   const [isAssigningTenant, setIsAssigningTenant] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const { data: property, isLoading: isLoadingProperty, refetch } = useQuery({
     queryKey: ["property", id],
@@ -106,10 +116,10 @@ const PropertyDetails = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <main className="flex-1 p-8">
-          <div className="flex flex-col gap-8">
+        <main className="flex-1 p-4 sm:p-8">
+          <div className="flex flex-col gap-6 sm:gap-8">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -118,10 +128,10 @@ const PropertyDetails = () => {
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
-                  <h1 className="text-2xl font-semibold text-white">
+                  <h1 className="text-xl sm:text-2xl font-semibold text-white">
                     {property.name}
                   </h1>
-                  <p className="text-sm text-gray-400">{property.address}</p>
+                  <p className="text-xs sm:text-sm text-gray-400">{property.address}</p>
                 </div>
               </div>
             </div>
@@ -129,12 +139,12 @@ const PropertyDetails = () => {
             <PropertyOverview property={property} />
 
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white">Units</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-white">Units</h2>
                 <AddUnitDialog propertyId={id!} onUnitAdded={refetch} />
               </div>
 
-              <Card className="bg-[#403E43] border-none">
+              <Card className="bg-[#403E43] border-none overflow-x-auto">
                 <UnitsTable
                   units={property.units || []}
                   onManageUnit={handleManageUnit}

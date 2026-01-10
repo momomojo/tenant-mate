@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Search, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,16 @@ const Properties = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingProperty, setIsAddingProperty] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const { data: properties, isLoading, refetch } = useQuery({
     queryKey: ["properties"],
@@ -100,16 +110,16 @@ const Properties = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <main className="flex-1 p-8">
-          <div className="flex flex-col gap-8">
+        <main className="flex-1 p-4 sm:p-8">
+          <div className="flex flex-col gap-6 sm:gap-8">
             <div>
-              <h1 className="text-2xl font-semibold text-white">Properties</h1>
-              <p className="text-sm text-gray-400">
+              <h1 className="text-xl sm:text-2xl font-semibold text-white">Properties</h1>
+              <p className="text-xs sm:text-sm text-gray-400">
                 Manage your properties and units
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                 <Input

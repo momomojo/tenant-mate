@@ -1,6 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStripeConnect } from '@/hooks/useStripeConnect';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,9 +10,20 @@ import { ArrowRight, ExternalLink, RefreshCcw } from 'lucide-react';
 import StripeConnect from '@/components/payment/StripeConnect';
 
 const StripeOnboarding = () => {
+  const navigate = useNavigate();
   const [accountId, setAccountId] = useState<string | null>(null);
   const { stripeConnect, isLoading, error, reload } = useStripeConnect();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const createConnectedAccount = async () => {
     try {
@@ -56,8 +68,8 @@ const StripeOnboarding = () => {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Stripe Integration</h1>
+    <div className="container mx-auto px-4 py-6 sm:py-10">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Stripe Integration</h1>
       
       <Tabs defaultValue="account" className="w-full">
         <TabsList className="mb-4">

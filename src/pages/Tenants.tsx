@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -10,6 +11,16 @@ import { User, Phone, Mail } from "lucide-react";
 
 const Tenants = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const { data: tenants, isLoading } = useQuery({
     queryKey: ["tenants"],
@@ -57,14 +68,14 @@ const Tenants = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#1A1F2C]">
         <AppSidebar />
-        <main className="flex-1 p-8">
-          <div className="mb-8">
-            <h1 className="text-2xl font-semibold text-white">Tenants</h1>
-            <p className="text-sm text-gray-400">Manage your property tenants</p>
+        <main className="flex-1 p-4 sm:p-8">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Tenants</h1>
+            <p className="text-xs sm:text-sm text-gray-400">Manage your property tenants</p>
           </div>
 
-          <div className="rounded-lg border bg-card">
-            <Table>
+          <div className="rounded-lg border bg-card overflow-x-auto">
+            <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Tenant</TableHead>
