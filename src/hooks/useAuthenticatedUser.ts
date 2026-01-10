@@ -1,4 +1,4 @@
-
+// Updated January 2026 - Using getUser() for secure session validation
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -9,32 +9,44 @@ export const useAuthenticatedUser = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // Get the initial session
-    const getInitialSession = async () => {
+    // Use getUser() instead of getSession() - it validates the JWT against the server
+    // Per Supabase docs: "Never trust getSession() inside server code...
+    // It isn't guaranteed to revalidate the Auth token."
+    const getInitialUser = async () => {
       try {
         setIsLoading(true);
-        const { data, error } = await supabase.auth.getSession();
-        
+        const { data: { user }, error } = await supabase.auth.getUser();
+
         if (error) {
+          // Don't throw on session errors - user is just not logged in
+          if (error.message.includes('session') || error.message.includes('refresh')) {
+            console.log('No active session');
+            setUser(null);
+            return;
+          }
           throw error;
         }
-        
-        console.log("Initial session data:", data);
-        setUser(data.session?.user || null);
+
+        setUser(user);
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('Error getting user:', error);
         setError(error as Error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    getInitialSession();
+    getInitialUser();
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed in hook:", event, session?.user);
+      // Update user state on auth changes
       setUser(session?.user || null);
+
+      // Reset loading state if we were waiting for initial auth
+      if (isLoading) {
+        setIsLoading(false);
+      }
     });
 
     return () => {

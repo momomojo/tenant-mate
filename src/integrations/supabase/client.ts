@@ -1,36 +1,30 @@
+// Updated January 2026 - Using current Supabase client patterns
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://jjwrzarqegbswrndjpup.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqd3J6YXJxZWdic3dybmRqcHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0Mzk1OTYsImV4cCI6MjA1NDAxNTU5Nn0.yrqKIeht6gSA1xFTQcV-zIGKOZvrkOfdeauKD0Zgl0I";
+// Use environment variables - never hardcode credentials
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Validate environment variables at runtime
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error(
+    'Missing Supabase environment variables. ' +
+    'Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set in your .env file.'
+  );
+}
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: localStorage,
-    storageKey: 'supabase.auth.token',
     flowType: 'pkce'
-  },
-  global: {
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    // Note: storage defaults to localStorage
+    // Note: storageKey defaults to sb-<project_ref>-auth-token (recommended)
   }
 });
 
-// Add session refresh handler
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-    // Clear local storage on sign out or token refresh
-    if (event === 'SIGNED_OUT') {
-      localStorage.removeItem('supabase.auth.token');
-    }
-    
-    // Update the auth state
-    if (session) {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-    }
-  }
-});
+// Note: No manual onAuthStateChange handler needed here.
+// Supabase JS client handles session persistence automatically when persistSession: true.
+// Manual localStorage manipulation can cause race conditions and is not recommended.

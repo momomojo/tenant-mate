@@ -1,36 +1,36 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+// Updated January 2026 - Using current Supabase Edge Functions patterns
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const url = new URL(req.url);
-    const paymentId = url.searchParams.get('paymentId');
+    const url = new URL(req.url)
+    const paymentId = url.searchParams.get('paymentId')
 
     if (!paymentId) {
-      throw new Error('Payment ID is required');
+      throw new Error('Payment ID is required')
     }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    );
+    )
 
     // Get the user from the auth header
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    const authHeader = req.headers.get('Authorization')!
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user } } = await supabaseClient.auth.getUser(token)
 
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new Error('Not authenticated')
     }
 
     // Get payment details with related information
@@ -52,17 +52,17 @@ serve(async (req) => {
         )
       `)
       .eq('id', paymentId)
-      .single();
+      .single()
 
-    if (paymentError) throw paymentError;
-    if (!payment) throw new Error('Payment not found');
+    if (paymentError) throw paymentError
+    if (!payment) throw new Error('Payment not found')
 
     // Format the payment date
     const paymentDate = new Date(payment.payment_date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
-    });
+    })
 
     // Generate receipt HTML with improved styling
     const receiptHtml = `
@@ -138,32 +138,32 @@ serve(async (req) => {
               <div class="logo">${payment.unit.property.name}</div>
               <div class="receipt-id">Receipt #${payment.invoice_number}</div>
             </div>
-            
+
             <div class="details">
               <div class="section">
                 <div class="section-title">Property Details</div>
                 <p>${payment.unit.property.address}</p>
                 <p>Unit ${payment.unit.unit_number}</p>
               </div>
-              
+
               <div class="section">
                 <div class="section-title">Tenant Information</div>
                 <p>${payment.tenant.first_name} ${payment.tenant.last_name}</p>
                 <p>${payment.tenant.email}</p>
               </div>
-              
+
               <div class="section">
                 <div class="section-title">Payment Details</div>
                 <p>Date: ${paymentDate}</p>
                 <p>Payment Method: ${payment.payment_method || 'N/A'}</p>
                 <p>Status: ${payment.status}</p>
               </div>
-              
+
               <div class="amount">
                 Amount Paid: $${payment.amount.toFixed(2)}
               </div>
             </div>
-            
+
             <div class="footer">
               <p>Thank you for your payment!</p>
               <p>This is an automatically generated receipt.</p>
@@ -171,25 +171,25 @@ serve(async (req) => {
           </div>
         </body>
       </html>
-    `;
+    `
 
     return new Response(
       receiptHtml,
-      { 
-        headers: { 
+      {
+        headers: {
           ...corsHeaders,
           'Content-Type': 'text/html',
         },
       }
-    );
+    )
   } catch (error) {
-    console.error('Error generating receipt:', error);
+    console.error('Error generating receipt:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       }
-    );
+    )
   }
-});
+})
