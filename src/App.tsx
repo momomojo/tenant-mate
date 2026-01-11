@@ -18,6 +18,8 @@ import StripeOnboarding from "@/pages/StripeOnboarding";
 import Maintenance from "@/pages/Maintenance";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import Messages from "@/pages/Messages";
+import Applicants from "@/pages/Applicants";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const queryClient = new QueryClient({
@@ -42,10 +44,12 @@ function App() {
             <Route path="/properties/:id" element={<PropertyDetails />} />
             <Route path="/tenants" element={<Tenants />} />
             <Route path="/tenants/:id" element={<TenantProfile />} />
+            <Route path="/applicants" element={<Applicants />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/stripe-onboarding" element={<StripeOnboarding />} />
             <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="/messages" element={<Messages />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
