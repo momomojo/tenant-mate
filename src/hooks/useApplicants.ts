@@ -246,6 +246,40 @@ export function useDeleteApplicant() {
   });
 }
 
+// Hook to trigger tenant screening via Edge Function
+interface StartScreeningInput {
+  applicantId: string;
+  screeningType?: "credit" | "background" | "eviction" | "income" | "full";
+}
+
+export function useStartScreening() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: StartScreeningInput) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("tenant-screening", {
+        body: {
+          applicant_id: input.applicantId,
+          screening_type: input.screeningType || "full",
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Screening failed");
+      }
+
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["applicant", variables.applicantId] });
+    },
+  });
+}
+
 // Helper hook to get applicant counts by status
 export function useApplicantCounts(propertyId?: string) {
   const { user } = useAuthenticatedUser();

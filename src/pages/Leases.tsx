@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useApplicants, useUpdateApplicant, useDeleteApplicant, useApplicantCounts, useStartScreening } from "@/hooks/useApplicants";
+import { useLeases, useUpdateLease, useDeleteLease, useLeaseCounts } from "@/hooks/useLeases";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
-import { ApplicantCard } from "@/components/applicants/ApplicantCard";
-import { ApplicantFilters } from "@/components/applicants/ApplicantFilters";
-import { InviteApplicantDialog } from "@/components/applicants/InviteApplicantDialog";
+import { LeaseCard } from "@/components/leases/LeaseCard";
+import { LeaseFilters } from "@/components/leases/LeaseFilters";
+import { CreateLeaseDialog } from "@/components/leases/CreateLeaseDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,29 +22,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserCheck, UserX, Clock, FileSearch } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, RefreshCw, Edit } from "lucide-react";
 
-export default function Applicants() {
+export default function Leases() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [propertyFilter, setPropertyFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [applicantToDelete, setApplicantToDelete] = useState<string | null>(null);
+  const [leaseToDelete, setLeaseToDelete] = useState<string | null>(null);
+  const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
+  const [leaseToTerminate, setLeaseToTerminate] = useState<string | null>(null);
 
-  const { data: applicants, isLoading } = useApplicants({
+  const { data: leases, isLoading } = useLeases({
     propertyId: propertyFilter || undefined,
     status: statusFilter || undefined,
-    search: searchFilter || undefined,
   });
 
-  const { data: counts } = useApplicantCounts(propertyFilter || undefined);
-  const { mutate: updateApplicant } = useUpdateApplicant();
-  const { mutate: deleteApplicant } = useDeleteApplicant();
-  const { mutate: startScreening, isPending: isScreening } = useStartScreening();
+  const { data: counts } = useLeaseCounts(propertyFilter || undefined);
+  const { mutate: updateLease } = useUpdateLease();
+  const { mutate: deleteLease } = useDeleteLease();
 
   // Auth check
   useEffect(() => {
@@ -57,84 +56,105 @@ export default function Applicants() {
     checkAuth();
   }, [navigate]);
 
-  const handleApprove = (applicantId: string) => {
-    updateApplicant(
-      { applicantId, status: "approved" },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Applicant approved",
-            description: "The applicant has been approved and can now be converted to a tenant.",
-          });
-        },
-      }
-    );
-  };
-
-  const handleReject = (applicantId: string) => {
-    updateApplicant(
-      { applicantId, status: "rejected" },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Applicant rejected",
-            description: "The application has been rejected.",
-          });
-        },
-      }
-    );
-  };
-
-  const handleStartScreening = (applicantId: string) => {
-    startScreening(
-      { applicantId, screeningType: "full" },
-      {
-        onSuccess: (data) => {
-          toast({
-            title: "Screening complete",
-            description: `Background and credit check completed. Recommendation: ${data.recommendation?.toUpperCase() || 'N/A'}`,
-          });
-        },
-        onError: (error) => {
-          toast({
-            title: "Screening failed",
-            description: error.message || "Could not complete screening. Please try again.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  };
-
-  const handleConvert = (applicantId: string) => {
+  const handleView = (leaseId: string) => {
+    // TODO: Implement lease detail view
     toast({
       title: "Coming soon",
-      description: "Convert to tenant functionality will be available soon.",
+      description: "Lease detail view will be available soon.",
     });
-    // TODO: Implement conversion flow
+  };
+
+  const handleEdit = (leaseId: string) => {
+    // TODO: Implement edit functionality
+    toast({
+      title: "Coming soon",
+      description: "Lease editing will be available soon.",
+    });
+  };
+
+  const handleSendForSignature = (leaseId: string) => {
+    updateLease(
+      { leaseId, status: "pending", signatureStatus: "sent" },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Sent for signature",
+            description: "The lease has been sent to the tenant for signature.",
+          });
+          // TODO: Integrate with e-signature provider (DocuSign/HelloSign)
+        },
+      }
+    );
+  };
+
+  const handleActivate = (leaseId: string) => {
+    updateLease(
+      { leaseId, status: "active" },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Lease activated",
+            description: "The lease is now active.",
+          });
+        },
+      }
+    );
+  };
+
+  const handleRenew = (leaseId: string) => {
+    updateLease(
+      { leaseId, status: "renewed" },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Lease renewed",
+            description: "The lease has been marked as renewed.",
+          });
+          // TODO: Create new lease based on old one
+        },
+      }
+    );
+  };
+
+  const handleTerminate = () => {
+    if (leaseToTerminate) {
+      updateLease(
+        { leaseId: leaseToTerminate, status: "terminated" },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Lease terminated",
+              description: "The lease has been terminated.",
+            });
+            setTerminateDialogOpen(false);
+            setLeaseToTerminate(null);
+          },
+        }
+      );
+    }
   };
 
   const handleDelete = () => {
-    if (applicantToDelete) {
-      deleteApplicant(applicantToDelete, {
+    if (leaseToDelete) {
+      deleteLease(leaseToDelete, {
         onSuccess: () => {
           toast({
-            title: "Applicant deleted",
-            description: "The applicant has been removed.",
+            title: "Lease deleted",
+            description: "The lease draft has been deleted.",
           });
           setDeleteDialogOpen(false);
-          setApplicantToDelete(null);
+          setLeaseToDelete(null);
         },
       });
     }
   };
 
-  const filteredByTab = applicants?.filter((a) => {
+  const filteredByTab = leases?.filter((lease) => {
     if (activeTab === "all") return true;
-    if (activeTab === "pending") return ["invited", "started", "submitted"].includes(a.status);
-    if (activeTab === "screening") return a.status === "screening";
-    if (activeTab === "approved") return a.status === "approved";
-    if (activeTab === "rejected") return a.status === "rejected";
+    if (activeTab === "drafts") return lease.status === "draft";
+    if (activeTab === "pending") return lease.status === "pending";
+    if (activeTab === "active") return ["signed", "active"].includes(lease.status);
+    if (activeTab === "expired") return ["expired", "terminated"].includes(lease.status);
     return true;
   });
 
@@ -148,12 +168,12 @@ export default function Applicants() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold">Applicants</h1>
+                <h1 className="text-2xl font-bold">Leases</h1>
                 <p className="text-muted-foreground">
-                  Manage rental applications and tenant screening
+                  Manage lease agreements and renewals
                 </p>
               </div>
-              <InviteApplicantDialog />
+              <CreateLeaseDialog />
             </div>
 
             {/* Stats Cards */}
@@ -166,8 +186,22 @@ export default function Applicants() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="text-2xl font-bold">{counts?.total || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Drafts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Edit className="h-4 w-4 text-gray-600" />
+                    <span className="text-2xl font-bold">{counts?.draft || 0}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -181,8 +215,22 @@ export default function Applicants() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-yellow-600" />
+                    <span className="text-2xl font-bold">{counts?.pending || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Active
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-2xl font-bold">
-                      {(counts?.invited || 0) + (counts?.started || 0) + (counts?.submitted || 0)}
+                      {(counts?.signed || 0) + (counts?.active || 0)}
                     </span>
                   </div>
                 </CardContent>
@@ -191,95 +239,72 @@ export default function Applicants() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Screening
+                    Expired
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <FileSearch className="h-4 w-4 text-orange-600" />
-                    <span className="text-2xl font-bold">{counts?.screening || 0}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Approved
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-green-600" />
-                    <span className="text-2xl font-bold">{counts?.approved || 0}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Rejected
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <UserX className="h-4 w-4 text-red-600" />
-                    <span className="text-2xl font-bold">{counts?.rejected || 0}</span>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-2xl font-bold">
+                      {(counts?.expired || 0) + (counts?.terminated || 0)}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Filters */}
-            <ApplicantFilters
+            <LeaseFilters
               propertyId={propertyFilter}
               onPropertyChange={setPropertyFilter}
               status={statusFilter}
               onStatusChange={setStatusFilter}
-              search={searchFilter}
-              onSearchChange={setSearchFilter}
             />
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="drafts">Drafts</TabsTrigger>
                 <TabsTrigger value="pending">Pending</TabsTrigger>
-                <TabsTrigger value="screening">Screening</TabsTrigger>
-                <TabsTrigger value="approved">Approved</TabsTrigger>
-                <TabsTrigger value="rejected">Rejected</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="expired">Expired</TabsTrigger>
               </TabsList>
 
               <TabsContent value={activeTab} className="mt-4">
                 {isLoading ? (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-48" />
+                      <Skeleton key={i} className="h-64" />
                     ))}
                   </div>
                 ) : filteredByTab?.length === 0 ? (
                   <Card className="p-12 text-center">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-medium">No applicants found</h3>
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-medium">No leases found</h3>
                     <p className="text-muted-foreground mt-1">
                       {activeTab === "all"
-                        ? "Invite your first applicant to get started"
-                        : `No applicants with ${activeTab} status`}
+                        ? "Create your first lease to get started"
+                        : `No leases with ${activeTab} status`}
                     </p>
                   </Card>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredByTab?.map((applicant) => (
-                      <ApplicantCard
-                        key={applicant.id}
-                        applicant={applicant}
-                        onApprove={() => handleApprove(applicant.id)}
-                        onReject={() => handleReject(applicant.id)}
-                        onStartScreening={() => handleStartScreening(applicant.id)}
-                        onConvert={() => handleConvert(applicant.id)}
+                    {filteredByTab?.map((lease) => (
+                      <LeaseCard
+                        key={lease.id}
+                        lease={lease}
+                        onView={() => handleView(lease.id)}
+                        onEdit={() => handleEdit(lease.id)}
+                        onSendForSignature={() => handleSendForSignature(lease.id)}
+                        onActivate={() => handleActivate(lease.id)}
+                        onTerminate={() => {
+                          setLeaseToTerminate(lease.id);
+                          setTerminateDialogOpen(true);
+                        }}
+                        onRenew={() => handleRenew(lease.id)}
                         onDelete={() => {
-                          setApplicantToDelete(applicant.id);
+                          setLeaseToDelete(lease.id);
                           setDeleteDialogOpen(true);
                         }}
                       />
@@ -296,15 +321,34 @@ export default function Applicants() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Applicant</AlertDialogTitle>
+            <AlertDialogTitle>Delete Lease Draft</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this applicant? This action cannot be undone.
+              Are you sure you want to delete this lease draft? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Terminate Confirmation Dialog */}
+      <AlertDialog open={terminateDialogOpen} onOpenChange={setTerminateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terminate Lease</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to terminate this lease? This will end the lease agreement
+              and may have legal implications. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTerminate} className="bg-red-600 hover:bg-red-700">
+              Terminate
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

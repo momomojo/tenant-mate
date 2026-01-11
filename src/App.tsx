@@ -20,6 +20,7 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Messages from "@/pages/Messages";
 import Applicants from "@/pages/Applicants";
+import Leases from "@/pages/Leases";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const queryClient = new QueryClient({
@@ -45,6 +46,7 @@ function App() {
             <Route path="/tenants" element={<Tenants />} />
             <Route path="/tenants/:id" element={<TenantProfile />} />
             <Route path="/applicants" element={<Applicants />} />
+            <Route path="/leases" element={<Leases />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/stripe-onboarding" element={<StripeOnboarding />} />

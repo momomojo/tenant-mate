@@ -11,6 +11,7 @@ import { AddUnitDialog } from "@/components/property/AddUnitDialog";
 import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
 import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
+import { PropertyImageUpload } from "@/components/property/PropertyImageUpload";
 import { UnitsTable } from "@/components/property/UnitsTable";
 import type { UnitWithTenant, TenantProfile } from "@/types";
 import { formatTenantLabel } from "@/types";
@@ -137,6 +138,8 @@ const PropertyDetails = () => {
             </div>
 
             <PropertyOverview property={property} />
+
+            <PropertyImageUpload propertyId={id!} />
 
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
