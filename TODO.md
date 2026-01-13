@@ -1,6 +1,6 @@
 # TenantMate - Master TODO
 
-**Last Updated:** January 10, 2026
+**Last Updated:** January 12, 2026
 
 This is the master TODO file. Each folder has its own TODO.md for granular tracking.
 
@@ -22,20 +22,28 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 ## Priority Overview
 
 ### P0 - Critical (Competitive Parity)
-1. **Tenant Screening** - $35-45/screening revenue
-2. **In-App Messaging** - Customer's #1 requested feature
-3. **Lease Management & E-Signatures** - Complete workflow
-4. **Applicant Pipeline** - Leads → Applicants → Tenants
+1. ~~**Tenant Screening**~~ - Moved to `feature/tenant-screening` branch (needs real provider)
+2. **In-App Messaging** - ✅ DONE (Messages page with real-time)
+3. **Lease Management** - ✅ DONE (Leases page, templates, CRUD)
+4. **Applicant Pipeline** - ✅ DONE (Applicants page with workflow)
 
 ### P1 - High (Customer Requested)
-5. **Lower Payment Fees** - Dwolla/Adyen vs Stripe
-6. **Commercial Property Support** - Icons and fields
-7. **Property Images** - Photo galleries
+5. **Lower Payment Fees** - Dwolla Edge Functions created (deploy when ready)
+6. **Commercial Property Support** - DB schema done, UI needs property type selector
+7. **Property Images** - ✅ DONE (PropertyImageUpload component)
 
 ### P2 - Medium (Nice to Have)
-8. **Expense Tracking** - Accounting features
-9. **Condition Reports** - Move-in/out inspections
-10. **Marketing Syndication** - Zillow, Apartments.com
+8. **Expense Tracking** - Not started
+9. **Condition Reports** - Not started
+10. **Marketing Syndication** - Not started
+
+---
+
+## Feature Branches
+
+| Branch | Feature | Status |
+|--------|---------|--------|
+| `feature/tenant-screening` | Tenant background/credit checks | Ready when provider selected |
 
 ---
 
@@ -47,40 +55,59 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 
 ---
 
-## Current Sprint
+## What's Left To Do
 
-### In Progress
-- [ ] None currently
+### Ready to Deploy (Backend Complete)
+- [ ] Dwolla ACH payments - Edge Functions created, need to deploy and wire up UI
+- [ ] E-Signatures - Need to select provider (DocuSign/HelloSign) and integrate
 
-### Up Next
-- [ ] Add property_type to properties table
-- [ ] Add property images support
-- [ ] Create applicants table
+### UI Enhancements Needed
+- [ ] Property type selector on Properties page
+- [ ] Dashboard stat cards for Applicants, Pending Leases
+- [ ] Convert Applicant → Tenant flow
+- [ ] Payment processor selection in Settings
+
+### New Features (P2)
+- [ ] Expenses page and tracking
+- [ ] Inspections/Condition reports
+- [ ] Marketing syndication (Zillow, Apartments.com)
 
 ---
 
 ## Completed (January 2026)
 
+### Backend & Infrastructure
 - [x] Backend audit - Security fixes, Edge Functions
 - [x] Auth checks on all protected pages
 - [x] PWA support with offline indicator
 - [x] Testing infrastructure (Vitest)
-- [x] Live dashboard stats
-- [x] Mobile responsive improvements
 - [x] Email notifications via database webhooks
+- [x] Database migrations for messaging, applicants, leases, property images
+
+### New Pages
+- [x] Messages.tsx - Real-time messaging with conversations
+- [x] Applicants.tsx - Full pipeline with invite, screening, approve/reject
+- [x] Leases.tsx - CRUD with status management
+
+### New Components
+- [x] PropertyImageUpload - Drag-drop with primary selection
+- [x] LeaseCard, CreateLeaseDialog, LeaseFilters
+- [x] ApplicantCard, InviteApplicantDialog, ApplicantFilters
+- [x] ConversationList, MessageThread, NewConversationDialog
+
+### New Hooks
+- [x] useLeases, useLeaseTemplates
+- [x] useProperties, useUnits
+- [x] usePropertyImages
+- [x] useConversations, useMessages
+- [x] useApplicants
 
 ---
 
 ## Notes
 
-### Competitor Credentials
-**IMPORTANT:** Do NOT store competitor login credentials in this codebase.
-Using competitor credentials would violate their Terms of Service.
-All competitive research should use publicly available information.
-
 ### Third-Party APIs Needed
-See `/supabase/functions/TODO.md` for required API keys:
-- TransUnion or Experian (screening)
-- DocuSign or HelloSign (e-signatures)
-- Dwolla or Adyen (lower payment fees)
-- Zillow API (marketing syndication)
+- TransUnion or Experian (screening) - for `feature/tenant-screening`
+- DocuSign or HelloSign (e-signatures) - for lease signing
+- Dwolla (ACH payments) - Edge Functions ready, need API keys
+- Zillow API (marketing syndication) - future feature

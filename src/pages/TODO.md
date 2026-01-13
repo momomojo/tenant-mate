@@ -3,10 +3,10 @@
 ## New Pages Needed
 
 ### P0 - Critical
-- [ ] `Applicants.tsx` - Leads/applicants pipeline (before they become tenants)
-- [ ] `Messages.tsx` - In-app messaging between landlord ↔ tenant
-- [ ] `Leases.tsx` - Lease management with templates and e-signatures
-- [ ] `Screening.tsx` - Tenant screening orders and results
+- [x] `Applicants.tsx` - Leads/applicants pipeline (before they become tenants) ✅ DONE
+- [x] `Messages.tsx` - In-app messaging between landlord ↔ tenant ✅ DONE
+- [x] `Leases.tsx` - Lease management with templates ✅ DONE
+- [ ] `Screening.tsx` - Tenant screening orders and results (needs real provider - see feature/tenant-screening branch)
 
 ### P1 - High Priority
 - [ ] `Expenses.tsx` - Expense tracking per property (accounting)
@@ -21,12 +21,12 @@
 
 ### Properties.tsx
 - [ ] Add property type selector (residential/commercial/mixed-use)
-- [ ] Add property image upload
+- [x] Add property image upload ✅ DONE (in PropertyDetails)
 - [ ] Show different icons based on property type
 - [ ] Add "Invite to Apply" button
 
 ### PropertyDetails.tsx
-- [ ] Add image gallery
+- [x] Add image gallery ✅ DONE (PropertyImageUpload component)
 - [ ] Add lease status indicator
 - [ ] Add applicants section
 - [ ] Add expense summary
@@ -42,14 +42,15 @@
 - [ ] Add lease documents section
 
 ### Payments.tsx
-- [ ] Add payment processor selection (Stripe vs Dwolla vs Adyen)
+- [ ] Add payment processor selection (Stripe vs Dwolla)
 - [ ] Show processing fees comparison
 - [ ] Add ACH-specific options
+- Note: Dwolla Edge Functions created - see supabase/functions/dwolla-*
 
 ### Dashboard.tsx
 - [ ] Add "Applicants" stat card
 - [ ] Add "Pending Leases" stat card
-- [ ] Add "Unread Messages" indicator
+- [x] Add "Unread Messages" indicator (Messages in sidebar)
 - [ ] Add expense summary widget
 
 ### Settings.tsx
@@ -62,7 +63,7 @@
 
 ## Technical Debt
 
-- [ ] Add auth checks to remaining pages (verify all protected)
+- [x] Add auth checks to remaining pages ✅ DONE
 - [ ] Add loading skeletons for better UX
 - [ ] Add error boundaries
 - [ ] Implement code splitting for large pages
