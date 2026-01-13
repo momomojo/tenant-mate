@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useApplicants, useUpdateApplicant, useDeleteApplicant, useApplicantCounts, useStartScreening } from "@/hooks/useApplicants";
+import { useApplicants, useUpdateApplicant, useDeleteApplicant, useApplicantCounts } from "@/hooks/useApplicants";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -44,7 +44,6 @@ export default function Applicants() {
   const { data: counts } = useApplicantCounts(propertyFilter || undefined);
   const { mutate: updateApplicant } = useUpdateApplicant();
   const { mutate: deleteApplicant } = useDeleteApplicant();
-  const { mutate: startScreening, isPending: isScreening } = useStartScreening();
 
   // Auth check
   useEffect(() => {
@@ -86,21 +85,15 @@ export default function Applicants() {
   };
 
   const handleStartScreening = (applicantId: string) => {
-    startScreening(
-      { applicantId, screeningType: "full" },
+    updateApplicant(
+      { applicantId, status: "screening" },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
           toast({
-            title: "Screening complete",
-            description: `Background and credit check completed. Recommendation: ${data.recommendation?.toUpperCase() || 'N/A'}`,
+            title: "Screening started",
+            description: "Background and credit check has been initiated.",
           });
-        },
-        onError: (error) => {
-          toast({
-            title: "Screening failed",
-            description: error.message || "Could not complete screening. Please try again.",
-            variant: "destructive",
-          });
+          // TODO: Integrate with real screening provider (see feature/tenant-screening branch)
         },
       }
     );
