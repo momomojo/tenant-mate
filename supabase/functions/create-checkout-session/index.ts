@@ -1,7 +1,7 @@
 // Updated January 2026 - Security hardened
 import Stripe from 'https://esm.sh/stripe@14?target=denonext'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
+import { getCorsHeaders, handleCorsPreflightOrRestrict, getSafeOrigin } from '../_shared/cors.ts'
 import { validatePaymentAmount, checkRateLimit, safeErrorResponse } from '../_shared/security.ts'
 
 Deno.serve(async (req) => {
@@ -150,8 +150,8 @@ Deno.serve(async (req) => {
       ...(setup_future_payments && {
         setup_future_usage: 'off_session',
       }),
-      success_url: `${req.headers.get('origin')}/tenant-mate/payments?success=true`,
-      cancel_url: `${req.headers.get('origin')}/tenant-mate/payments?canceled=true`,
+      success_url: `${getSafeOrigin(req)}/tenant-mate/payments?success=true`,
+      cancel_url: `${getSafeOrigin(req)}/tenant-mate/payments?canceled=true`,
       metadata: {
         payment_id: payment.id,
         tenant_id: user.id,

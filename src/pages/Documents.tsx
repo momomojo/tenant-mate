@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -10,6 +10,7 @@ import { Building2, Database, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 const Documents = () => {
+  const queryClient = useQueryClient();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
   // Fetch user role
@@ -123,8 +124,7 @@ const Documents = () => {
               <DocumentUpload
                 propertyId={selectedPropertyId}
                 onUploadComplete={() => {
-                  // Refetch documents
-                  window.location.reload();
+                  queryClient.invalidateQueries({ queryKey: ["documents"] });
                 }}
               />
               <DocumentList

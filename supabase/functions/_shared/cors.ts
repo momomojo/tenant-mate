@@ -1,12 +1,21 @@
 // Shared CORS configuration for Edge Functions
 // SEC-04: Restrict CORS to allowed origins only
 
-const ALLOWED_ORIGINS = [
+export const ALLOWED_ORIGINS = [
   'https://momomojo.github.io',
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:4173',
 ]
+
+/**
+ * Returns a safe, validated origin from the request.
+ * Falls back to the primary production origin if not in allowlist.
+ */
+export function getSafeOrigin(req: Request): string {
+  const origin = req.headers.get('origin') ?? ''
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+}
 
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? ''

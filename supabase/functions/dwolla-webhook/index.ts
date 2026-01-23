@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 const DWOLLA_WEBHOOK_SECRET = Deno.env.get("DWOLLA_WEBHOOK_SECRET");
 
@@ -27,7 +27,15 @@ function verifyWebhookSignature(
     .update(payload)
     .digest("hex");
 
-  return signature === expectedSignature;
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const sigBuffer = Buffer.from(signature, 'utf8');
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+    if (sigBuffer.length !== expectedBuffer.length) return false;
+    return timingSafeEqual(sigBuffer, expectedBuffer);
+  } catch {
+    return false;
+  }
 }
 
 Deno.serve(async (req: Request) => {
