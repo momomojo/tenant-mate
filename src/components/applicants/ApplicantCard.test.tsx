@@ -143,7 +143,7 @@ describe('ApplicantCard', () => {
 
     render(<ApplicantCard applicant={submitted} />);
 
-    expect(screen.getByText(/Submitted Jan 5, 2025/)).toBeInTheDocument();
+    expect(screen.getByText(/Submitted Jan 20, 2025/)).toBeInTheDocument();
   });
 
   it('applies cursor-pointer class when onClick is provided', () => {
