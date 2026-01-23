@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format, differenceInDays, isPast, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,7 @@ export function LeaseCard({
   onDelete,
 }: LeaseCardProps) {
   const status = statusConfig[lease.status];
-  const leaseEnd = new Date(lease.lease_end);
+  const leaseEnd = parseISO(lease.lease_end);
   const daysUntilExpiry = differenceInDays(leaseEnd, new Date());
   const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   const isExpired = isPast(leaseEnd);
@@ -157,7 +157,7 @@ export function LeaseCard({
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <span>
-            {format(new Date(lease.lease_start), "MMM d, yyyy")} -{" "}
+            {format(parseISO(lease.lease_start), "MMM d, yyyy")} -{" "}
             {format(leaseEnd, "MMM d, yyyy")}
           </span>
         </div>
