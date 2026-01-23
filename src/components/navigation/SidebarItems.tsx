@@ -1,4 +1,4 @@
-import { Building2, Home, Users, Wrench, FileText, BarChart, Settings2, DollarSign, MessageSquare, UserPlus, ScrollText } from "lucide-react";
+import { Building2, Home, Users, Wrench, FileText, BarChart, Settings2, DollarSign, MessageSquare, UserPlus, ScrollText, Receipt, ClipboardCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -110,6 +110,18 @@ export const useMenuItems = () => {
       title: "Reports",
       icon: BarChart,
       path: "/reports",
+      roles: ["admin", "property_manager"]
+    },
+    {
+      title: "Expenses",
+      icon: Receipt,
+      path: "/expenses",
+      roles: ["admin", "property_manager"]
+    },
+    {
+      title: "Inspections",
+      icon: ClipboardCheck,
+      path: "/inspections",
       roles: ["admin", "property_manager"]
     },
     {

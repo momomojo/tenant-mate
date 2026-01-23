@@ -7,11 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 import { TopBar } from "@/components/layout/TopBar";
 import { useState, useEffect } from "react";
-import { User, Bell, Shield, CreditCard } from "lucide-react";
+import { User, Shield, CreditCard, Building2, Check, ExternalLink, Loader2, Landmark } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -28,6 +38,14 @@ const Settings = () => {
     state: "",
     postal_code: "",
   });
+  const [paymentProcessor, setPaymentProcessor] = useState<"stripe" | "dwolla">("stripe");
+  const [showDwollaSetup, setShowDwollaSetup] = useState(false);
+  const [dwollaBankForm, setDwollaBankForm] = useState({
+    routingNumber: "",
+    accountNumber: "",
+    bankAccountType: "checking" as "checking" | "savings",
+    name: "",
+  });
 
   const { data: userProfile, isLoading } = useQuery({
     queryKey: ["userProfile", user?.id],
@@ -41,6 +59,78 @@ const Settings = () => {
       return data;
     },
     enabled: !!user,
+  });
+
+  // Query Dwolla payment processor status
+  const { data: dwollaProcessor, isLoading: dwollaLoading } = useQuery({
+    queryKey: ["dwollaProcessor", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_processors")
+        .select("*")
+        .eq("user_id", user?.id)
+        .eq("processor", "dwolla")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && userProfile?.role === "property_manager",
+  });
+
+  // Create Dwolla customer mutation
+  const createDwollaCustomerMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("dwolla-create-customer", {
+        body: {
+          firstName: profile.first_name || userProfile?.first_name,
+          lastName: profile.last_name || userProfile?.last_name,
+          email: profile.email || userProfile?.email,
+          type: "personal",
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dwollaProcessor"] });
+      toast({ title: "Success", description: "Dwolla customer created. Now add your bank account." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Add Dwolla bank account mutation
+  const addDwollaBankMutation = useMutation({
+    mutationFn: async (bankData: typeof dwollaBankForm) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("dwolla-add-funding-source", {
+        body: bankData,
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["dwollaProcessor"] });
+      setShowDwollaSetup(false);
+      setDwollaBankForm({ routingNumber: "", accountNumber: "", bankAccountType: "checking", name: "" });
+      toast({
+        title: "Bank Account Added",
+        description: data.verified
+          ? "Your bank account has been verified and is ready to receive payments."
+          : "Your bank account has been added. Please verify via micro-deposits.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
   });
 
   useEffect(() => {
@@ -236,7 +326,7 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            {/* Stripe Connect (for property managers) */}
+            {/* Payment Settings (for property managers) */}
             {userProfile?.role === "property_manager" && (
               <Card className="bg-[#403E43] border-none">
                 <CardHeader>
@@ -245,19 +335,269 @@ const Settings = () => {
                     <CardTitle className="text-white">Payment Settings</CardTitle>
                   </div>
                   <CardDescription className="text-gray-400">
-                    Configure your payment receiving settings
+                    Configure how you receive rent payments from tenants
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button
-                    variant="outline"
-                    onClick={() => window.location.href = "/stripe-onboarding"}
-                  >
-                    Manage Stripe Connect
-                  </Button>
+                <CardContent className="space-y-6">
+                  {/* Payment Processor Selection */}
+                  <div className="space-y-4">
+                    <Label className="text-gray-300">Payment Processor</Label>
+                    <RadioGroup
+                      value={paymentProcessor}
+                      onValueChange={(v: "stripe" | "dwolla") => {
+                        setPaymentProcessor(v);
+                        toast({
+                          title: "Payment processor updated",
+                          description: `Switched to ${v === "stripe" ? "Stripe (Credit Cards)" : "Dwolla (ACH Bank Transfer)"}`,
+                        });
+                      }}
+                      className="space-y-3"
+                    >
+                      {/* Stripe Option */}
+                      <div className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
+                        paymentProcessor === "stripe"
+                          ? "border-[#9b87f5] bg-[#9b87f5]/10"
+                          : "border-gray-600 bg-[#2A2D35]"
+                      }`}>
+                        <RadioGroupItem value="stripe" id="stripe" className="mt-1" />
+                        <Label htmlFor="stripe" className="flex-1 cursor-pointer">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CreditCard className="h-4 w-4 text-[#9b87f5]" />
+                            <span className="text-white font-medium">Stripe</span>
+                            <Badge variant="secondary" className="text-xs">Active</Badge>
+                          </div>
+                          <p className="text-sm text-gray-400 mb-2">
+                            Accept credit/debit cards with fast payouts
+                          </p>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-gray-500">
+                              <span className="text-yellow-500">2.9% + $0.30</span> per transaction
+                            </span>
+                            <span className="text-gray-500">2-day payouts</span>
+                          </div>
+                        </Label>
+                      </div>
+
+                      {/* Dwolla/ACH Option */}
+                      <div className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
+                        paymentProcessor === "dwolla"
+                          ? "border-[#9b87f5] bg-[#9b87f5]/10"
+                          : "border-gray-600 bg-[#2A2D35]"
+                      }`}>
+                        <RadioGroupItem value="dwolla" id="dwolla" className="mt-1" />
+                        <Label htmlFor="dwolla" className="flex-1 cursor-pointer">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Building2 className="h-4 w-4 text-green-500" />
+                            <span className="text-white font-medium">Dwolla ACH</span>
+                            {dwollaProcessor?.status === "active" ? (
+                              <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                                <Check className="h-3 w-3 mr-1" /> Active
+                              </Badge>
+                            ) : dwollaProcessor ? (
+                              <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/50">
+                                Setup Required
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-blue-400 border-blue-400/50">
+                                Available
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-400 mb-2">
+                            Bank transfers with lower fees for large payments
+                          </p>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-gray-500">
+                              <span className="text-green-500">$0.25 flat</span> per transaction (up to $10,000)
+                            </span>
+                            <span className="text-gray-500">3-5 day transfers</span>
+                          </div>
+                          {dwollaProcessor?.dwolla_funding_source_name && (
+                            <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
+                              <Landmark className="h-3 w-3" />
+                              {dwollaProcessor.dwolla_funding_source_name}
+                            </div>
+                          )}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <Separator className="bg-gray-600" />
+
+                  {/* Fee Comparison */}
+                  <div className="space-y-3">
+                    <Label className="text-gray-300">Fee Comparison (on $1,500 rent)</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg bg-[#2A2D35]">
+                        <div className="text-sm text-gray-400">Stripe</div>
+                        <div className="text-lg font-medium text-yellow-500">$43.80</div>
+                        <div className="text-xs text-gray-500">2.9% + $0.30</div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-[#2A2D35]">
+                        <div className="text-sm text-gray-400">Dwolla ACH</div>
+                        <div className="text-lg font-medium text-green-500">$0.25</div>
+                        <div className="text-xs text-gray-500">Flat fee</div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      * Dwolla ACH saves up to $43.55 per payment on typical rent amounts
+                    </p>
+                  </div>
+
+                  <Separator className="bg-gray-600" />
+
+                  {/* Stripe Connect Management */}
+                  <div className="space-y-3">
+                    <Label className="text-gray-300">Stripe Connect Account</Label>
+                    <Button
+                      variant="outline"
+                      onClick={() => window.location.href = "/stripe-onboarding"}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Manage Stripe Connect
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                      Set up or manage your Stripe account to receive payments
+                    </p>
+                  </div>
+
+                  <Separator className="bg-gray-600" />
+
+                  {/* Dwolla ACH Setup */}
+                  <div className="space-y-3">
+                    <Label className="text-gray-300">Dwolla ACH Account</Label>
+                    {!dwollaProcessor ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => createDwollaCustomerMutation.mutate()}
+                          disabled={createDwollaCustomerMutation.isPending}
+                          className="gap-2"
+                        >
+                          {createDwollaCustomerMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Building2 className="h-4 w-4" />
+                          )}
+                          Set Up Dwolla ACH
+                        </Button>
+                        <p className="text-xs text-gray-500">
+                          Create a Dwolla account to accept low-fee bank transfers
+                        </p>
+                      </>
+                    ) : !dwollaProcessor.dwolla_funding_source_id ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowDwollaSetup(true)}
+                          className="gap-2"
+                        >
+                          <Landmark className="h-4 w-4" />
+                          Add Bank Account
+                        </Button>
+                        <p className="text-xs text-gray-500">
+                          Link your bank account to receive ACH payments
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <div>
+                            <p className="text-sm text-green-400">Bank Account Connected</p>
+                            <p className="text-xs text-gray-400">{dwollaProcessor.dwolla_funding_source_name}</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowDwollaSetup(true)}
+                          className="text-xs text-gray-400"
+                        >
+                          Change Bank Account
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
+
+            {/* Dwolla Bank Account Setup Dialog */}
+            <Dialog open={showDwollaSetup} onOpenChange={setShowDwollaSetup}>
+              <DialogContent className="bg-[#403E43] border-gray-600">
+                <DialogHeader>
+                  <DialogTitle className="text-white">Add Bank Account</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Enter your bank account details to receive ACH payments. In sandbox mode, accounts are auto-verified.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Account Holder Name</Label>
+                    <Input
+                      placeholder="John Smith"
+                      value={dwollaBankForm.name}
+                      onChange={(e) => setDwollaBankForm({ ...dwollaBankForm, name: e.target.value })}
+                      className="bg-[#2A2D35] border-gray-600 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Routing Number (9 digits)</Label>
+                    <Input
+                      placeholder="222222226"
+                      value={dwollaBankForm.routingNumber}
+                      onChange={(e) => setDwollaBankForm({ ...dwollaBankForm, routingNumber: e.target.value.replace(/\D/g, "").slice(0, 9) })}
+                      className="bg-[#2A2D35] border-gray-600 text-white"
+                    />
+                    <p className="text-xs text-gray-500">For sandbox testing, use: 222222226</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Account Number</Label>
+                    <Input
+                      placeholder="123456789"
+                      value={dwollaBankForm.accountNumber}
+                      onChange={(e) => setDwollaBankForm({ ...dwollaBankForm, accountNumber: e.target.value.replace(/\D/g, "") })}
+                      className="bg-[#2A2D35] border-gray-600 text-white"
+                    />
+                    <p className="text-xs text-gray-500">For sandbox testing, use any digits</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Account Type</Label>
+                    <RadioGroup
+                      value={dwollaBankForm.bankAccountType}
+                      onValueChange={(v: "checking" | "savings") => setDwollaBankForm({ ...dwollaBankForm, bankAccountType: v })}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="checking" id="checking" />
+                        <Label htmlFor="checking" className="text-gray-300">Checking</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="savings" id="savings" />
+                        <Label htmlFor="savings" className="text-gray-300">Savings</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setShowDwollaSetup(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => addDwollaBankMutation.mutate(dwollaBankForm)}
+                    disabled={addDwollaBankMutation.isPending || !dwollaBankForm.name || !dwollaBankForm.routingNumber || !dwollaBankForm.accountNumber}
+                  >
+                    {addDwollaBankMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Add Bank Account
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </main>
       </div>

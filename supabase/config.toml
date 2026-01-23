@@ -1,5 +1,5 @@
-# Updated January 2026 - Supabase project configuration
-project_id = "xbtuztzcgxhzvsvfcjvk"
+# Supabase project configuration
+project_id = "jjwrzarqegbswrndjpup"
 
 [functions.create-checkout-session]
 verify_jwt = true

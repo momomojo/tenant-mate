@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useApplicants, useUpdateApplicant, useDeleteApplicant, useApplicantCounts } from "@/hooks/useApplicants";
+import { useApplicants, useUpdateApplicant, useDeleteApplicant, useApplicantCounts, type Applicant } from "@/hooks/useApplicants";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { ApplicantCard } from "@/components/applicants/ApplicantCard";
 import { ApplicantFilters } from "@/components/applicants/ApplicantFilters";
 import { InviteApplicantDialog } from "@/components/applicants/InviteApplicantDialog";
+import { ConvertApplicantDialog } from "@/components/applicants/ConvertApplicantDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +35,8 @@ export default function Applicants() {
   const [activeTab, setActiveTab] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [applicantToDelete, setApplicantToDelete] = useState<string | null>(null);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [applicantToConvert, setApplicantToConvert] = useState<Applicant | null>(null);
 
   const { data: applicants, isLoading } = useApplicants({
     propertyId: propertyFilter || undefined,
@@ -99,12 +102,9 @@ export default function Applicants() {
     );
   };
 
-  const handleConvert = (applicantId: string) => {
-    toast({
-      title: "Coming soon",
-      description: "Convert to tenant functionality will be available soon.",
-    });
-    // TODO: Implement conversion flow
+  const handleConvert = (applicant: Applicant) => {
+    setApplicantToConvert(applicant);
+    setConvertDialogOpen(true);
   };
 
   const handleDelete = () => {
@@ -270,7 +270,7 @@ export default function Applicants() {
                         onApprove={() => handleApprove(applicant.id)}
                         onReject={() => handleReject(applicant.id)}
                         onStartScreening={() => handleStartScreening(applicant.id)}
-                        onConvert={() => handleConvert(applicant.id)}
+                        onConvert={() => handleConvert(applicant)}
                         onDelete={() => {
                           setApplicantToDelete(applicant.id);
                           setDeleteDialogOpen(true);
@@ -302,6 +302,18 @@ export default function Applicants() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Convert to Tenant Dialog */}
+      {applicantToConvert && (
+        <ConvertApplicantDialog
+          applicant={applicantToConvert}
+          open={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          onSuccess={() => {
+            setApplicantToConvert(null);
+          }}
+        />
+      )}
     </SidebarProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Home, Percent, DollarSign, Users, Wrench, FileText, BarChart } from "lucide-react";
+import { Building2, Home, Percent, DollarSign, Users, Wrench, FileText, BarChart, UserPlus, ScrollText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -92,6 +92,68 @@ const Dashboard = () => {
         activeTenants,
         openMaintenance: maintenanceCount || 0,
         occupiedUnits,
+      };
+    },
+    enabled: userRole === 'property_manager' || userRole === 'admin',
+  });
+
+  // Applicant Stats for Property Managers
+  const { data: applicantStats } = useQuery({
+    queryKey: ["applicantStats", user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("No user found");
+
+      const { data, error } = await supabase
+        .from("applicants")
+        .select(`
+          status,
+          property:properties!inner(created_by, property_manager_id)
+        `)
+        .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`);
+
+      if (error) {
+        console.error("Error fetching applicant stats:", error);
+        return { total: 0, pending: 0 };
+      }
+
+      const pending = data?.filter((a: any) =>
+        ["invited", "started", "submitted", "screening"].includes(a.status)
+      ).length || 0;
+
+      return {
+        total: data?.length || 0,
+        pending,
+      };
+    },
+    enabled: userRole === 'property_manager' || userRole === 'admin',
+  });
+
+  // Lease Stats for Property Managers
+  const { data: leaseStats } = useQuery({
+    queryKey: ["leaseStats", user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("No user found");
+
+      const { data, error } = await supabase
+        .from("leases")
+        .select(`
+          status,
+          property:properties!inner(created_by, property_manager_id)
+        `)
+        .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`);
+
+      if (error) {
+        console.error("Error fetching lease stats:", error);
+        return { total: 0, active: 0, expiringSoon: 0 };
+      }
+
+      const active = data?.filter((l: any) => l.status === "active").length || 0;
+      const pending = data?.filter((l: any) => ["draft", "pending"].includes(l.status)).length || 0;
+
+      return {
+        total: data?.length || 0,
+        active,
+        pending,
       };
     },
     enabled: userRole === 'property_manager' || userRole === 'admin',
@@ -238,6 +300,22 @@ const Dashboard = () => {
             trendUp: occupancyRate >= 80,
           },
           {
+            title: "Applicants",
+            value: String(applicantStats?.total || 0),
+            icon: UserPlus,
+            description: `${applicantStats?.pending || 0} pending review`,
+            trend: applicantStats?.pending ? "Needs attention" : "All reviewed",
+            trendUp: !applicantStats?.pending,
+          },
+          {
+            title: "Leases",
+            value: String(leaseStats?.active || 0),
+            icon: ScrollText,
+            description: `${leaseStats?.pending || 0} pending signature`,
+            trend: leaseStats?.pending ? "Action needed" : "All signed",
+            trendUp: !leaseStats?.pending,
+          },
+          {
             title: "Active Tenants",
             value: String(pmStats?.activeTenants || 0),
             icon: Users,
@@ -271,6 +349,22 @@ const Dashboard = () => {
             description: `${pmStats?.occupiedUnits || 0}/${pmStats?.totalUnits || 0} units`,
             trend: occupancyRate >= 80 ? "Healthy" : "Below target",
             trendUp: occupancyRate >= 80,
+          },
+          {
+            title: "Applicants",
+            value: String(applicantStats?.total || 0),
+            icon: UserPlus,
+            description: `${applicantStats?.pending || 0} pending review`,
+            trend: applicantStats?.pending ? "Needs attention" : "All reviewed",
+            trendUp: !applicantStats?.pending,
+          },
+          {
+            title: "Leases",
+            value: String(leaseStats?.active || 0),
+            icon: ScrollText,
+            description: `${leaseStats?.pending || 0} pending signature`,
+            trend: leaseStats?.pending ? "Action needed" : "All signed",
+            trendUp: !leaseStats?.pending,
           },
           {
             title: "Active Tenants",
@@ -350,7 +444,7 @@ const Dashboard = () => {
           <div className="flex flex-col gap-6 sm:gap-8">
             <TopBar title={getDashboardTitle()} subtitle={getDashboardSubtitle()} />
 
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {getStatsByRole().map((stat) => (
                 <StatCard key={stat.title} {...stat} />
               ))}

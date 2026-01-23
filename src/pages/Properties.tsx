@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Search, Users } from "lucide-react";
+import { Building2, Search, Users, Home, Store, Warehouse } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import {
@@ -15,14 +16,31 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Label } from "@/components/ui/label";
+
+type PropertyType = "residential" | "commercial" | "mixed_use" | "industrial";
 
 interface AddPropertyForm {
   name: string;
   address: string;
+  property_type: PropertyType;
 }
+
+const propertyTypeConfig: Record<PropertyType, { label: string; icon: React.ElementType; color: string }> = {
+  residential: { label: "Residential", icon: Home, color: "bg-blue-600" },
+  commercial: { label: "Commercial", icon: Store, color: "bg-green-600" },
+  mixed_use: { label: "Mixed Use", icon: Building2, color: "bg-purple-600" },
+  industrial: { label: "Industrial", icon: Warehouse, color: "bg-orange-600" },
+};
 
 const Properties = () => {
   const navigate = useNavigate();
@@ -69,14 +87,20 @@ const Properties = () => {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { isSubmitting },
-  } = useForm<AddPropertyForm>();
+  } = useForm<AddPropertyForm>({
+    defaultValues: {
+      property_type: "residential",
+    },
+  });
 
   const onSubmit = async (data: AddPropertyForm) => {
     try {
       const { error } = await supabase.from("properties").insert({
         name: data.name,
         address: data.address,
+        property_type: data.property_type,
         created_by: (await supabase.auth.getUser()).data.user?.id,
       });
 
@@ -157,6 +181,30 @@ const Properties = () => {
                         {...register("address", { required: true })}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Property Type</Label>
+                      <Controller
+                        name="property_type"
+                        control={control}
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(propertyTypeConfig).map(([value, config]) => (
+                                <SelectItem key={value} value={value}>
+                                  <div className="flex items-center gap-2">
+                                    <config.icon className="h-4 w-4" />
+                                    {config.label}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
                     <Button
                       type="submit"
                       className="w-full"
@@ -183,6 +231,10 @@ const Properties = () => {
                       ? Math.round((occupiedUnits / totalUnits) * 100)
                       : 0;
 
+                  const propertyType = (property.property_type as PropertyType) || "residential";
+                  const typeConfig = propertyTypeConfig[propertyType];
+                  const TypeIcon = typeConfig?.icon || Building2;
+
                   return (
                     <Card
                       key={property.id}
@@ -190,10 +242,18 @@ const Properties = () => {
                       onClick={() => navigate(`/properties/${property.id}`)}
                     >
                       <CardHeader>
-                        <CardTitle className="text-lg font-medium text-white">
-                          {property.name}
-                        </CardTitle>
-                        <p className="text-sm text-gray-400">{property.address}</p>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg font-medium text-white">
+                              {property.name}
+                            </CardTitle>
+                            <p className="text-sm text-gray-400">{property.address}</p>
+                          </div>
+                          <Badge className={`${typeConfig?.color || "bg-gray-600"} text-white`}>
+                            <TypeIcon className="h-3 w-3 mr-1" />
+                            {typeConfig?.label || "Property"}
+                          </Badge>
+                        </div>
                       </CardHeader>
                       <CardContent>
                         <div className="flex justify-between items-center">

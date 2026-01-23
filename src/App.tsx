@@ -21,6 +21,8 @@ import Settings from "@/pages/Settings";
 import Messages from "@/pages/Messages";
 import Applicants from "@/pages/Applicants";
 import Leases from "@/pages/Leases";
+import Expenses from "@/pages/Expenses";
+import Inspections from "@/pages/Inspections";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const queryClient = new QueryClient({
@@ -53,6 +55,8 @@ function App() {
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/inspections" element={<Inspections />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

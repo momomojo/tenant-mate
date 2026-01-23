@@ -28,13 +28,13 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 4. **Applicant Pipeline** - ✅ DONE (Applicants page with workflow)
 
 ### P1 - High (Customer Requested)
-5. **Lower Payment Fees** - Dwolla Edge Functions created (deploy when ready)
-6. **Commercial Property Support** - DB schema done, UI needs property type selector
+5. **Lower Payment Fees** - ✅ Dwolla Edge Functions created + Payment settings UI (deploy when ready)
+6. **Commercial Property Support** - ✅ DONE (Property type selector with icons)
 7. **Property Images** - ✅ DONE (PropertyImageUpload component)
 
 ### P2 - Medium (Nice to Have)
-8. **Expense Tracking** - Not started
-9. **Condition Reports** - Not started
+8. **Expense Tracking** - ✅ DONE (Expenses page with CRUD, categories, summaries)
+9. **Condition Reports** - ✅ DONE (Inspections page with move-in/move-out tracking)
 10. **Marketing Syndication** - Not started
 
 ---
@@ -61,15 +61,7 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 - [ ] Dwolla ACH payments - Edge Functions created, need to deploy and wire up UI
 - [ ] E-Signatures - Need to select provider (DocuSign/HelloSign) and integrate
 
-### UI Enhancements Needed
-- [ ] Property type selector on Properties page
-- [ ] Dashboard stat cards for Applicants, Pending Leases
-- [ ] Convert Applicant → Tenant flow
-- [ ] Payment processor selection in Settings
-
-### New Features (P2)
-- [ ] Expenses page and tracking
-- [ ] Inspections/Condition reports
+### Future Features
 - [ ] Marketing syndication (Zillow, Apartments.com)
 
 ---
@@ -82,18 +74,27 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 - [x] PWA support with offline indicator
 - [x] Testing infrastructure (Vitest)
 - [x] Email notifications via database webhooks
-- [x] Database migrations for messaging, applicants, leases, property images
+- [x] Database migrations for messaging, applicants, leases, property images, expenses, inspections
 
 ### New Pages
 - [x] Messages.tsx - Real-time messaging with conversations
 - [x] Applicants.tsx - Full pipeline with invite, screening, approve/reject
 - [x] Leases.tsx - CRUD with status management
+- [x] Expenses.tsx - Expense tracking with categories and summaries
+- [x] Inspections.tsx - Move-in/move-out condition reports
+
+### UI Enhancements (January 12, 2026)
+- [x] Property type selector on Properties page (residential/commercial/mixed_use/industrial)
+- [x] Dashboard stat cards for Applicants and Leases (property_manager and admin roles)
+- [x] Convert Applicant → Tenant flow (ConvertApplicantDialog with unit assignment and lease creation)
+- [x] Payment processor settings in Settings page (Stripe vs Dwolla with fee comparison)
 
 ### New Components
 - [x] PropertyImageUpload - Drag-drop with primary selection
 - [x] LeaseCard, CreateLeaseDialog, LeaseFilters
 - [x] ApplicantCard, InviteApplicantDialog, ApplicantFilters
 - [x] ConversationList, MessageThread, NewConversationDialog
+- [x] ConvertApplicantDialog - Converts approved applicants to tenants
 
 ### New Hooks
 - [x] useLeases, useLeaseTemplates
@@ -101,6 +102,8 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 - [x] usePropertyImages
 - [x] useConversations, useMessages
 - [x] useApplicants
+- [x] useExpenses - Expense CRUD with category summaries
+- [x] useInspections - Inspection CRUD with status management
 
 ---
 
