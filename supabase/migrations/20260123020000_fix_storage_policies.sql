@@ -116,7 +116,7 @@ CREATE POLICY "Authorized users can upload inspection photos"
       SELECT 1 FROM inspections i
       JOIN properties p ON p.id = i.property_id
       WHERE i.id::text = split_part(name, '/', 1)
-      AND (p.created_by = auth.uid() OR i.inspector_id = auth.uid())
+      AND (p.created_by = auth.uid() OR i.created_by = auth.uid())
     )
   );
 

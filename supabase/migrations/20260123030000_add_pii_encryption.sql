@@ -16,8 +16,9 @@ ALTER TABLE app_secrets ENABLE ROW LEVEL SECURITY;
 -- No user-facing policies - service_role bypasses RLS
 
 -- Insert a default encryption key (should be rotated in production)
+-- Use extensions schema for pgcrypto functions in Supabase
 INSERT INTO app_secrets (key, value)
-VALUES ('pii_encryption_key', encode(gen_random_bytes(32), 'hex'))
+VALUES ('pii_encryption_key', encode(extensions.gen_random_bytes(32), 'hex'))
 ON CONFLICT (key) DO NOTHING;
 
 -- Function to encrypt PII data (called server-side via service_role)
@@ -31,7 +32,7 @@ BEGIN
     RAISE EXCEPTION 'Encryption key not configured';
   END IF;
   RETURN encode(
-    pgp_sym_encrypt(plaintext, encryption_key),
+    extensions.pgp_sym_encrypt(plaintext, encryption_key),
     'base64'
   );
 END;
@@ -50,7 +51,7 @@ BEGIN
   IF encryption_key IS NULL THEN
     RAISE EXCEPTION 'Encryption key not configured';
   END IF;
-  RETURN pgp_sym_decrypt(
+  RETURN extensions.pgp_sym_decrypt(
     decode(ciphertext, 'base64'),
     encryption_key
   );
