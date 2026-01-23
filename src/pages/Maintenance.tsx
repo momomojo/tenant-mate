@@ -188,7 +188,7 @@ const Maintenance = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="flex flex-col gap-8">
@@ -275,7 +275,7 @@ const Maintenance = () => {
               )}
             </div>
 
-            <Card className="bg-[#403E43] border-none overflow-x-auto">
+            <Card className="glass-card overflow-x-auto">
               {isLoading ? (
                 <div className="p-8 text-center text-gray-400">Loading...</div>
               ) : maintenanceRequests && maintenanceRequests.length > 0 ? (

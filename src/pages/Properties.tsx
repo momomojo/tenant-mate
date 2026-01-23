@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Search, Users, Home, Store, Warehouse } from "lucide-react";
+import { Building2, Search, Users, Home, Store, Warehouse, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { Label } from "@/components/ui/label";
+import { motion } from "framer-motion";
 
 type PropertyType = "residential" | "commercial" | "mixed_use" | "industrial";
 
@@ -35,11 +35,11 @@ interface AddPropertyForm {
   property_type: PropertyType;
 }
 
-const propertyTypeConfig: Record<PropertyType, { label: string; icon: React.ElementType; color: string }> = {
-  residential: { label: "Residential", icon: Home, color: "bg-blue-600" },
-  commercial: { label: "Commercial", icon: Store, color: "bg-green-600" },
-  mixed_use: { label: "Mixed Use", icon: Building2, color: "bg-purple-600" },
-  industrial: { label: "Industrial", icon: Warehouse, color: "bg-orange-600" },
+const propertyTypeConfig: Record<PropertyType, { label: string; icon: React.ElementType; color: string; bgColor: string }> = {
+  residential: { label: "Residential", icon: Home, color: "text-brand-blue", bgColor: "bg-brand-blue/10" },
+  commercial: { label: "Commercial", icon: Store, color: "text-status-success", bgColor: "bg-status-success/10" },
+  mixed_use: { label: "Mixed Use", icon: Building2, color: "text-brand-purple-light", bgColor: "bg-brand-purple/10" },
+  industrial: { label: "Industrial", icon: Warehouse, color: "text-status-warning", bgColor: "bg-status-warning/10" },
 };
 
 const Properties = () => {
@@ -115,7 +115,6 @@ const Properties = () => {
       setIsAddingProperty(false);
       refetch();
     } catch (error) {
-      console.error("Error adding property:", error);
       toast({
         title: "Error",
         description: "Failed to add property. Please try again.",
@@ -132,66 +131,63 @@ const Properties = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <main className="flex-1 p-4 sm:p-8">
+        <main className="flex-1 p-4 sm:p-8 overflow-x-hidden">
           <div className="flex flex-col gap-6 sm:gap-8">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-white">Properties</h1>
-              <p className="text-xs sm:text-sm text-gray-400">
-                Manage your properties and units
-              </p>
-            </div>
+            <TopBar title="Properties" subtitle="Manage your properties and units" />
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search properties..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-muted-foreground/50 focus:border-brand-indigo/50 rounded-xl h-10"
                 />
               </div>
               <Dialog open={isAddingProperty} onOpenChange={setIsAddingProperty}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Building2 className="mr-2 h-4 w-4" />
+                  <Button className="bg-brand-indigo hover:bg-brand-indigo-light text-white rounded-xl h-10 px-5 shadow-glow-sm hover:shadow-glow transition-all duration-300">
+                    <Plus className="mr-2 h-4 w-4" />
                     Add Property
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="bg-surface-elevated border-white/[0.08] rounded-2xl">
                   <DialogHeader>
-                    <DialogTitle>Add New Property</DialogTitle>
+                    <DialogTitle className="text-white text-lg">Add New Property</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Property Name</Label>
+                      <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">Property Name</Label>
                       <Input
                         id="name"
                         placeholder="Enter property name"
                         {...register("name", { required: true })}
+                        className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-muted-foreground/50 focus:border-brand-indigo/50 rounded-xl h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
+                      <Label htmlFor="address" className="text-xs font-medium text-muted-foreground">Address</Label>
                       <Input
                         id="address"
                         placeholder="Enter property address"
                         {...register("address", { required: true })}
+                        className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-muted-foreground/50 focus:border-brand-indigo/50 rounded-xl h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Property Type</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Property Type</Label>
                       <Controller
                         name="property_type"
                         control={control}
                         render={({ field }) => (
                           <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-white rounded-xl h-11">
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-surface-elevated border-white/[0.08]">
                               {Object.entries(propertyTypeConfig).map(([value, config]) => (
                                 <SelectItem key={value} value={value}>
                                   <div className="flex items-center gap-2">
@@ -207,7 +203,7 @@ const Properties = () => {
                     </div>
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full bg-brand-indigo hover:bg-brand-indigo-light text-white rounded-xl h-11 mt-2"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? "Adding..." : "Add Property"}
@@ -218,10 +214,41 @@ const Properties = () => {
             </div>
 
             {isLoading ? (
-              <div className="text-center text-gray-400">Loading properties...</div>
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-5 space-y-4 animate-pulse">
+                    <div className="h-5 w-32 skeleton" />
+                    <div className="h-4 w-48 skeleton" />
+                    <div className="h-8 w-full skeleton" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredProperties?.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.08] mb-4">
+                  <Building2 className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <h3 className="text-base font-medium text-white mb-1">No properties found</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {searchQuery ? "Try a different search term" : "Add your first property to get started"}
+                </p>
+                {!searchQuery && (
+                  <Button
+                    onClick={() => setIsAddingProperty(true)}
+                    className="bg-brand-indigo hover:bg-brand-indigo-light text-white rounded-xl"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Property
+                  </Button>
+                )}
+              </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filteredProperties?.map((property) => {
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="grid gap-5 md:grid-cols-2 lg:grid-cols-3"
+              >
+                {filteredProperties?.map((property, index) => {
                   const totalUnits = property.units?.length || 0;
                   const occupiedUnits =
                     property.units?.filter((unit) => unit.status === "occupied")
@@ -236,50 +263,60 @@ const Properties = () => {
                   const TypeIcon = typeConfig?.icon || Building2;
 
                   return (
-                    <Card
+                    <motion.div
                       key={property.id}
-                      className="bg-[#403E43] border-none hover:bg-[#4A484D] transition-colors cursor-pointer"
-                      onClick={() => navigate(`/properties/${property.id}`)}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
                     >
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg font-medium text-white">
+                      <div
+                        className="group relative overflow-hidden rounded-2xl bg-white/[0.04] border border-white/[0.08] p-5 hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-300 cursor-pointer card-hover-lift"
+                        onClick={() => navigate(`/properties/${property.id}`)}
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-semibold text-white truncate mb-0.5">
                               {property.name}
-                            </CardTitle>
-                            <p className="text-sm text-gray-400">{property.address}</p>
+                            </h3>
+                            <p className="text-xs text-muted-foreground truncate">{property.address}</p>
                           </div>
-                          <Badge className={`${typeConfig?.color || "bg-gray-600"} text-white`}>
-                            <TypeIcon className="h-3 w-3 mr-1" />
-                            {typeConfig?.label || "Property"}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex justify-between items-center">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-[#9b87f5]" />
-                              <span className="text-sm text-gray-300">
-                                {totalUnits} Units
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-[#9b87f5]" />
-                              <span className="text-sm text-gray-300">
-                                {occupancyRate}% Occupied
-                              </span>
-                            </div>
+                          <div className={`flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full ${typeConfig?.bgColor || "bg-white/[0.06]"} ${typeConfig?.color || "text-muted-foreground"}`}>
+                            <TypeIcon className="h-3 w-3" />
+                            <span>{typeConfig?.label || "Property"}</span>
                           </div>
-                          <Button variant="secondary" size="sm">
-                            View Details
-                          </Button>
                         </div>
-                      </CardContent>
-                    </Card>
+
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-indigo/10">
+                              <Building2 className="h-3.5 w-3.5 text-brand-indigo-light" />
+                            </div>
+                            <span className="text-sm text-gray-300">
+                              {totalUnits} Units
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-purple/10">
+                              <Users className="h-3.5 w-3.5 text-brand-purple-light" />
+                            </div>
+                            <span className="text-sm text-gray-300">
+                              {occupancyRate}% Occupied
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Occupancy bar */}
+                        <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-brand-indigo to-brand-purple rounded-full transition-all duration-500"
+                            style={{ width: `${occupancyRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
           </div>
         </main>

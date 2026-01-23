@@ -122,7 +122,7 @@ const Reports = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="flex flex-col gap-8">
@@ -130,7 +130,7 @@ const Reports = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="bg-[#403E43] border-none">
+              <Card className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-gray-400">Total Properties</CardTitle>
                   <Home className="h-4 w-4 text-gray-400" />
@@ -139,7 +139,7 @@ const Reports = () => {
                   <div className="text-2xl font-bold text-white">{propertySummary?.length || 0}</div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#403E43] border-none">
+              <Card className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-gray-400">Total Units</CardTitle>
                   <BarChart className="h-4 w-4 text-gray-400" />
@@ -149,7 +149,7 @@ const Reports = () => {
                   <p className="text-xs text-gray-400">{totalOccupied} occupied</p>
                 </CardContent>
               </Card>
-              <Card className="bg-[#403E43] border-none">
+              <Card className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-gray-400">Potential Monthly Income</CardTitle>
                   <DollarSign className="h-4 w-4 text-gray-400" />
@@ -158,7 +158,7 @@ const Reports = () => {
                   <div className="text-2xl font-bold text-white">${totalPotentialIncome.toLocaleString()}</div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#403E43] border-none">
+              <Card className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-gray-400">Current Monthly Income</CardTitle>
                   <DollarSign className="h-4 w-4 text-green-400" />
@@ -170,14 +170,14 @@ const Reports = () => {
             </div>
 
             <Tabs defaultValue="rent-roll" className="w-full">
-              <TabsList className="bg-[#403E43]">
+              <TabsList className="bg-white/[0.04] border-white/[0.08]">
                 <TabsTrigger value="rent-roll">Rent Roll</TabsTrigger>
                 <TabsTrigger value="income">Income Report</TabsTrigger>
                 <TabsTrigger value="property">Property Summary</TabsTrigger>
               </TabsList>
 
               <TabsContent value="rent-roll">
-                <Card className="bg-[#403E43] border-none">
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="text-white">Rent Roll</CardTitle>
                   </CardHeader>
@@ -228,7 +228,7 @@ const Reports = () => {
               </TabsContent>
 
               <TabsContent value="income">
-                <Card className="bg-[#403E43] border-none">
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="text-white">Income Report</CardTitle>
                   </CardHeader>
@@ -280,7 +280,7 @@ const Reports = () => {
               </TabsContent>
 
               <TabsContent value="property">
-                <Card className="bg-[#403E43] border-none">
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="text-white">Property Summary</CardTitle>
                   </CardHeader>

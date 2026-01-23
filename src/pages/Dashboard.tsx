@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Home, Percent, DollarSign, Users, Wrench, FileText, BarChart, UserPlus, ScrollText } from "lucide-react";
+import { Building2, Home, Percent, DollarSign, Users, Wrench, FileText, UserPlus, ScrollText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -11,6 +11,14 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { queryKeys } from "@/lib/query-keys";
+import {
+  USER_ROLES,
+  HEALTHY_OCCUPANCY_THRESHOLD,
+  OPEN_MAINTENANCE_STATUSES,
+  PENDING_APPLICANT_STATUSES,
+} from "@/lib/constants";
+import { formatCurrency } from "@/lib/formatters";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -22,8 +30,8 @@ const Dashboard = () => {
     userId: user?.id,
   });
 
-  const { data: userRole, isError: isRoleError, error: roleError, isLoading } = useQuery({
-    queryKey: ["userRole", user?.id],
+  const { data: userRole, isError: isRoleError, isLoading } = useQuery({
+    queryKey: queryKeys.userRole(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -34,11 +42,9 @@ const Dashboard = () => {
         .single();
 
       if (error) {
-        console.error("Error fetching user role:", error);
         throw error;
       }
 
-      console.log("Fetched user role:", profile?.role);
       return profile?.role;
     },
     enabled: !!user,
@@ -46,7 +52,7 @@ const Dashboard = () => {
 
   // Property Manager Stats
   const { data: pmStats } = useQuery({
-    queryKey: ["pmDashboardStats", user?.id],
+    queryKey: queryKeys.dashboard.pmStats(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -84,7 +90,7 @@ const Dashboard = () => {
       const { count: maintenanceCount } = await supabase
         .from("maintenance_requests")
         .select("*", { count: "exact", head: true })
-        .in("status", ["pending", "in_progress"]);
+        .in("status", OPEN_MAINTENANCE_STATUSES);
 
       return {
         totalProperties,
@@ -94,12 +100,12 @@ const Dashboard = () => {
         occupiedUnits,
       };
     },
-    enabled: userRole === 'property_manager' || userRole === 'admin',
+    enabled: userRole === USER_ROLES.propertyManager || userRole === USER_ROLES.admin,
   });
 
   // Applicant Stats for Property Managers
   const { data: applicantStats } = useQuery({
-    queryKey: ["applicantStats", user?.id],
+    queryKey: queryKeys.dashboard.applicantStats(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -111,13 +117,10 @@ const Dashboard = () => {
         `)
         .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`);
 
-      if (error) {
-        console.error("Error fetching applicant stats:", error);
-        return { total: 0, pending: 0 };
-      }
+      if (error) return { total: 0, pending: 0 };
 
       const pending = data?.filter((a: any) =>
-        ["invited", "started", "submitted", "screening"].includes(a.status)
+        PENDING_APPLICANT_STATUSES.includes(a.status)
       ).length || 0;
 
       return {
@@ -125,12 +128,12 @@ const Dashboard = () => {
         pending,
       };
     },
-    enabled: userRole === 'property_manager' || userRole === 'admin',
+    enabled: userRole === USER_ROLES.propertyManager || userRole === USER_ROLES.admin,
   });
 
   // Lease Stats for Property Managers
   const { data: leaseStats } = useQuery({
-    queryKey: ["leaseStats", user?.id],
+    queryKey: queryKeys.dashboard.leaseStats(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -142,10 +145,7 @@ const Dashboard = () => {
         `)
         .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`);
 
-      if (error) {
-        console.error("Error fetching lease stats:", error);
-        return { total: 0, active: 0, expiringSoon: 0 };
-      }
+      if (error) return { total: 0, active: 0, pending: 0 };
 
       const active = data?.filter((l: any) => l.status === "active").length || 0;
       const pending = data?.filter((l: any) => ["draft", "pending"].includes(l.status)).length || 0;
@@ -156,12 +156,12 @@ const Dashboard = () => {
         pending,
       };
     },
-    enabled: userRole === 'property_manager' || userRole === 'admin',
+    enabled: userRole === USER_ROLES.propertyManager || userRole === USER_ROLES.admin,
   });
 
   // Tenant's units and their total rent
   const { data: tenantUnitsData, isError: isUnitsError } = useQuery({
-    queryKey: ["tenantUnits", user?.id],
+    queryKey: queryKeys.tenants.units(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -178,19 +178,16 @@ const Dashboard = () => {
         .eq('tenant_id', user.id)
         .eq('status', 'active');
 
-      if (error) {
-        console.error("Error fetching tenant units:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },
-    enabled: userRole === 'tenant'
+    enabled: userRole === USER_ROLES.tenant
   });
 
   // Tenant maintenance requests count
   const { data: tenantMaintenanceCount } = useQuery({
-    queryKey: ["tenantMaintenanceCount", user?.id],
+    queryKey: queryKeys.tenants.maintenanceCount(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -198,17 +195,17 @@ const Dashboard = () => {
         .from('maintenance_requests')
         .select("*", { count: "exact", head: true })
         .eq('tenant_id', user.id)
-        .in("status", ["pending", "in_progress"]);
+        .in("status", OPEN_MAINTENANCE_STATUSES);
 
       if (error) throw error;
       return count || 0;
     },
-    enabled: userRole === 'tenant'
+    enabled: userRole === USER_ROLES.tenant
   });
 
   // Tenant documents count - using the document_access_view
   const { data: tenantDocumentsCount } = useQuery({
-    queryKey: ["tenantDocumentsCount", user?.id],
+    queryKey: queryKeys.tenants.documentsCount(user?.id),
     queryFn: async () => {
       if (!user) throw new Error("No user found");
 
@@ -217,13 +214,10 @@ const Dashboard = () => {
         .from('document_access_view')
         .select("*", { count: "exact", head: true });
 
-      if (error) {
-        console.error("Error fetching documents count:", error);
-        return 0;
-      }
+      if (error) return 0;
       return count || 0;
     },
-    enabled: userRole === 'tenant'
+    enabled: userRole === USER_ROLES.tenant
   });
 
   useEffect(() => {
@@ -241,14 +235,16 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#1A1F2C]">
-        <p className="text-white">Loading dashboard...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 rounded-full border-2 border-brand-indigo/20 border-t-brand-indigo animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
 
   if (isRoleError) {
-    console.error("Error loading dashboard:", roleError);
     toast.error("Error loading dashboard. Please try again.");
     return null;
   }
@@ -273,9 +269,6 @@ const Dashboard = () => {
   };
 
   const getStatsByRole = () => {
-    console.log("Getting stats for role:", userRole);
-
-    // Calculate occupancy rate
     const occupancyRate = pmStats?.totalUnits
       ? Math.round((pmStats.occupiedUnits / pmStats.totalUnits) * 100)
       : 0;
@@ -297,7 +290,7 @@ const Dashboard = () => {
             icon: Home,
             description: `${pmStats?.occupiedUnits || 0} occupied`,
             trend: `${occupancyRate}% occupancy`,
-            trendUp: occupancyRate >= 80,
+            trendUp: occupancyRate >= HEALTHY_OCCUPANCY_THRESHOLD,
           },
           {
             title: "Applicants",
@@ -347,8 +340,8 @@ const Dashboard = () => {
             value: `${occupancyRate}%`,
             icon: Percent,
             description: `${pmStats?.occupiedUnits || 0}/${pmStats?.totalUnits || 0} units`,
-            trend: occupancyRate >= 80 ? "Healthy" : "Below target",
-            trendUp: occupancyRate >= 80,
+            trend: occupancyRate >= HEALTHY_OCCUPANCY_THRESHOLD ? "Healthy" : "Below target",
+            trendUp: occupancyRate >= HEALTHY_OCCUPANCY_THRESHOLD,
           },
           {
             title: "Applicants",
@@ -395,7 +388,7 @@ const Dashboard = () => {
           },
           {
             title: "Rent Due",
-            value: `$${calculateTotalRent().toLocaleString()}`,
+            value: formatCurrency(calculateTotalRent()),
             icon: DollarSign,
             description: "Due on 1st of month",
             trend: "Monthly",
@@ -419,7 +412,6 @@ const Dashboard = () => {
           },
         ];
       default:
-        console.log("No matching role found:", userRole);
         return [];
     }
   };
@@ -438,15 +430,15 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8 overflow-x-hidden">
           <div className="flex flex-col gap-6 sm:gap-8">
             <TopBar title={getDashboardTitle()} subtitle={getDashboardSubtitle()} />
 
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              {getStatsByRole().map((stat) => (
-                <StatCard key={stat.title} {...stat} />
+            <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {getStatsByRole().map((stat, idx) => (
+                <StatCard key={stat.title} {...stat} index={idx} />
               ))}
             </div>
 

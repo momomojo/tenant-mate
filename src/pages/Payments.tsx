@@ -137,7 +137,7 @@ const Payments = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {success && (

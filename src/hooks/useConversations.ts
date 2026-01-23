@@ -55,12 +55,11 @@ export function useConversations() {
         .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (error) {
-        console.error("Error fetching conversations:", error);
         throw error;
       }
 
       // Map to include other_user based on current user
-      return (data || []).map((conv: any) => ({
+      return (data || []).map((conv: Record<string, unknown> & { landlord_id: string; tenant: unknown; landlord: unknown }) => ({
         ...conv,
         other_user: conv.landlord_id === user.id ? conv.tenant : conv.landlord,
       }));
@@ -90,7 +89,6 @@ export function useConversation(conversationId: string | undefined) {
         .single();
 
       if (error) {
-        console.error("Error fetching conversation:", error);
         throw error;
       }
 
@@ -152,7 +150,6 @@ export function useCreateConversation() {
         .single();
 
       if (error) {
-        console.error("Error creating conversation:", error);
         throw error;
       }
 
@@ -206,7 +203,6 @@ export function useUnreadCount() {
         .eq("is_archived", false);
 
       if (error) {
-        console.error("Error fetching unread count:", error);
         return 0;
       }
 

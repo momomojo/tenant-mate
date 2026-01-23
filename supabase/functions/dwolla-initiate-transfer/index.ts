@@ -131,17 +131,18 @@ Deno.serve(async (req: Request) => {
       throw new Error("Amount must be greater than 0");
     }
 
-    // Get rent payment details
+    // Get rent payment details with unit -> property relationship
     const { data: rentPayment, error: paymentError } = await supabase
       .from("rent_payments")
       .select(`
         *,
-        tenant_units!inner(
-          tenant_id,
-          units!inner(
-            properties!inner(
-              created_by
-            )
+        units!inner(
+          id,
+          property_id,
+          properties!inner(
+            id,
+            created_by,
+            property_manager_id
           )
         )
       `)
@@ -152,8 +153,8 @@ Deno.serve(async (req: Request) => {
       throw new Error("Rent payment not found");
     }
 
-    const tenantId = rentPayment.tenant_units.tenant_id;
-    const landlordId = rentPayment.tenant_units.units.properties.created_by;
+    const tenantId = rentPayment.tenant_id;
+    const landlordId = rentPayment.units.properties.created_by;
 
     // Verify the requesting user is the tenant
     if (user.id !== tenantId) {

@@ -26,10 +26,7 @@ export function useUnits(propertyId: string | undefined) {
         .eq("property_id", propertyId)
         .order("unit_number");
 
-      if (error) {
-        console.error("Error fetching units:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data || [];
     },
@@ -49,10 +46,7 @@ export function useUnit(unitId: string | undefined) {
         .eq("id", unitId)
         .single();
 
-      if (error) {
-        console.error("Error fetching unit:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },
@@ -88,10 +82,7 @@ export function useCreateUnit() {
         .select()
         .single();
 
-      if (error) {
-        console.error("Error creating unit:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },
@@ -133,10 +124,7 @@ export function useUpdateUnit() {
         .select()
         .single();
 
-      if (error) {
-        console.error("Error updating unit:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },

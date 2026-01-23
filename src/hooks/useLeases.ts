@@ -96,7 +96,6 @@ export function useLeases(filters: LeasesFilters = {}) {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching leases:", error);
         throw error;
       }
 
@@ -124,7 +123,6 @@ export function useLease(leaseId: string | undefined) {
         .single();
 
       if (error) {
-        console.error("Error fetching lease:", error);
         throw error;
       }
 
@@ -145,7 +143,6 @@ export function useLeaseTemplates() {
         .order("is_default", { ascending: false });
 
       if (error) {
-        console.error("Error fetching templates:", error);
         throw error;
       }
 
@@ -204,7 +201,6 @@ export function useCreateLease() {
         .single();
 
       if (error) {
-        console.error("Error creating lease:", error);
         throw error;
       }
 
@@ -251,7 +247,6 @@ export function useUpdateLease() {
         .single();
 
       if (error) {
-        console.error("Error updating lease:", error);
         throw error;
       }
 
@@ -275,7 +270,6 @@ export function useDeleteLease() {
         .eq("id", leaseId);
 
       if (error) {
-        console.error("Error deleting lease:", error);
         throw error;
       }
     },
@@ -308,7 +302,6 @@ export function useLeaseCounts(propertyId?: string) {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching lease counts:", error);
         return {};
       }
 
@@ -322,7 +315,7 @@ export function useLeaseCounts(propertyId?: string) {
         terminated: 0,
       };
 
-      (data || []).forEach((l: any) => {
+      (data || []).forEach((l: { status: string; property: unknown }) => {
         counts.total++;
         if (counts[l.status] !== undefined) {
           counts[l.status]++;

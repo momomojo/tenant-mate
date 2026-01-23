@@ -42,7 +42,6 @@ export function useMessages(conversationId: string | undefined) {
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Error fetching messages:", error);
         throw error;
       }
 
@@ -127,7 +126,6 @@ export function useSendMessage() {
         .single();
 
       if (error) {
-        console.error("Error sending message:", error);
         throw error;
       }
 
@@ -164,7 +162,6 @@ export function useMarkMessagesRead() {
       });
 
       if (error) {
-        console.error("Error marking messages read:", error);
         throw error;
       }
     },
@@ -190,7 +187,6 @@ export function useUploadMessageAttachment() {
         .upload(filePath, file);
 
       if (uploadError) {
-        console.error("Error uploading file:", uploadError);
         throw uploadError;
       }
 

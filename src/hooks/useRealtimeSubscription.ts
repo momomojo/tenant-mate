@@ -15,7 +15,7 @@ type TableName =
 interface UseRealtimeSubscriptionOptions {
   tables: TableName[];
   userId?: string;
-  onNotification?: (notification: any) => void;
+  onNotification?: (notification: Record<string, unknown>) => void;
 }
 
 export function useRealtimeSubscription({
@@ -43,8 +43,6 @@ export function useRealtimeSubscription({
             filter: getFilterForTable(table, userId),
           },
           (payload) => {
-            console.log(`Realtime update for ${table}:`, payload);
-
             // Invalidate relevant queries
             invalidateQueriesForTable(queryClient, table, payload);
 
@@ -54,7 +52,7 @@ export function useRealtimeSubscription({
                 onNotification(payload.new);
               }
               // Show toast for new notifications
-              const newNotification = payload.new as any;
+              const newNotification = payload.new as Record<string, unknown>;
               if (newNotification?.title) {
                 toast(newNotification.title, {
                   description: newNotification.message,
@@ -95,7 +93,7 @@ function getFilterForTable(table: TableName, userId: string): string | undefined
 function invalidateQueriesForTable(
   queryClient: ReturnType<typeof useQueryClient>,
   table: TableName,
-  payload: any
+  _payload: unknown
 ) {
   switch (table) {
     case "notifications":

@@ -181,7 +181,7 @@ const Settings = () => {
   if (isLoading) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <main className="flex-1 p-8">
             <div className="text-gray-400">Loading...</div>
@@ -193,14 +193,14 @@ const Settings = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="flex flex-col gap-8 max-w-4xl">
             <TopBar title="Settings" subtitle="Manage your account settings and preferences" />
 
             {/* Profile Settings */}
-            <Card className="bg-[#403E43] border-none">
+            <Card className="glass-card">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <User className="h-5 w-5 text-gray-400" />
@@ -217,7 +217,7 @@ const Settings = () => {
                     <Input
                       value={profile.first_name}
                       onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -225,7 +225,7 @@ const Settings = () => {
                     <Input
                       value={profile.last_name}
                       onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                   </div>
                 </div>
@@ -234,7 +234,7 @@ const Settings = () => {
                   <Input
                     value={profile.email}
                     disabled
-                    className="bg-[#2A2D35] border-gray-600 text-gray-400"
+                    className="bg-white/[0.04] border-white/[0.08] text-gray-400"
                   />
                   <p className="text-xs text-gray-500">Email cannot be changed</p>
                 </div>
@@ -243,7 +243,7 @@ const Settings = () => {
                   <Input
                     value={profile.phone_number}
                     onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
-                    className="bg-[#2A2D35] border-gray-600 text-white"
+                    className="bg-white/[0.04] border-white/[0.08] text-white"
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -253,7 +253,7 @@ const Settings = () => {
                   <Input
                     value={profile.address_line1}
                     onChange={(e) => setProfile({ ...profile, address_line1: e.target.value })}
-                    className="bg-[#2A2D35] border-gray-600 text-white"
+                    className="bg-white/[0.04] border-white/[0.08] text-white"
                     placeholder="Street address"
                   />
                 </div>
@@ -263,7 +263,7 @@ const Settings = () => {
                     <Input
                       value={profile.city}
                       onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -271,7 +271,7 @@ const Settings = () => {
                     <Input
                       value={profile.state}
                       onChange={(e) => setProfile({ ...profile, state: e.target.value })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -279,7 +279,7 @@ const Settings = () => {
                     <Input
                       value={profile.postal_code}
                       onChange={(e) => setProfile({ ...profile, postal_code: e.target.value })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                   </div>
                 </div>
@@ -294,7 +294,7 @@ const Settings = () => {
             </Card>
 
             {/* Account Info */}
-            <Card className="bg-[#403E43] border-none">
+            <Card className="glass-card">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-gray-400" />
@@ -328,7 +328,7 @@ const Settings = () => {
 
             {/* Payment Settings (for property managers) */}
             {userProfile?.role === "property_manager" && (
-              <Card className="bg-[#403E43] border-none">
+              <Card className="glass-card">
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-gray-400" />
@@ -356,13 +356,13 @@ const Settings = () => {
                       {/* Stripe Option */}
                       <div className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
                         paymentProcessor === "stripe"
-                          ? "border-[#9b87f5] bg-[#9b87f5]/10"
-                          : "border-gray-600 bg-[#2A2D35]"
+                          ? "border-brand-indigo bg-brand-indigo/10"
+                          : "border-white/[0.08] bg-white/[0.04]"
                       }`}>
                         <RadioGroupItem value="stripe" id="stripe" className="mt-1" />
                         <Label htmlFor="stripe" className="flex-1 cursor-pointer">
                           <div className="flex items-center gap-2 mb-1">
-                            <CreditCard className="h-4 w-4 text-[#9b87f5]" />
+                            <CreditCard className="h-4 w-4 text-brand-indigo-light" />
                             <span className="text-white font-medium">Stripe</span>
                             <Badge variant="secondary" className="text-xs">Active</Badge>
                           </div>
@@ -381,8 +381,8 @@ const Settings = () => {
                       {/* Dwolla/ACH Option */}
                       <div className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
                         paymentProcessor === "dwolla"
-                          ? "border-[#9b87f5] bg-[#9b87f5]/10"
-                          : "border-gray-600 bg-[#2A2D35]"
+                          ? "border-brand-indigo bg-brand-indigo/10"
+                          : "border-white/[0.08] bg-white/[0.04]"
                       }`}>
                         <RadioGroupItem value="dwolla" id="dwolla" className="mt-1" />
                         <Label htmlFor="dwolla" className="flex-1 cursor-pointer">
@@ -429,12 +429,12 @@ const Settings = () => {
                   <div className="space-y-3">
                     <Label className="text-gray-300">Fee Comparison (on $1,500 rent)</Label>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 rounded-lg bg-[#2A2D35]">
+                      <div className="p-3 rounded-lg bg-white/[0.04]">
                         <div className="text-sm text-gray-400">Stripe</div>
                         <div className="text-lg font-medium text-yellow-500">$43.80</div>
                         <div className="text-xs text-gray-500">2.9% + $0.30</div>
                       </div>
-                      <div className="p-3 rounded-lg bg-[#2A2D35]">
+                      <div className="p-3 rounded-lg bg-white/[0.04]">
                         <div className="text-sm text-gray-400">Dwolla ACH</div>
                         <div className="text-lg font-medium text-green-500">$0.25</div>
                         <div className="text-xs text-gray-500">Flat fee</div>
@@ -527,7 +527,7 @@ const Settings = () => {
 
             {/* Dwolla Bank Account Setup Dialog */}
             <Dialog open={showDwollaSetup} onOpenChange={setShowDwollaSetup}>
-              <DialogContent className="bg-[#403E43] border-gray-600">
+              <DialogContent className="bg-white/[0.04] border-white/[0.08] border-white/[0.08]">
                 <DialogHeader>
                   <DialogTitle className="text-white">Add Bank Account</DialogTitle>
                   <DialogDescription className="text-gray-400">
@@ -541,7 +541,7 @@ const Settings = () => {
                       placeholder="John Smith"
                       value={dwollaBankForm.name}
                       onChange={(e) => setDwollaBankForm({ ...dwollaBankForm, name: e.target.value })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -550,7 +550,7 @@ const Settings = () => {
                       placeholder="222222226"
                       value={dwollaBankForm.routingNumber}
                       onChange={(e) => setDwollaBankForm({ ...dwollaBankForm, routingNumber: e.target.value.replace(/\D/g, "").slice(0, 9) })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                     <p className="text-xs text-gray-500">For sandbox testing, use: 222222226</p>
                   </div>
@@ -560,7 +560,7 @@ const Settings = () => {
                       placeholder="123456789"
                       value={dwollaBankForm.accountNumber}
                       onChange={(e) => setDwollaBankForm({ ...dwollaBankForm, accountNumber: e.target.value.replace(/\D/g, "") })}
-                      className="bg-[#2A2D35] border-gray-600 text-white"
+                      className="bg-white/[0.04] border-white/[0.08] text-white"
                     />
                     <p className="text-xs text-gray-500">For sandbox testing, use any digits</p>
                   </div>

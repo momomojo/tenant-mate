@@ -107,7 +107,7 @@ const Documents = () => {
       return (
         <div className="space-y-4">
           <select
-            className="w-full p-2 rounded bg-[#2D2B30] text-white border border-gray-600"
+            className="w-full p-2 rounded bg-white/[0.04] text-white border border-white/[0.08]"
             value={selectedPropertyId || ""}
             onChange={(e) => setSelectedPropertyId(e.target.value || null)}
           >
@@ -149,13 +149,13 @@ const Documents = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="flex flex-col gap-6 sm:gap-8">
             <h1 className="text-xl sm:text-2xl font-semibold text-white">Documents</h1>
 
-            <Card className="bg-[#403E43] border-none p-4 sm:p-6">
+            <Card className="glass-card p-4 sm:p-6">
               <div className="space-y-6">
                 {renderDocumentHeader()}
                 {renderDocumentList()}

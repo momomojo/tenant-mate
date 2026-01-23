@@ -30,8 +30,6 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
   const { data: deletedLeases, isLoading: isLoadingDeleted } = useQuery({
     queryKey: ["deletedLeases", tenantId],
     queryFn: async () => {
-      console.log("Fetching deleted leases for tenant:", tenantId);
-
       const { data, error } = await supabase
         .from("deleted_tenant_units")
         .select(`
@@ -55,12 +53,7 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
         .eq("tenant_id", tenantId)
         .order('deleted_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching deleted leases:", error);
-        throw error;
-      }
-
-      console.log("Fetched deleted leases:", data);
+      if (error) throw error;
       return data;
     },
   });
@@ -86,7 +79,6 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
 
   const restoreLeaseMutation = useMutation({
     mutationFn: async (lease: DeletedLease) => {
-      console.log("Attempting to restore lease:", lease);
       const { error: insertError } = await supabase
         .from("tenant_units")
         .insert({
@@ -119,34 +111,12 @@ export function LeaseHistory({ leases, tenantId }: LeaseHistoryProps) {
 
   const deleteLeaseMutation = useMutation({
     mutationFn: async (leaseId: string) => {
-      console.log("Attempting to delete lease:", leaseId);
-
-      // First get the lease details before deletion
-      const { data: leaseToDelete, error: fetchError } = await supabase
-        .from("tenant_units")
-        .select("*")
-        .eq("id", leaseId)
-        .single();
-
-      if (fetchError) {
-        console.error("Error fetching lease to delete:", fetchError);
-        throw fetchError;
-      }
-
-      console.log("Lease to be deleted:", leaseToDelete);
-
-      // Now delete the lease - this should trigger the database trigger
       const { error: deleteError } = await supabase
         .from("tenant_units")
         .delete()
         .eq("id", leaseId);
 
-      if (deleteError) {
-        console.error("Error in delete mutation:", deleteError);
-        throw deleteError;
-      }
-
-      console.log("Lease deleted successfully");
+      if (deleteError) throw deleteError;
     },
     onSuccess: () => {
       toast.success("Lease deleted successfully");

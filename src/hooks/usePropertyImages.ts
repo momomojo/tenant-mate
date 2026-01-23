@@ -27,7 +27,6 @@ export function usePropertyImages(propertyId: string | undefined) {
         .order("display_order");
 
       if (error) {
-        console.error("Error fetching property images:", error);
         throw error;
       }
 
@@ -65,7 +64,6 @@ export function useUploadPropertyImage() {
         });
 
       if (uploadError) {
-        console.error("Error uploading image:", uploadError);
         throw uploadError;
       }
 
@@ -100,7 +98,6 @@ export function useUploadPropertyImage() {
       if (error) {
         // Rollback: delete uploaded file
         await supabase.storage.from("property-images").remove([storagePath]);
-        console.error("Error creating image record:", error);
         throw error;
       }
 
@@ -139,7 +136,6 @@ export function useUpdatePropertyImage() {
         .single();
 
       if (error) {
-        console.error("Error updating image:", error);
         throw error;
       }
 
@@ -164,7 +160,6 @@ export function useDeletePropertyImage() {
         .single();
 
       if (fetchError) {
-        console.error("Error fetching image:", fetchError);
         throw fetchError;
       }
 
@@ -175,7 +170,6 @@ export function useDeletePropertyImage() {
         .eq("id", imageId);
 
       if (deleteError) {
-        console.error("Error deleting image record:", deleteError);
         throw deleteError;
       }
 
@@ -186,7 +180,6 @@ export function useDeletePropertyImage() {
           .remove([image.storage_path]);
 
         if (storageError) {
-          console.error("Error deleting file from storage:", storageError);
           // Don't throw - record is already deleted
         }
       }

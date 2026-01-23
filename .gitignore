@@ -31,3 +31,9 @@ package-lock.json
 
 # Supabase
 supabase/.temp/
+
+# Test coverage
+coverage/
+
+# Agent orchestration working files
+.agents/

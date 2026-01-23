@@ -54,7 +54,7 @@ const Tenants = () => {
   if (isLoading) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <main className="flex-1 p-8">
             <div className="text-center text-gray-400">Loading tenants...</div>
@@ -66,7 +66,7 @@ const Tenants = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="mb-6 sm:mb-8">

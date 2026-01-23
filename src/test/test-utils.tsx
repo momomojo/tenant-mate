@@ -39,6 +39,11 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'>
 ) => render(ui, { wrapper: AllTheProviders, ...options });
 
+// Hook wrapper creator for renderHook tests
+export function createWrapper() {
+  return AllTheProviders;
+}
+
 // Re-export everything
 export * from '@testing-library/react';
 export { customRender as render };

@@ -9,7 +9,7 @@ interface PropertyOverviewProps {
 export function PropertyOverview({ property }: PropertyOverviewProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <Card className="bg-[#403E43] border-none">
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle className="text-lg font-medium text-white">
             Units Overview
@@ -17,13 +17,13 @@ export function PropertyOverview({ property }: PropertyOverviewProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-[#9b87f5]" />
+            <Building2 className="h-4 w-4 text-brand-indigo-light" />
             <span className="text-sm text-gray-300">
               {property.units?.length || 0} Total Units
             </span>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <Users className="h-4 w-4 text-[#9b87f5]" />
+            <Users className="h-4 w-4 text-brand-indigo-light" />
             <span className="text-sm text-gray-300">
               {property.units?.filter((unit: Unit) => unit.status === "occupied")
                 .length || 0}{" "}

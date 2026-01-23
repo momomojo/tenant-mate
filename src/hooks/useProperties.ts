@@ -30,10 +30,7 @@ export function useProperties() {
         .or(`created_by.eq.${user.id},property_manager_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching properties:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data || [];
     },
@@ -53,10 +50,7 @@ export function useProperty(propertyId: string | undefined) {
         .eq("id", propertyId)
         .single();
 
-      if (error) {
-        console.error("Error fetching property:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },
@@ -95,10 +89,7 @@ export function useCreateProperty() {
         .select()
         .single();
 
-      if (error) {
-        console.error("Error creating property:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },

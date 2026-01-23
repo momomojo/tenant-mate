@@ -20,7 +20,6 @@ export const useAuthenticatedUser = () => {
         if (error) {
           // Don't throw on session errors - user is just not logged in
           if (error.message.includes('session') || error.message.includes('refresh')) {
-            console.log('No active session');
             setUser(null);
             return;
           }

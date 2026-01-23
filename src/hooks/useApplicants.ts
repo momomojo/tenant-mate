@@ -77,7 +77,6 @@ export function useApplicants(filters: ApplicantsFilters = {}) {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching applicants:", error);
         throw error;
       }
 
@@ -104,7 +103,6 @@ export function useApplicant(applicantId: string | undefined) {
         .single();
 
       if (error) {
-        console.error("Error fetching applicant:", error);
         throw error;
       }
 
@@ -151,7 +149,6 @@ export function useInviteApplicant() {
         .single();
 
       if (error) {
-        console.error("Error inviting applicant:", error);
         throw error;
       }
 
@@ -212,7 +209,6 @@ export function useUpdateApplicant() {
         .single();
 
       if (error) {
-        console.error("Error updating applicant:", error);
         throw error;
       }
 
@@ -236,7 +232,6 @@ export function useDeleteApplicant() {
         .eq("id", applicantId);
 
       if (error) {
-        console.error("Error deleting applicant:", error);
         throw error;
       }
     },
@@ -270,7 +265,6 @@ export function useApplicantCounts(propertyId?: string) {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching applicant counts:", error);
         return {};
       }
 
@@ -286,7 +280,7 @@ export function useApplicantCounts(propertyId?: string) {
         converted: 0,
       };
 
-      (data || []).forEach((a: any) => {
+      (data || []).forEach((a: { status: string; property: unknown }) => {
         counts.total++;
         if (counts[a.status] !== undefined) {
           counts[a.status]++;

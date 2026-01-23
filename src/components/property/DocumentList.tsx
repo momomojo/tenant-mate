@@ -75,10 +75,10 @@ export function DocumentList({
       {documents.map((doc) => (
         <div
           key={doc.id}
-          className="flex items-center justify-between p-4 bg-[#2D2B30] rounded-lg"
+          className="flex items-center justify-between p-4 bg-white/[0.04] rounded-lg"
         >
           <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-[#9b87f5]" />
+            <FileText className="h-5 w-5 text-brand-indigo-light" />
             <div>
               <p className="text-white">{doc.filename}</p>
               <div className="text-sm text-gray-400 space-y-1">

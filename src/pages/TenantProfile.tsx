@@ -92,7 +92,7 @@ const TenantProfile = () => {
   if (isLoadingTenant) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <main className="flex-1 p-8">
             <div className="text-center text-gray-400">Loading tenant data...</div>
@@ -105,7 +105,7 @@ const TenantProfile = () => {
   if (!tenant) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <main className="flex-1 p-8">
             <div className="text-center text-gray-400">Tenant not found</div>
@@ -117,7 +117,7 @@ const TenantProfile = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">

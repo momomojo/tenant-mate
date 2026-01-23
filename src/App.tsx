@@ -43,8 +43,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div className="min-h-screen bg-[#1A1F2C]">
-          <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" /></div>}>
+        <div className="min-h-screen bg-background">
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><div className="h-8 w-8 rounded-full border-2 border-brand-indigo/20 border-t-brand-indigo animate-spin" /></div>}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />

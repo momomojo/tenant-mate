@@ -88,7 +88,7 @@ const PropertyDetails = () => {
   if (isLoadingProperty) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <main className="flex-1 p-8">
             <div className="text-center text-gray-400">
@@ -103,7 +103,7 @@ const PropertyDetails = () => {
   if (!property) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <main className="flex-1 p-8">
             <div className="text-center text-gray-400">Property not found</div>
@@ -115,7 +115,7 @@ const PropertyDetails = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 p-4 sm:p-8">
           <div className="flex flex-col gap-6 sm:gap-8">
@@ -147,7 +147,7 @@ const PropertyDetails = () => {
                 <AddUnitDialog propertyId={id!} onUnitAdded={refetch} />
               </div>
 
-              <Card className="bg-[#403E43] border-none overflow-x-auto">
+              <Card className="glass-card overflow-x-auto">
                 <UnitsTable
                   units={property.units || []}
                   onManageUnit={handleManageUnit}

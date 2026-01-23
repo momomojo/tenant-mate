@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Check, Trash2, X } from "lucide-react";
+import { Bell, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -92,16 +92,16 @@ export function NotificationBell() {
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeDot = (type: string) => {
     switch (type) {
       case "success":
-        return "bg-green-500/20 border-green-500/50";
+        return "bg-status-success";
       case "warning":
-        return "bg-yellow-500/20 border-yellow-500/50";
+        return "bg-status-warning";
       case "error":
-        return "bg-red-500/20 border-red-500/50";
+        return "bg-status-error";
       default:
-        return "bg-blue-500/20 border-blue-500/50";
+        return "bg-brand-indigo";
     }
   };
 
@@ -123,82 +123,78 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-gray-400" />
+        <button className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/[0.12] transition-all duration-200">
+          <Bell className="h-4 w-4 text-muted-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-brand-indigo text-[10px] text-white flex items-center justify-center font-medium shadow-glow-sm">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 bg-[#2A2D35] border-gray-700" align="end">
-        <div className="flex items-center justify-between p-3 border-b border-gray-700">
-          <h3 className="font-semibold text-white">Notifications</h3>
+      <PopoverContent className="w-80 p-0 bg-surface-elevated border-white/[0.08] rounded-xl shadow-glass-lg" align="end">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+          <h3 className="text-sm font-semibold text-white">Notifications</h3>
           {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => markAllAsReadMutation.mutate()}
-              className="text-xs text-gray-400 hover:text-white"
+              className="flex items-center gap-1 text-[10px] font-medium text-brand-indigo-light hover:text-white transition-colors"
             >
-              <Check className="h-3 w-3 mr-1" />
+              <Check className="h-3 w-3" />
               Mark all read
-            </Button>
+            </button>
           )}
         </div>
         <ScrollArea className="h-[300px]">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-gray-400">
-              No notifications
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.06] mb-3">
+                <Bell className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">No notifications</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-700">
+            <div className="divide-y divide-white/[0.04]">
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
                   className={cn(
-                    "p-3 cursor-pointer hover:bg-[#3A3D45] transition-colors",
-                    !notification.read && "bg-[#3A3D45]/50"
+                    "px-4 py-3 cursor-pointer hover:bg-white/[0.03] transition-colors",
+                    !notification.read && "bg-brand-indigo/[0.03]"
                   )}
                 >
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-3">
                     <div
                       className={cn(
-                        "w-2 h-2 rounded-full mt-2 shrink-0",
-                        notification.type === "success" && "bg-green-500",
-                        notification.type === "warning" && "bg-yellow-500",
-                        notification.type === "error" && "bg-red-500",
-                        notification.type === "info" && "bg-blue-500"
+                        "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                        getTypeDot(notification.type)
                       )}
                     />
                     <div
                       className="flex-1 min-w-0"
                       onClick={() => handleNotificationClick(notification)}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <p className={cn(
                           "text-sm truncate",
-                          notification.read ? "text-gray-400" : "text-white font-medium"
+                          notification.read ? "text-muted-foreground" : "text-white font-medium"
                         )}>
                           {notification.title}
                         </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
+                        <button
+                          className="shrink-0 p-1 rounded-md hover:bg-white/[0.06] transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotificationMutation.mutate(notification.id);
                           }}
                         >
-                          <X className="h-3 w-3 text-gray-500 hover:text-white" />
-                        </Button>
+                          <X className="h-3 w-3 text-muted-foreground hover:text-white" />
+                        </button>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                         {notification.message}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">
                         {formatTime(notification.created_at)}
                       </p>
                     </div>

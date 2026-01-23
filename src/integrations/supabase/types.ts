@@ -1780,9 +1780,12 @@ export type Database = {
           amount: number
           company_stripe_account_id: string | null
           created_at: string
+          fee: number | null
           id: string
+          net_amount: number | null
           payment_method: string | null
           processor: string | null
+          processor_transaction_id: string | null
           property_manager_id: string | null
           rent_payment_id: string | null
           routing_attempts: number | null
@@ -1798,9 +1801,12 @@ export type Database = {
           amount: number
           company_stripe_account_id?: string | null
           created_at?: string
+          fee?: number | null
           id?: string
+          net_amount?: number | null
           payment_method?: string | null
           processor?: string | null
+          processor_transaction_id?: string | null
           property_manager_id?: string | null
           rent_payment_id?: string | null
           routing_attempts?: number | null
@@ -1816,9 +1822,12 @@ export type Database = {
           amount?: number
           company_stripe_account_id?: string | null
           created_at?: string
+          fee?: number | null
           id?: string
+          net_amount?: number | null
           payment_method?: string | null
           processor?: string | null
+          processor_transaction_id?: string | null
           property_manager_id?: string | null
           rent_payment_id?: string | null
           routing_attempts?: number | null
@@ -2665,6 +2674,7 @@ export type Database = {
     }
     Functions: {
       calculate_late_fee:
+        | { Args: { p_payment_id: string }; Returns: number }
         | {
             Args: {
               due_date: string
@@ -2711,6 +2721,17 @@ export type Database = {
               p_entity_type: string
               p_event_type: string
               p_ip_address?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_changes?: Json
+              p_entity_id: string
+              p_entity_type: string
+              p_event_type: string
+              p_ip_address?: string
+              p_user_id: string
             }
             Returns: string
           }

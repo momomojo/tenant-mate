@@ -1,141 +1,129 @@
-import { Building2, Home, Users, Wrench, FileText, BarChart, Settings2, DollarSign, MessageSquare, UserPlus, ScrollText, Receipt, ClipboardCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  Building2,
+  Home,
+  Users,
+  Wrench,
+  FileText,
+  BarChart,
+  Settings2,
+  DollarSign,
+  MessageSquare,
+  UserPlus,
+  ScrollText,
+  Receipt,
+  ClipboardCheck,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
+import { queryKeys } from "@/lib/query-keys";
+import { QUERY_STALE_TIME_MS, QUERY_RETRY_COUNT, USER_ROLES } from "@/lib/constants";
 import type { MenuItem } from "@/types";
 
-const fetchUserRole = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("No user found");
-      throw new Error("No user found");
-    }
+const ALL_MENU_ITEMS: MenuItem[] = [
+  {
+    title: "Dashboard",
+    icon: Home,
+    path: "/dashboard",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager, USER_ROLES.tenant],
+  },
+  {
+    title: "Properties",
+    icon: Building2,
+    path: "/properties",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Tenants",
+    icon: Users,
+    path: "/tenants",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Applicants",
+    icon: UserPlus,
+    path: "/applicants",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Leases",
+    icon: ScrollText,
+    path: "/leases",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Maintenance",
+    icon: Wrench,
+    path: "/maintenance",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager, USER_ROLES.tenant],
+  },
+  {
+    title: "Messages",
+    icon: MessageSquare,
+    path: "/messages",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager, USER_ROLES.tenant],
+  },
+  {
+    title: "Documents",
+    icon: FileText,
+    path: "/documents",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager, USER_ROLES.tenant],
+  },
+  {
+    title: "Payments",
+    icon: DollarSign,
+    path: "/payments",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager, USER_ROLES.tenant],
+  },
+  {
+    title: "Reports",
+    icon: BarChart,
+    path: "/reports",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Expenses",
+    icon: Receipt,
+    path: "/expenses",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Inspections",
+    icon: ClipboardCheck,
+    path: "/inspections",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager],
+  },
+  {
+    title: "Settings",
+    icon: Settings2,
+    path: "/settings",
+    roles: [USER_ROLES.admin, USER_ROLES.propertyManager, USER_ROLES.tenant],
+  },
+];
 
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+export const useMenuItems = (): MenuItem[] => {
+  const { user } = useAuthenticatedUser();
 
-    if (error) {
-      console.error("Error fetching user role:", error);
-      throw error;
-    }
+  const { data: userRole } = useQuery({
+    queryKey: queryKeys.userRole(user?.id),
+    queryFn: async () => {
+      if (!user) throw new Error("No user found");
 
-    console.log("Fetched user role:", profile?.role);
-    return profile?.role;
-  } catch (error) {
-    console.error("Error in fetchUserRole:", error);
-    const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError || !session) {
-      toast.error("Session expired. Please login again.");
-      window.location.href = "/auth";
-      throw error;
-    }
-    return fetchUserRole();
-  }
-};
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-export const useMenuItems = () => {
-  const { data: userRole, isError, error } = useQuery({
-    queryKey: ["userRole"],
-    queryFn: fetchUserRole,
-    retry: 1,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+      if (error) throw error;
+      return profile?.role;
+    },
+    enabled: !!user,
+    retry: QUERY_RETRY_COUNT,
+    staleTime: QUERY_STALE_TIME_MS,
   });
 
-  console.log("Current user role:", userRole);
-
-  if (isError) {
-    console.error("Error in useMenuItems:", error);
-  }
-
-  const allMenuItems: MenuItem[] = [
-    {
-      title: "Dashboard",
-      icon: Home,
-      path: "/dashboard",
-      roles: ["admin", "property_manager", "tenant"]
-    },
-    {
-      title: "Properties",
-      icon: Building2,
-      path: "/properties",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Tenants",
-      icon: Users,
-      path: "/tenants",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Applicants",
-      icon: UserPlus,
-      path: "/applicants",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Leases",
-      icon: ScrollText,
-      path: "/leases",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Maintenance",
-      icon: Wrench,
-      path: "/maintenance",
-      roles: ["admin", "property_manager", "tenant"]
-    },
-    {
-      title: "Messages",
-      icon: MessageSquare,
-      path: "/messages",
-      roles: ["admin", "property_manager", "tenant"]
-    },
-    {
-      title: "Documents",
-      icon: FileText,
-      path: "/documents",
-      roles: ["admin", "property_manager", "tenant"]
-    },
-    {
-      title: "Payments",
-      icon: DollarSign,
-      path: "/payments",
-      roles: ["admin", "property_manager", "tenant"]
-    },
-    {
-      title: "Reports",
-      icon: BarChart,
-      path: "/reports",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Expenses",
-      icon: Receipt,
-      path: "/expenses",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Inspections",
-      icon: ClipboardCheck,
-      path: "/inspections",
-      roles: ["admin", "property_manager"]
-    },
-    {
-      title: "Settings",
-      icon: Settings2,
-      path: "/settings",
-      roles: ["admin", "property_manager", "tenant"]
-    },
-  ];
-
-  const filteredItems = allMenuItems.filter(item =>
-    !item.roles || (userRole && item.roles.includes(userRole))
+  return ALL_MENU_ITEMS.filter(
+    (item) => !item.roles || (userRole && item.roles.includes(userRole))
   );
-
-  console.log("Filtered menu items:", filteredItems);
-  return filteredItems;
 };
