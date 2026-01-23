@@ -1,0 +1,20 @@
+# Global code owners
+* @momomojo
+
+# CI/CD configuration
+.github/ @momomojo
+
+# Core application
+src/ @momomojo
+
+# Database and backend
+supabase/ @momomojo
+
+# Infrastructure and config
+vite.config.ts @momomojo
+tsconfig*.json @momomojo
+package.json @momomojo
+
+# E2E tests
+e2e/ @momomojo
+playwright.config.ts @momomojo
