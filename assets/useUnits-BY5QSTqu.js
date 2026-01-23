@@ -1,0 +1,1 @@
+import{u as n}from"./vendor-query-BBSsXiBS.js";import{s}from"./index-De75nt2H.js";function i(r){return n({queryKey:["units",r],queryFn:async()=>{if(!r)return[];const{data:u,error:e}=await s.from("units").select("*").eq("property_id",r).order("unit_number");if(e)throw e;return u||[]},enabled:!!r})}export{i as u};

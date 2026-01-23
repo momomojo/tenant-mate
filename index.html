@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TenantMate - Property Management</title>
+    <meta name="description" content="Property management and tenant portal application" />
+    <meta property="og:title" content="TenantMate" />
+    <meta property="og:description" content="Property management and tenant portal application" />
+    <!-- SPA redirect handling for GitHub Pages -->
+    <script>
+      (function(l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function(s) {
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location))
+    </script>
+    <script type="module" crossorigin src="/tenant-mate/assets/index-De75nt2H.js"></script>
+    <link rel="modulepreload" crossorigin href="/tenant-mate/assets/vendor-react-Cua_SOQ2.js">
+    <link rel="modulepreload" crossorigin href="/tenant-mate/assets/vendor-query-BBSsXiBS.js">
+    <link rel="modulepreload" crossorigin href="/tenant-mate/assets/vendor-ui-Dpa_eFEd.js">
+    <link rel="modulepreload" crossorigin href="/tenant-mate/assets/vendor-supabase-By2EX_dj.js">
+    <link rel="stylesheet" crossorigin href="/tenant-mate/assets/index-BzclLPuI.css">
+  <link rel="manifest" href="/tenant-mate/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/tenant-mate/registerSW.js"></script></head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

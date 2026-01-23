@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/momomojo/Documents/tenant-mate/.claude/hooks/stop-guard-check.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
