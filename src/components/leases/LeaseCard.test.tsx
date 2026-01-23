@@ -21,8 +21,8 @@ describe('LeaseCard', () => {
     tenant_id: 'tenant-1',
     template_id: null,
     status: 'active',
-    lease_start: '2025-01-15',
-    lease_end: '2026-01-15',
+    lease_start: '2025-03-15',
+    lease_end: '2026-03-15',
     monthly_rent: 1500,
     security_deposit: 1500,
     late_fee: 50,
@@ -76,8 +76,8 @@ describe('LeaseCard', () => {
   it('renders lease dates', () => {
     render(<LeaseCard lease={baseLease} {...defaultHandlers} />);
 
-    expect(screen.getByText(/Jan 15, 2025/)).toBeInTheDocument();
-    expect(screen.getByText(/Jan 15, 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Mar 15, 2025/)).toBeInTheDocument();
+    expect(screen.getByText(/Mar 15, 2026/)).toBeInTheDocument();
   });
 
   it('renders Active status badge', () => {
