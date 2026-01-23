@@ -1,10 +1,6 @@
-// Updated January 2026 - Using current Supabase Edge Functions patterns
+// Updated January 2026 - Security hardened
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
 
 interface WebhookPayload {
   type: 'INSERT' | 'UPDATE' | 'DELETE'
@@ -15,10 +11,10 @@ interface WebhookPayload {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsHeaders = getCorsHeaders(req)
+
+  const preflightResponse = handleCorsPreflightOrRestrict(req)
+  if (preflightResponse) return preflightResponse
 
   try {
     const payload: WebhookPayload = await req.json()
@@ -58,7 +54,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Database webhook error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Webhook processing failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

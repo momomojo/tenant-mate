@@ -1,19 +1,23 @@
-// Updated January 2026 - Using current Supabase Edge Functions patterns
+// Updated January 2026 - Security hardened
 import Stripe from 'https://esm.sh/stripe@14?target=denonext'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
+import { validatePaymentAmount, checkRateLimit, safeErrorResponse } from '../_shared/security.ts'
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsHeaders = getCorsHeaders(req)
+
+  // SEC-04: CORS preflight with restricted origins
+  const preflightResponse = handleCorsPreflightOrRestrict(req)
+  if (preflightResponse) return preflightResponse
 
   try {
-    const { amount, unit_id, setup_future_payments } = await req.json()
+    const { unit_id, setup_future_payments } = await req.json()
+
+    // SEC-07: Validate unit_id is provided
+    if (!unit_id) {
+      throw new Error('Unit ID is required')
+    }
 
     // Client for user auth verification
     const supabaseClient = createClient(
@@ -28,7 +32,10 @@ Deno.serve(async (req) => {
     )
 
     // Get the user from the auth header
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Not authenticated')
+    }
     const token = authHeader.replace('Bearer ', '')
     const { data: { user } } = await supabaseClient.auth.getUser(token)
 
@@ -36,13 +43,44 @@ Deno.serve(async (req) => {
       throw new Error('Not authenticated')
     }
 
+    // SEC-06: Rate limit - max 5 checkout sessions per minute per user
+    if (!checkRateLimit(user.id, 5, 60000)) {
+      throw new Error('Rate limit exceeded')
+    }
+
+    // SEC-01: Look up the actual rent amount from the database (don't trust client)
+    const { data: unit, error: unitError } = await supabaseAdmin
+      .from('units')
+      .select('id, monthly_rent, unit_number, property_id')
+      .eq('id', unit_id)
+      .single()
+
+    if (unitError || !unit) {
+      throw new Error('Unit not found')
+    }
+
+    // SEC-01: Verify the user is actually a tenant of this unit
+    const { data: tenantUnit, error: tenantUnitError } = await supabaseAdmin
+      .from('tenant_units')
+      .select('id')
+      .eq('unit_id', unit_id)
+      .eq('tenant_id', user.id)
+      .maybeSingle()
+
+    if (tenantUnitError || !tenantUnit) {
+      throw new Error('You are not assigned to this unit')
+    }
+
+    // SEC-01 + SEC-07: Use the database rent amount, validate it
+    const amount = validatePaymentAmount(unit.monthly_rent)
+
     // Initialize Stripe with current API version
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
       apiVersion: '2024-11-20',
     })
 
-    // Create a new payment record
-    const { data: payment, error: paymentError } = await supabaseClient
+    // Create a new payment record with server-validated amount
+    const { data: payment, error: paymentError } = await supabaseAdmin
       .from('rent_payments')
       .insert({
         tenant_id: user.id,
@@ -58,7 +96,7 @@ Deno.serve(async (req) => {
       throw paymentError
     }
 
-    // Create payment transaction record (using admin client to bypass RLS)
+    // Create payment transaction record
     const { error: transactionError } = await supabaseAdmin
       .from('payment_transactions')
       .insert({
@@ -72,7 +110,7 @@ Deno.serve(async (req) => {
       throw transactionError
     }
 
-    // Get or create customer
+    // Get or create Stripe customer
     let customerId
     const { data: customers } = await stripe.customers.list({
       email: user.email,
@@ -91,7 +129,7 @@ Deno.serve(async (req) => {
       customerId = customer.id
     }
 
-    // Create Stripe checkout session
+    // Create Stripe checkout session with server-validated amount
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -101,8 +139,9 @@ Deno.serve(async (req) => {
             currency: 'usd',
             product_data: {
               name: 'Rent Payment',
+              description: `Unit ${unit.unit_number}`,
             },
-            unit_amount: Math.round(amount * 100), // Convert to cents
+            unit_amount: Math.round(amount * 100), // Convert validated amount to cents
           },
           quantity: 1,
         },
@@ -111,8 +150,8 @@ Deno.serve(async (req) => {
       ...(setup_future_payments && {
         setup_future_usage: 'off_session',
       }),
-      success_url: `${req.headers.get('origin')}/payments?success=true`,
-      cancel_url: `${req.headers.get('origin')}/payments?canceled=true`,
+      success_url: `${req.headers.get('origin')}/tenant-mate/payments?success=true`,
+      cancel_url: `${req.headers.get('origin')}/tenant-mate/payments?canceled=true`,
       metadata: {
         payment_id: payment.id,
         tenant_id: user.id,
@@ -125,13 +164,6 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    )
+    return safeErrorResponse(error, corsHeaders)
   }
 })

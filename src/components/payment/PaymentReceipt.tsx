@@ -23,10 +23,17 @@ interface PaymentReceiptProps {
 export function PaymentReceipt({ payment }: PaymentReceiptProps) {
   const handleDownload = async () => {
     try {
-      // Get the Supabase URL and session for authenticated request
+      // Validate user with server before proceeding
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please log in to download receipt");
+        return;
+      }
+
+      // getSession() is needed here for the access_token used in the Authorization header
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Please log in to download receipt");
+        toast.error("Session expired. Please log in again.");
         return;
       }
 

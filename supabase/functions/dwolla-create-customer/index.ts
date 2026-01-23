@@ -1,10 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
 
 // Dwolla API configuration
 const DWOLLA_ENV = Deno.env.get("DWOLLA_ENV") || "sandbox"; // sandbox or production
@@ -96,10 +92,10 @@ async function createDwollaCustomer(
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req)
+
+  const preflightResponse = handleCorsPreflightOrRestrict(req)
+  if (preflightResponse) return preflightResponse
 
   try {
     // Verify Dwolla credentials are configured
@@ -182,9 +178,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Error creating Dwolla customer:", error);
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
+      JSON.stringify({ error: "Failed to create customer" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

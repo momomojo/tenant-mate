@@ -80,7 +80,26 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    console.log('Processing webhook event:', event.type)
+    console.log('Processing webhook event:', event.type, event.id)
+
+    // SEC-03: Idempotency check - prevent duplicate event processing
+    const { data: existingEvent } = await supabaseClient
+      .from('processed_webhook_events')
+      .select('id')
+      .eq('event_id', event.id)
+      .maybeSingle()
+
+    if (existingEvent) {
+      console.log('Event already processed, skipping:', event.id)
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Record this event as being processed
+    await supabaseClient
+      .from('processed_webhook_events')
+      .insert({ event_id: event.id, event_type: event.type })
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -141,17 +160,19 @@ Deno.serve(async (req) => {
       }
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object
-        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id)
-        const paymentId = session.metadata?.payment_id
+        // Look up the checkout session by payment_intent to get our metadata
+        const { data: sessions } = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntent.id,
+          limit: 1,
+        })
+        const paymentId = sessions?.[0]?.metadata?.payment_id
 
         if (paymentId) {
-          // Update rent_payments status
           await supabaseClient
             .from('rent_payments')
             .update({ status: 'failed' })
             .eq('id', paymentId)
 
-          // Update payment_transactions status
           await supabaseClient
             .from('payment_transactions')
             .update({
@@ -164,11 +185,13 @@ Deno.serve(async (req) => {
       }
       case 'payment_intent.processing': {
         const paymentIntent = event.data.object
-        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id)
-        const paymentId = session.metadata?.payment_id
+        const { data: sessions } = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntent.id,
+          limit: 1,
+        })
+        const paymentId = sessions?.[0]?.metadata?.payment_id
 
         if (paymentId) {
-          // Update both tables to processing status
           await supabaseClient
             .from('rent_payments')
             .update({ status: 'processing' })
@@ -186,12 +209,13 @@ Deno.serve(async (req) => {
       }
       case 'charge.refunded': {
         const charge = event.data.object
-        const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent as string)
-        const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata?.session_id)
-        const paymentId = session.metadata?.payment_id
+        const { data: sessions } = await stripe.checkout.sessions.list({
+          payment_intent: charge.payment_intent as string,
+          limit: 1,
+        })
+        const paymentId = sessions?.[0]?.metadata?.payment_id
 
         if (paymentId) {
-          // Update both tables to refunded status
           await supabaseClient
             .from('rent_payments')
             .update({ status: 'refunded' })
@@ -201,7 +225,7 @@ Deno.serve(async (req) => {
             .from('payment_transactions')
             .update({
               status: 'refunded',
-              stripe_payment_intent_id: paymentIntent.id
+              stripe_payment_intent_id: charge.payment_intent as string
             })
             .eq('rent_payment_id', paymentId)
         }
@@ -215,7 +239,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error('Error processing webhook:', err)
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: 'Webhook processing failed' }),
       {
         status: 400,
         headers: { 'Content-Type': 'application/json' },

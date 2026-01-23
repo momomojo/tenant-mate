@@ -1,10 +1,7 @@
-// Updated January 2026 - Using current Supabase Edge Functions patterns
+// Updated January 2026 - Security hardened
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
+import { escapeHtml } from '../_shared/security.ts'
 
 interface EmailPayload {
   type: 'maintenance_created' | 'maintenance_status_changed' | 'payment_received' | 'tenant_assigned'
@@ -15,64 +12,64 @@ interface EmailPayload {
 
 const emailTemplates = {
   maintenance_created: (data: Record<string, unknown>) => ({
-    subject: `New Maintenance Request: ${data.title}`,
+    subject: `New Maintenance Request: ${escapeHtml(String(data.title || ''))}`,
     html: `
       <h2>New Maintenance Request Submitted</h2>
       <p>A new maintenance request has been submitted for your property.</p>
       <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <p><strong>Title:</strong> ${data.title}</p>
-        <p><strong>Description:</strong> ${data.description}</p>
-        <p><strong>Priority:</strong> ${data.priority}</p>
-        <p><strong>Property:</strong> ${data.propertyName}</p>
-        <p><strong>Unit:</strong> ${data.unitNumber}</p>
-        <p><strong>Submitted by:</strong> ${data.tenantName}</p>
+        <p><strong>Title:</strong> ${escapeHtml(String(data.title || ''))}</p>
+        <p><strong>Description:</strong> ${escapeHtml(String(data.description || ''))}</p>
+        <p><strong>Priority:</strong> ${escapeHtml(String(data.priority || ''))}</p>
+        <p><strong>Property:</strong> ${escapeHtml(String(data.propertyName || ''))}</p>
+        <p><strong>Unit:</strong> ${escapeHtml(String(data.unitNumber || ''))}</p>
+        <p><strong>Submitted by:</strong> ${escapeHtml(String(data.tenantName || ''))}</p>
       </div>
       <p>Please log in to your dashboard to review and respond to this request.</p>
     `,
   }),
 
   maintenance_status_changed: (data: Record<string, unknown>) => ({
-    subject: `Maintenance Request Update: ${data.title}`,
+    subject: `Maintenance Request Update: ${escapeHtml(String(data.title || ''))}`,
     html: `
       <h2>Maintenance Request Status Updated</h2>
       <p>Your maintenance request status has been updated.</p>
       <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <p><strong>Title:</strong> ${data.title}</p>
-        <p><strong>New Status:</strong> <span style="color: ${getStatusColor(data.status as string)}; font-weight: bold;">${formatStatus(data.status as string)}</span></p>
-        <p><strong>Property:</strong> ${data.propertyName}</p>
-        <p><strong>Unit:</strong> ${data.unitNumber}</p>
+        <p><strong>Title:</strong> ${escapeHtml(String(data.title || ''))}</p>
+        <p><strong>New Status:</strong> <span style="color: ${getStatusColor(String(data.status || ''))}; font-weight: bold;">${formatStatus(String(data.status || ''))}</span></p>
+        <p><strong>Property:</strong> ${escapeHtml(String(data.propertyName || ''))}</p>
+        <p><strong>Unit:</strong> ${escapeHtml(String(data.unitNumber || ''))}</p>
       </div>
       <p>Log in to your dashboard to view more details.</p>
     `,
   }),
 
   payment_received: (data: Record<string, unknown>) => ({
-    subject: `Payment Received - $${data.amount}`,
+    subject: `Payment Received - $${Number(data.amount || 0).toFixed(2)}`,
     html: `
       <h2>Payment Confirmation</h2>
       <p>We have received your rent payment. Thank you!</p>
       <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <p><strong>Amount:</strong> $${data.amount}</p>
-        <p><strong>Payment Date:</strong> ${data.paymentDate}</p>
-        <p><strong>Property:</strong> ${data.propertyName}</p>
-        <p><strong>Unit:</strong> ${data.unitNumber}</p>
-        <p><strong>Invoice #:</strong> ${data.invoiceNumber || 'N/A'}</p>
+        <p><strong>Amount:</strong> $${Number(data.amount || 0).toFixed(2)}</p>
+        <p><strong>Payment Date:</strong> ${escapeHtml(String(data.paymentDate || ''))}</p>
+        <p><strong>Property:</strong> ${escapeHtml(String(data.propertyName || ''))}</p>
+        <p><strong>Unit:</strong> ${escapeHtml(String(data.unitNumber || ''))}</p>
+        <p><strong>Invoice #:</strong> ${escapeHtml(String(data.invoiceNumber || 'N/A'))}</p>
       </div>
       <p>A receipt has been generated and is available in your dashboard.</p>
     `,
   }),
 
   tenant_assigned: (data: Record<string, unknown>) => ({
-    subject: `Welcome to ${data.propertyName}!`,
+    subject: `Welcome to ${escapeHtml(String(data.propertyName || ''))}!`,
     html: `
       <h2>Welcome to Your New Home!</h2>
       <p>You have been assigned to a new unit. Here are your details:</p>
       <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <p><strong>Property:</strong> ${data.propertyName}</p>
-        <p><strong>Unit:</strong> ${data.unitNumber}</p>
-        <p><strong>Monthly Rent:</strong> $${data.monthlyRent}</p>
-        <p><strong>Lease Start:</strong> ${data.leaseStart}</p>
-        <p><strong>Lease End:</strong> ${data.leaseEnd}</p>
+        <p><strong>Property:</strong> ${escapeHtml(String(data.propertyName || ''))}</p>
+        <p><strong>Unit:</strong> ${escapeHtml(String(data.unitNumber || ''))}</p>
+        <p><strong>Monthly Rent:</strong> $${Number(data.monthlyRent || 0).toFixed(2)}</p>
+        <p><strong>Lease Start:</strong> ${escapeHtml(String(data.leaseStart || ''))}</p>
+        <p><strong>Lease End:</strong> ${escapeHtml(String(data.leaseEnd || ''))}</p>
       </div>
       <p>Log in to your tenant portal to:</p>
       <ul>
@@ -100,10 +97,10 @@ function formatStatus(status: string): string {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsHeaders = getCorsHeaders(req)
+
+  const preflightResponse = handleCorsPreflightOrRestrict(req)
+  if (preflightResponse) return preflightResponse
 
   try {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')

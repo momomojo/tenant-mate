@@ -22,24 +22,15 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
 
   const checkAuth = useCallback(async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { user }, error } = await supabase.auth.getUser();
 
       if (error) {
         console.error('Auth error:', error);
         throw error;
       }
 
-      if (!session) {
+      if (!user) {
         toast.error("Please login to make a payment");
-        navigate("/auth");
-        return;
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        console.error('User verification error:', userError);
-        await supabase.auth.signOut();
         navigate("/auth");
         return;
       }
@@ -154,8 +145,8 @@ export function PaymentForm({ unitId, amount: defaultAmount }: PaymentFormProps)
     try {
       setIsLoading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         throw new Error('No active session');
       }
 

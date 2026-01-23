@@ -1,10 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
 
 const DWOLLA_ENV = Deno.env.get("DWOLLA_ENV") || "sandbox";
 const DWOLLA_KEY = Deno.env.get("DWOLLA_KEY");
@@ -98,9 +94,10 @@ async function initiateMicroDeposits(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req)
+
+  const preflightResponse = handleCorsPreflightOrRestrict(req)
+  if (preflightResponse) return preflightResponse
 
   try {
     if (!DWOLLA_KEY || !DWOLLA_SECRET) {
@@ -219,9 +216,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Error adding funding source:", error);
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
+      JSON.stringify({ error: "Failed to add funding source" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -80,8 +80,8 @@ const Settings = () => {
   // Create Dwolla customer mutation
   const createDwollaCustomerMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       const response = await supabase.functions.invoke("dwolla-create-customer", {
         body: {
@@ -107,8 +107,8 @@ const Settings = () => {
   // Add Dwolla bank account mutation
   const addDwollaBankMutation = useMutation({
     mutationFn: async (bankData: typeof dwollaBankForm) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       const response = await supabase.functions.invoke("dwolla-add-funding-source", {
         body: bankData,

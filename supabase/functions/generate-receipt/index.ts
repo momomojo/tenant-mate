@@ -1,15 +1,13 @@
-// Updated January 2026 - Using current Supabase Edge Functions patterns
+// Updated January 2026 - Security hardened
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
+import { escapeHtml, safeErrorResponse } from '../_shared/security.ts'
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsHeaders = getCorsHeaders(req)
+
+  const preflightResponse = handleCorsPreflightOrRestrict(req)
+  if (preflightResponse) return preflightResponse
 
   try {
     const url = new URL(req.url)
@@ -135,32 +133,32 @@ Deno.serve(async (req) => {
         <body>
           <div class="receipt">
             <div class="header">
-              <div class="logo">${payment.unit.property.name}</div>
-              <div class="receipt-id">Receipt #${payment.invoice_number}</div>
+              <div class="logo">${escapeHtml(payment.unit.property.name)}</div>
+              <div class="receipt-id">Receipt #${escapeHtml(String(payment.invoice_number))}</div>
             </div>
 
             <div class="details">
               <div class="section">
                 <div class="section-title">Property Details</div>
-                <p>${payment.unit.property.address}</p>
-                <p>Unit ${payment.unit.unit_number}</p>
+                <p>${escapeHtml(payment.unit.property.address)}</p>
+                <p>Unit ${escapeHtml(payment.unit.unit_number)}</p>
               </div>
 
               <div class="section">
                 <div class="section-title">Tenant Information</div>
-                <p>${payment.tenant.first_name} ${payment.tenant.last_name}</p>
-                <p>${payment.tenant.email}</p>
+                <p>${escapeHtml(payment.tenant.first_name)} ${escapeHtml(payment.tenant.last_name)}</p>
+                <p>${escapeHtml(payment.tenant.email)}</p>
               </div>
 
               <div class="section">
                 <div class="section-title">Payment Details</div>
-                <p>Date: ${paymentDate}</p>
-                <p>Payment Method: ${payment.payment_method || 'N/A'}</p>
-                <p>Status: ${payment.status}</p>
+                <p>Date: ${escapeHtml(paymentDate)}</p>
+                <p>Payment Method: ${escapeHtml(payment.payment_method || 'N/A')}</p>
+                <p>Status: ${escapeHtml(payment.status)}</p>
               </div>
 
               <div class="amount">
-                Amount Paid: $${payment.amount.toFixed(2)}
+                Amount Paid: $${Number(payment.amount).toFixed(2)}
               </div>
             </div>
 
@@ -183,13 +181,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error generating receipt:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    )
+    return safeErrorResponse(error, corsHeaders)
   }
 })

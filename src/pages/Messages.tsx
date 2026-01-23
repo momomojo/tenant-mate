@@ -38,8 +38,8 @@ export default function Messages() {
   // Auth check
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         navigate("/auth", { replace: true });
       }
     };
