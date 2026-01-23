@@ -24,9 +24,9 @@ describe('ApplicantCard', () => {
     converted_tenant_id: null,
     converted_at: null,
     invited_by: 'user-123',
-    invited_at: '2025-01-01T00:00:00Z',
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z',
+    invited_at: '2025-01-15T12:00:00Z',
+    created_at: '2025-01-15T12:00:00Z',
+    updated_at: '2025-01-15T12:00:00Z',
     property: { id: 'prop-1', name: 'Sunset Apartments', address: '123 Main St' },
   };
 
@@ -87,7 +87,7 @@ describe('ApplicantCard', () => {
     const submittedApplicant = {
       ...baseApplicant,
       status: 'submitted' as const,
-      application_submitted_at: '2025-01-05T10:00:00Z',
+      application_submitted_at: '2025-01-20T12:00:00Z',
     };
 
     render(<ApplicantCard applicant={submittedApplicant} />);
@@ -132,13 +132,13 @@ describe('ApplicantCard', () => {
   it('renders invited date', () => {
     render(<ApplicantCard applicant={baseApplicant} />);
 
-    expect(screen.getByText(/Invited Jan 1, 2025/)).toBeInTheDocument();
+    expect(screen.getByText(/Invited Jan 15, 2025/)).toBeInTheDocument();
   });
 
   it('renders submitted date when available', () => {
     const submitted = {
       ...baseApplicant,
-      application_submitted_at: '2025-01-05T10:00:00Z',
+      application_submitted_at: '2025-01-20T12:00:00Z',
     };
 
     render(<ApplicantCard applicant={submitted} />);
