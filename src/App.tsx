@@ -1,29 +1,34 @@
 
+import { lazy, Suspense } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { Routes, Route } from "react-router-dom";
-import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Properties from "@/pages/Properties";
-import PropertyDetails from "@/pages/PropertyDetails";
-import Tenants from "@/pages/Tenants";
-import TenantProfile from "@/pages/TenantProfile";
-import NotFound from "@/pages/NotFound";
-import Index from "@/pages/Index";
-import Documents from "@/pages/Documents";
-import Payments from "@/pages/Payments";
-import StripeOnboarding from "@/pages/StripeOnboarding";
-import Maintenance from "@/pages/Maintenance";
-import Reports from "@/pages/Reports";
-import Settings from "@/pages/Settings";
-import Messages from "@/pages/Messages";
-import Applicants from "@/pages/Applicants";
-import Leases from "@/pages/Leases";
-import Expenses from "@/pages/Expenses";
-import Inspections from "@/pages/Inspections";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+
+// Eager-loaded pages (entry points)
+import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
+import NotFound from "@/pages/NotFound";
+
+// Lazy-loaded pages
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Properties = lazy(() => import("@/pages/Properties"));
+const PropertyDetails = lazy(() => import("@/pages/PropertyDetails"));
+const Tenants = lazy(() => import("@/pages/Tenants"));
+const TenantProfile = lazy(() => import("@/pages/TenantProfile"));
+const Documents = lazy(() => import("@/pages/Documents"));
+const Payments = lazy(() => import("@/pages/Payments"));
+const StripeOnboarding = lazy(() => import("@/pages/StripeOnboarding"));
+const Maintenance = lazy(() => import("@/pages/Maintenance"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const Messages = lazy(() => import("@/pages/Messages"));
+const Applicants = lazy(() => import("@/pages/Applicants"));
+const Leases = lazy(() => import("@/pages/Leases"));
+const Expenses = lazy(() => import("@/pages/Expenses"));
+const Inspections = lazy(() => import("@/pages/Inspections"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,27 +44,29 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <div className="min-h-screen bg-[#1A1F2C]">
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/properties" element={<Properties />} />
-            <Route path="/properties/:id" element={<PropertyDetails />} />
-            <Route path="/tenants" element={<Tenants />} />
-            <Route path="/tenants/:id" element={<TenantProfile />} />
-            <Route path="/applicants" element={<Applicants />} />
-            <Route path="/leases" element={<Leases />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/stripe-onboarding" element={<StripeOnboarding />} />
-            <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/inspections" element={<Inspections />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" /></div>}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/properties" element={<Properties />} />
+              <Route path="/properties/:id" element={<PropertyDetails />} />
+              <Route path="/tenants" element={<Tenants />} />
+              <Route path="/tenants/:id" element={<TenantProfile />} />
+              <Route path="/applicants" element={<Applicants />} />
+              <Route path="/leases" element={<Leases />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/stripe-onboarding" element={<StripeOnboarding />} />
+              <Route path="/maintenance" element={<Maintenance />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/inspections" element={<Inspections />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
           <Toaster />
           <SonnerToaster position="top-right" richColors />
           <OfflineIndicator />

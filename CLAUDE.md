@@ -69,7 +69,12 @@ Edge Functions are in `supabase/functions/`. They use Deno and import from esm.s
 
 - `profiles` - User profiles linked to auth.users (landlords and tenants)
 - `properties` → `units` → `tenant_units` (property hierarchy)
+- `applicants` - Rental applicant tracking with status workflow
+- `leases` - Lease agreements with terms and documents
+- `expenses` - Property expense tracking by category
+- `inspections` → `inspection_items` → `inspection_photos` (property condition reports)
 - `rent_payments` → `payment_transactions` (payment tracking)
+- `conversations` → `messages` (messaging system)
 - `company_stripe_accounts` / `automatic_payments` (Stripe integration)
 - `maintenance_requests`, `documents` (operational data)
 
@@ -90,10 +95,10 @@ Defined in `App.tsx`:
 
 ## Environment Variables
 
-Required in `.env`:
+Required in `.env` (see `.env.example`):
 ```
 VITE_SUPABASE_URL=https://xbtuztzcgxhzvsvfcjvk.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon_key>
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable_key>
 VITE_STRIPE_PUBLISHABLE_KEY=<stripe_key>
 ```
 

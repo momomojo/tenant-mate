@@ -111,37 +111,10 @@ export function ConvertApplicantDialog({
             .eq("id", tenantId);
         }
       } else {
-        // Create a new profile for the applicant
-        // Note: In a real app, you'd send an invite email or create account via admin
-        const { data: newProfile, error: createError } = await supabase
-          .from("profiles")
-          .insert({
-            id: crypto.randomUUID(), // Generate new ID
-            email: applicant.email,
-            first_name: applicant.first_name,
-            last_name: applicant.last_name,
-            phone: applicant.phone,
-            role: "tenant",
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          // Profile might already exist - try to find by email again
-          const { data: retryProfile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("email", applicant.email)
-            .single();
-
-          if (retryProfile) {
-            tenantId = retryProfile.id;
-          } else {
-            throw new Error("Could not create or find tenant profile");
-          }
-        } else {
-          tenantId = newProfile.id;
-        }
+        // No account exists - applicant must sign up first
+        throw new Error(
+          `No account found for ${applicant.email}. The applicant must create an account (sign up) before they can be converted to a tenant.`
+        );
       }
 
       // Step 2: Update unit status
@@ -212,7 +185,7 @@ export function ConvertApplicantDialog({
       console.error("Error converting applicant:", error);
       toast({
         title: "Conversion failed",
-        description: "Could not convert applicant. Please try again.",
+        description: error instanceof Error ? error.message : "Could not convert applicant. Please try again.",
         variant: "destructive",
       });
     } finally {
