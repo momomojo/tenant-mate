@@ -6,6 +6,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: '/tenant-mate/',
   server: {
     host: "::",
     port: 8080,
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => ({
         theme_color: '#1A1F2C',
         background_color: '#1A1F2C',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/tenant-mate/',
         icons: [
           {
             src: 'pwa-192x192.png',

@@ -12,8 +12,11 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "predeploy": "bun run build",
+    "deploy": "gh-pages -d dist"
   },
+  "homepage": "https://momomojo.github.io/tenant-mate",
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -90,6 +93,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
+    "gh-pages": "^6.3.0",
     "globals": "^15.9.0",
     "jsdom": "^27.4.0",
     "lovable-tagger": "^1.1.7",
