@@ -3,17 +3,19 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 
-// Mock Supabase
-const mockFrom = vi.fn();
-const mockChannel = vi.fn();
-const mockRemoveChannel = vi.fn();
-const mockRpc = vi.fn();
-const mockStorage = {
-  from: vi.fn().mockReturnValue({
-    upload: vi.fn().mockResolvedValue({ error: null }),
-    getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://example.com/file.pdf' } }),
-  }),
-};
+// Mock Supabase - use vi.hoisted to ensure these are available when vi.mock factory runs
+const { mockFrom, mockChannel, mockRemoveChannel, mockRpc, mockStorage } = vi.hoisted(() => ({
+  mockFrom: vi.fn(),
+  mockChannel: vi.fn(),
+  mockRemoveChannel: vi.fn(),
+  mockRpc: vi.fn(),
+  mockStorage: {
+    from: vi.fn().mockReturnValue({
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://example.com/file.pdf' } }),
+    }),
+  },
+}));
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
@@ -29,9 +31,8 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 // Mock useAuthenticatedUser
-const mockUser = { id: 'user-123', email: 'test@example.com' };
 vi.mock('@/hooks/useAuthenticatedUser', () => ({
-  useAuthenticatedUser: () => ({ user: mockUser, isLoading: false, error: null }),
+  useAuthenticatedUser: () => ({ user: { id: 'user-123', email: 'test@example.com' }, isLoading: false, error: null }),
 }));
 
 import { useMessages, useSendMessage, useMarkMessagesRead, useUploadMessageAttachment } from '../useMessages';
