@@ -85,7 +85,8 @@ export interface TenantProfile {
 }
 
 /** Format a tenant profile into a display label */
-export function formatTenantLabel(tenant: TenantProfile): string {
+export function formatTenantLabel(tenant: TenantProfile | null | undefined): string {
+  if (!tenant) return "No Tenant";
   const name = [tenant.first_name, tenant.last_name].filter(Boolean).join(" ");
   if (name) return name;
   if (tenant.email) return tenant.email;
