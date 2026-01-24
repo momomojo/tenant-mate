@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeases, useUpdateLease, useDeleteLease, useLeaseCounts } from "@/hooks/useLeases";
+import { useLeases, useUpdateLease, useDeleteLease, useLeaseCounts, useSendForSignature } from "@/hooks/useLeases";
+import { SignLeaseDialog } from "@/components/leases/SignLeaseDialog";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -28,22 +29,25 @@ export default function Leases() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [propertyFilter, setPropertyFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("__all__");
+  const [statusFilter, setStatusFilter] = useState("__all__");
   const [activeTab, setActiveTab] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaseToDelete, setLeaseToDelete] = useState<string | null>(null);
   const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
   const [leaseToTerminate, setLeaseToTerminate] = useState<string | null>(null);
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [signatureIdToSign, setSignatureIdToSign] = useState<string | null>(null);
 
   const { data: leases, isLoading } = useLeases({
-    propertyId: propertyFilter || undefined,
-    status: statusFilter || undefined,
+    propertyId: propertyFilter === "__all__" ? undefined : propertyFilter,
+    status: statusFilter === "__all__" ? undefined : statusFilter,
   });
 
-  const { data: counts } = useLeaseCounts(propertyFilter || undefined);
+  const { data: counts } = useLeaseCounts(propertyFilter === "__all__" ? undefined : propertyFilter);
   const { mutate: updateLease } = useUpdateLease();
   const { mutate: deleteLease } = useDeleteLease();
+  const sendForSignatureMutation = useSendForSignature();
 
   // Auth check
   useEffect(() => {
@@ -73,15 +77,33 @@ export default function Leases() {
   };
 
   const handleSendForSignature = (leaseId: string) => {
-    updateLease(
-      { leaseId, status: "pending", signatureStatus: "sent" },
+    const lease = leases?.find(l => l.id === leaseId);
+    if (!lease?.tenant?.email || !lease?.tenant?.first_name) {
+      toast({
+        title: "Missing tenant info",
+        description: "The tenant must have an email and name to send for signature.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const signerName = `${lease.tenant.first_name || ""} ${lease.tenant.last_name || ""}`.trim();
+
+    sendForSignatureMutation.mutate(
+      { leaseId, signerEmail: lease.tenant.email, signerName },
       {
         onSuccess: () => {
           toast({
             title: "Sent for signature",
-            description: "The lease has been sent to the tenant for signature.",
+            description: "The lease has been sent to the tenant via Dropbox Sign.",
           });
-          // TODO: Integrate with e-signature provider (DocuSign/HelloSign)
+        },
+        onError: (error: Error) => {
+          toast({
+            title: "Failed to send",
+            description: error.message,
+            variant: "destructive",
+          });
         },
       }
     );
@@ -353,6 +375,17 @@ export default function Leases() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Sign Lease Dialog (embedded Dropbox Sign) */}
+      <SignLeaseDialog
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        signatureId={signatureIdToSign}
+        clientId={import.meta.env.VITE_DROPBOX_SIGN_CLIENT_ID || ""}
+        onSignComplete={() => {
+          // Refresh leases to show updated status
+        }}
+      />
     </SidebarProvider>
   );
 }

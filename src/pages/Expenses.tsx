@@ -288,14 +288,14 @@ export default function Expenses() {
                           control={form.control}
                           render={({ field }) => (
                             <Select
-                              value={field.value || ""}
-                              onValueChange={(v) => field.onChange(v || undefined)}
+                              value={field.value || "__none__"}
+                              onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="All units / Property-wide" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Property-wide</SelectItem>
+                                <SelectItem value="__none__">Property-wide</SelectItem>
                                 {units.map((u) => (
                                   <SelectItem key={u.id} value={u.id}>
                                     Unit {u.unit_number}
@@ -465,9 +465,9 @@ export default function Expenses() {
                 <span className="text-sm font-medium">Filters:</span>
               </div>
               <Select
-                value={filters.propertyId || ""}
+                value={filters.propertyId || "__all__"}
                 onValueChange={(v) =>
-                  setFilters({ ...filters, propertyId: v || undefined })
+                  setFilters({ ...filters, propertyId: v === "__all__" ? undefined : v })
                 }
               >
                 <SelectTrigger className="w-[180px]">
@@ -475,7 +475,7 @@ export default function Expenses() {
                   <SelectValue placeholder="All Properties" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Properties</SelectItem>
+                  <SelectItem value="__all__">All Properties</SelectItem>
                   {properties?.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
@@ -485,11 +485,11 @@ export default function Expenses() {
               </Select>
 
               <Select
-                value={filters.category || ""}
+                value={filters.category || "__all__"}
                 onValueChange={(v) =>
                   setFilters({
                     ...filters,
-                    category: (v as ExpenseCategory) || undefined,
+                    category: v === "__all__" ? undefined : (v as ExpenseCategory),
                   })
                 }
               >
@@ -498,7 +498,7 @@ export default function Expenses() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="__all__">All Categories</SelectItem>
                   {Object.entries(expenseCategoryConfig).map(([key, config]) => (
                     <SelectItem key={key} value={key}>
                       {config.label}

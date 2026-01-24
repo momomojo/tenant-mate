@@ -21,7 +21,7 @@ interface ApplicantFiltersProps {
 }
 
 const statusOptions = [
-  { value: "", label: "All Statuses" },
+  { value: "__all__", label: "All Statuses" },
   { value: "invited", label: "Invited" },
   { value: "started", label: "In Progress" },
   { value: "submitted", label: "Submitted" },
@@ -72,7 +72,7 @@ export function ApplicantFilters({
           <SelectValue placeholder="All Properties" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Properties</SelectItem>
+          <SelectItem value="__all__">All Properties</SelectItem>
           {properties?.map((property) => (
             <SelectItem key={property.id} value={property.id}>
               {property.name}

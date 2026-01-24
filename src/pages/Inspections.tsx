@@ -425,9 +425,9 @@ export default function Inspections() {
                 <span className="text-sm font-medium">Filters:</span>
               </div>
               <Select
-                value={filters.propertyId || ""}
+                value={filters.propertyId || "__all__"}
                 onValueChange={(v) =>
-                  setFilters({ ...filters, propertyId: v || undefined })
+                  setFilters({ ...filters, propertyId: v === "__all__" ? undefined : v })
                 }
               >
                 <SelectTrigger className="w-[180px]">
@@ -435,7 +435,7 @@ export default function Inspections() {
                   <SelectValue placeholder="All Properties" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Properties</SelectItem>
+                  <SelectItem value="__all__">All Properties</SelectItem>
                   {properties?.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
@@ -445,11 +445,11 @@ export default function Inspections() {
               </Select>
 
               <Select
-                value={filters.type || ""}
+                value={filters.type || "__all__"}
                 onValueChange={(v) =>
                   setFilters({
                     ...filters,
-                    type: (v as InspectionType) || undefined,
+                    type: v === "__all__" ? undefined : (v as InspectionType),
                   })
                 }
               >
@@ -458,7 +458,7 @@ export default function Inspections() {
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="__all__">All Types</SelectItem>
                   {Object.entries(inspectionTypeConfig).map(([key, config]) => (
                     <SelectItem key={key} value={key}>
                       {config.label}
@@ -468,11 +468,11 @@ export default function Inspections() {
               </Select>
 
               <Select
-                value={filters.status || ""}
+                value={filters.status || "__all__"}
                 onValueChange={(v) =>
                   setFilters({
                     ...filters,
-                    status: (v as InspectionStatus) || undefined,
+                    status: v === "__all__" ? undefined : (v as InspectionStatus),
                   })
                 }
               >
@@ -481,7 +481,7 @@ export default function Inspections() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="__all__">All Statuses</SelectItem>
                   {Object.entries(inspectionStatusConfig).map(([key, config]) => (
                     <SelectItem key={key} value={key}>
                       {config.label}

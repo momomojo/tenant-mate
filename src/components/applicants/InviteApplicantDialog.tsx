@@ -32,7 +32,7 @@ interface InviteApplicantDialogProps {
 export function InviteApplicantDialog({ defaultPropertyId, onSuccess }: InviteApplicantDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(defaultPropertyId || "");
-  const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("__none__");
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -97,7 +97,7 @@ export function InviteApplicantDialog({ defaultPropertyId, onSuccess }: InviteAp
     try {
       await inviteApplicant({
         propertyId: selectedProperty,
-        unitId: selectedUnit || undefined,
+        unitId: selectedUnit === "__none__" ? undefined : selectedUnit,
         email,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
@@ -165,7 +165,7 @@ export function InviteApplicantDialog({ defaultPropertyId, onSuccess }: InviteAp
                 <SelectValue placeholder={selectedProperty ? "Select a unit" : "Select a property first"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No specific unit</SelectItem>
+                <SelectItem value="__none__">No specific unit</SelectItem>
                 {units?.map((unit) => (
                   <SelectItem key={unit.id} value={unit.id}>
                     Unit {unit.unit_number}

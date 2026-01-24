@@ -75,7 +75,7 @@ export function CreateLeaseDialog() {
       propertyId: "",
       unitId: "",
       tenantId: "",
-      templateId: "",
+      templateId: "__none__",
       leaseStart: format(new Date(), "yyyy-MM-dd"),
       leaseEnd: format(addYears(new Date(), 1), "yyyy-MM-dd"),
       monthlyRent: 0,
@@ -143,7 +143,7 @@ export function CreateLeaseDialog() {
         propertyId: data.propertyId,
         unitId: data.unitId,
         tenantId: data.tenantId,
-        templateId: data.templateId || undefined,
+        templateId: data.templateId === "__none__" ? undefined : data.templateId,
         leaseStart: data.leaseStart,
         leaseEnd: data.leaseEnd,
         monthlyRent: data.monthlyRent,
@@ -315,7 +315,7 @@ export function CreateLeaseDialog() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No template</SelectItem>
+                      <SelectItem value="__none__">No template</SelectItem>
                       {templates?.map((template) => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}

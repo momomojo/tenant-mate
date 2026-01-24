@@ -17,7 +17,7 @@ interface LeaseFiltersProps {
 }
 
 const statusOptions = [
-  { value: "", label: "All Statuses" },
+  { value: "__all__", label: "All Statuses" },
   { value: "draft", label: "Draft" },
   { value: "pending", label: "Pending Signature" },
   { value: "signed", label: "Signed" },
@@ -42,7 +42,7 @@ export function LeaseFilters({
           <SelectValue placeholder="All Properties" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Properties</SelectItem>
+          <SelectItem value="__all__">All Properties</SelectItem>
           {properties?.map((property) => (
             <SelectItem key={property.id} value={property.id}>
               {property.name}

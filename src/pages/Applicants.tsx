@@ -29,8 +29,8 @@ export default function Applicants() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [propertyFilter, setPropertyFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("__all__");
+  const [statusFilter, setStatusFilter] = useState("__all__");
   const [searchFilter, setSearchFilter] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -39,12 +39,12 @@ export default function Applicants() {
   const [applicantToConvert, setApplicantToConvert] = useState<Applicant | null>(null);
 
   const { data: applicants, isLoading } = useApplicants({
-    propertyId: propertyFilter || undefined,
-    status: statusFilter || undefined,
+    propertyId: propertyFilter === "__all__" ? undefined : propertyFilter,
+    status: statusFilter === "__all__" ? undefined : statusFilter,
     search: searchFilter || undefined,
   });
 
-  const { data: counts } = useApplicantCounts(propertyFilter || undefined);
+  const { data: counts } = useApplicantCounts(propertyFilter === "__all__" ? undefined : propertyFilter);
   const { mutate: updateApplicant } = useUpdateApplicant();
   const { mutate: deleteApplicant } = useDeleteApplicant();
 
