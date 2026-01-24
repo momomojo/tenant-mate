@@ -30,17 +30,27 @@ bun run dev              # Must be running on port 8080 first
 # Checklist: .claude/testing/TEST-CHECKLIST.md
 ```
 
+## Deployment
+
+**Vercel (Primary)**: https://tenant-mate.vercel.app
+- Deploy: `vercel --prod` or push to main (auto-deploy via GitHub integration)
+- Env vars configured: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`
+- Base path: `/` (auto-detected via `process.env.VERCEL` in vite.config.ts)
+
+**GitHub Pages (Legacy)**: https://momomojo.github.io/tenant-mate/
+- Base path: `/tenant-mate/`
+
 ## E2E Testing Workflow
 
 **Checklist**: [`.claude/testing/TEST-CHECKLIST.md`](.claude/testing/TEST-CHECKLIST.md)
 
-Uses the `agent-browser` skill (Chrome automation via MCP) to test all features interactively:
+Uses the `agent-browser` skill (Chrome automation via MCP) to test all features on the **live Vercel deployment**:
 
-1. Start dev server: `bun run dev`
-2. Use `agent-browser` to navigate and interact with the app at `http://localhost:8080`
+1. Deploy latest: `vercel --prod`
+2. Use `agent-browser` to navigate and interact with the app at `https://tenant-mate.vercel.app`
 3. Test each feature, checking off items in the checklist as they pass
 4. Record bugs found in the checklist's "Bugs Found" table
-5. Fix bugs, re-test, update checklist
+5. Fix bugs, redeploy, re-test, update checklist
 
 **Key testing accounts** (created during test runs, clean up after):
 - Tenant: `test-tenant-[timestamp]@test.com`
