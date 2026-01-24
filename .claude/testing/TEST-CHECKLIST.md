@@ -82,7 +82,7 @@
 ## Tenants (Manager)
 - [x] Tenants list page with table (Tenant, Contact, Current Unit, Actions)
 - [x] Shows assigned tenants with unit info
-- [ ] Click tenant → tenant detail page
+- [x] Click tenant → tenant detail page (shows info, lease, payment, maintenance history)
 - [ ] Add tenant manually
 - [ ] Remove tenant from unit
 
@@ -105,7 +105,7 @@
 - [x] Create lease form (tenant, unit, dates, rent, terms)
 - [x] Lease card shows details
 - [ ] Lease status transitions
-- [ ] View lease details
+- [x] View lease details (visible on tenant detail page)
 
 ## Maintenance
 - [x] Tenant view: "No maintenance requests yet" empty state
@@ -153,8 +153,8 @@
 - [x] Expense table shows all fields
 - [ ] Edit expense
 - [ ] Delete expense
-- [ ] Filter by property
-- [ ] Filter by category (13 categories)
+- [x] Filter by property
+- [x] Filter by category (13 categories)
 - [ ] Tax deductible flag
 - [ ] Receipt upload
 
@@ -215,10 +215,11 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~101
+- **Passing**: ~105
 - **Failing**: 0
-- **Untested**: ~29
-- **Last run**: 2026-01-24 (session 4 - messaging, maintenance, notifications, mobile)
+- **Not implemented**: ~15 (edit/delete CRUD, Stripe flows, file uploads)
+- **Untested**: ~10
+- **Last run**: 2026-01-24 (session 4 - messaging, maintenance, notifications, mobile, filters)
 
 ## Bugs Found & Fixed
 | # | Description | File | Status |
