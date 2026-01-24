@@ -259,6 +259,40 @@ export function useUpdateLease() {
   });
 }
 
+export function useSendForSignature() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ leaseId, signerEmail, signerName }: { leaseId: string; signerEmail: string; signerName: string }) => {
+      const response = await supabase.functions.invoke("dropbox-sign-send-request", {
+        body: { leaseId, signerEmail, signerName, testMode: true },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["leases"] });
+      queryClient.invalidateQueries({ queryKey: ["lease", variables.leaseId] });
+    },
+  });
+}
+
+export function useGetSignUrl() {
+  return useMutation({
+    mutationFn: async (signatureId: string) => {
+      const response = await supabase.functions.invoke("dropbox-sign-get-sign-url", {
+        body: { signatureId },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+      return response.data as { signUrl: string; expiresAt: number };
+    },
+  });
+}
+
 export function useDeleteLease() {
   const queryClient = useQueryClient();
 

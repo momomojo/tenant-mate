@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 import { TopBar } from "@/components/layout/TopBar";
 import { useState, useEffect } from "react";
-import { User, Shield, CreditCard, Building2, Check, ExternalLink, Loader2, Landmark } from "lucide-react";
+import { User, Shield, CreditCard, Building2, Check, ExternalLink, Loader2, Landmark, PenTool } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -521,6 +521,46 @@ const Settings = () => {
                       </>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* E-Signature Settings (for property managers) */}
+            {userProfile?.role === "property_manager" && (
+              <Card className="glass-card">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <PenTool className="h-5 w-5 text-gray-400" />
+                    <CardTitle className="text-white">E-Signature Settings</CardTitle>
+                  </div>
+                  <CardDescription className="text-gray-400">
+                    Configure electronic signatures for lease agreements
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start space-x-3 p-4 rounded-lg border border-brand-indigo bg-brand-indigo/10">
+                    <PenTool className="h-5 w-5 text-brand-indigo-light mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white font-medium">Dropbox Sign</span>
+                        <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                          <Check className="h-3 w-3 mr-1" /> Configured
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-2">
+                        Legally binding e-signatures for lease agreements
+                      </p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>~$0.80-$1.00 per signature</span>
+                        <span>Embedded signing</span>
+                        <span>Audit trail included</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Send lease agreements for signature directly from the Leases page. Tenants will receive
+                    an email notification and can sign electronically.
+                  </p>
                 </CardContent>
               </Card>
             )}
