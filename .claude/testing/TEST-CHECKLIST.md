@@ -15,8 +15,8 @@
 - [x] Hero section renders (title, subtitle, CTA buttons)
 - [x] "Get Started Free" navigates to `/auth?mode=signup`
 - [x] "Sign In" navigates to `/auth`
-- [ ] Feature cards section (Smart Messaging, Maintenance, Payments)
-- [ ] Footer renders
+- [x] Feature cards section (6 cards: Smart Messaging, Maintenance, Payments, Documents, Inspections, Analytics)
+- [x] Footer renders
 - [ ] Mobile responsive layout
 
 ## Authentication
@@ -30,7 +30,7 @@
 - [ ] Invalid credentials show error toast
 - [ ] Empty form validation
 - [ ] Password minimum length enforcement
-- [ ] Sign out clears session and redirects to `/auth`
+- [x] Sign out clears session and redirects to `/auth`
 
 ## Tenant Dashboard
 - [x] Title: "My Dashboard"
@@ -60,7 +60,7 @@
 - [x] Click property card → property detail page
 - [ ] Edit property (name, address, type)
 - [ ] Delete property
-- [ ] Search filters properties by name
+- [x] Search filters properties by name
 
 ## Property Details (Manager)
 - [x] Header with property name, address, back button
@@ -149,8 +149,8 @@
 - [x] Filters: property, category, search
 - [x] "Add Expense" button
 - [x] Empty state: "No expenses found"
-- [ ] Add expense form (property, category, amount, date, description)
-- [ ] Expense table shows all fields
+- [x] Add expense form (property, category, amount, date, description)
+- [x] Expense table shows all fields
 - [ ] Edit expense
 - [ ] Delete expense
 - [ ] Filter by property
@@ -163,8 +163,8 @@
 - [x] Filters: property, type, status
 - [x] "Schedule Inspection" button
 - [x] Empty state
-- [ ] Schedule inspection form (property, unit, type, date)
-- [ ] Inspection types: move_in, move_out, routine, maintenance, annual
+- [x] Schedule inspection form (property, unit, type, date)
+- [x] Inspection types: move_in, move_out, routine, maintenance, annual
 - [ ] Inspection card shows details
 - [ ] Status transitions (scheduled → in_progress → completed)
 - [ ] Add inspection items
@@ -174,17 +174,18 @@
 ## Reports (Manager)
 - [x] Summary cards (Properties, Units, Potential Income, Current Income)
 - [x] Rent Roll tab with property/unit data
-- [ ] Income Report tab
-- [ ] Property Summary tab
-- [ ] Data accuracy (matches real database state)
+- [x] Income Report tab
+- [x] Property Summary tab
+- [x] Data accuracy (matches real database state: 1 property, 1 unit, $1,500 potential, $0 current)
 
 ## Settings
 - [x] Profile Information form (first name, last name, email, phone, address)
 - [x] Email field read-only ("cannot be changed")
 - [x] First/last name pre-filled from signup
 - [x] Manager: Account Information section (Account Type, Member Since)
-- [x] Manager: Payment Settings section (Stripe Connect)
-- [ ] Save profile changes
+- [x] Manager: Payment Settings section (Stripe Connect + Dwolla tabs)
+- [x] Manager: E-Signature section (Dropbox Sign integration)
+- [x] Save profile changes (phone number persists after reload)
 - [ ] Phone number formatting
 - [ ] Address fields save correctly
 - [ ] Manager: Stripe Connect onboarding button
@@ -205,8 +206,8 @@
 - [ ] Forms are usable on mobile
 
 ## Error Handling
-- [ ] 404 page for invalid routes
-- [ ] Unauthorized redirect to /auth
+- [x] 404 page for invalid routes (shows "This page doesn't exist" with Back to Home)
+- [x] Unauthorized redirect to /auth (protected routes redirect correctly)
 - [ ] Network error handling (toast messages)
 - [ ] Form validation errors display correctly
 
@@ -214,12 +215,16 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~50
-- **Failing**: 1 (fixed: formatTenantLabel)
-- **Untested**: ~80
-- **Last run**: 2026-01-24
+- **Passing**: ~70
+- **Failing**: 0
+- **Untested**: ~60
+- **Last run**: 2026-01-24 (session 2 - cache invalidation fixes verified)
 
-## Bugs Found
+## Bugs Found & Fixed
 | # | Description | File | Status |
 |---|-------------|------|--------|
 | 1 | `formatTenantLabel` crashes on null tenant | `src/types/index.ts:88` | Fixed |
+| 2 | Expense total ($0) not updating after create | `src/hooks/useExpenses.ts` | Fixed - added `expenseSummary` invalidation |
+| 3 | Inspection count cards show 0 after create | `src/hooks/useInspections.ts` | Fixed - added `inspectionCounts` invalidation |
+| 4 | Applicant count cards stale after mutations | `src/hooks/useApplicants.ts` | Fixed - added `applicant-counts` invalidation |
+| 5 | Lease count cards stale after mutations | `src/hooks/useLeases.ts` | Fixed - added `lease-counts` invalidation |
