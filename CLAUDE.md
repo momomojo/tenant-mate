@@ -23,7 +23,30 @@ supabase start           # Start local Supabase
 supabase db push         # Push migrations to remote
 supabase functions serve # Local Edge Functions
 supabase gen types typescript --project-id xbtuztzcgxhzvsvfcjvk > src/integrations/supabase/types.ts  # Regenerate types
+
+# E2E UI Testing (via agent-browser)
+bun run dev              # Must be running on port 8080 first
+# Then use agent-browser skill to test features interactively
+# Checklist: .claude/testing/TEST-CHECKLIST.md
 ```
+
+## E2E Testing Workflow
+
+**Checklist**: [`.claude/testing/TEST-CHECKLIST.md`](.claude/testing/TEST-CHECKLIST.md)
+
+Uses the `agent-browser` skill (Chrome automation via MCP) to test all features interactively:
+
+1. Start dev server: `bun run dev`
+2. Use `agent-browser` to navigate and interact with the app at `http://localhost:8080`
+3. Test each feature, checking off items in the checklist as they pass
+4. Record bugs found in the checklist's "Bugs Found" table
+5. Fix bugs, re-test, update checklist
+
+**Key testing accounts** (created during test runs, clean up after):
+- Tenant: `test-tenant-[timestamp]@test.com`
+- Manager: `test-manager-[timestamp]@test.com`
+
+The checklist covers: Landing, Auth, Dashboard (both roles), Properties, Units, Tenants, Applicants, Leases, Maintenance, Messages, Documents, Payments, Expenses, Inspections, Reports, Settings, Notifications, Mobile, and Error Handling.
 
 ## Architecture Overview
 
