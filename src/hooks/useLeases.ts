@@ -78,7 +78,7 @@ export function useLeases(filters: LeasesFilters = {}) {
           unit:units(id, unit_number),
           tenant:profiles!leases_tenant_id_fkey(id, first_name, last_name, email)
         `)
-        .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`)
+        .or(`created_by.eq.${user.id},property_manager_id.eq.${user.id}`, { referencedTable: 'property' })
         .order("created_at", { ascending: false });
 
       if (filters.propertyId) {
@@ -331,7 +331,7 @@ export function useLeaseCounts(propertyId?: string) {
           status,
           property:properties!inner(created_by, property_manager_id)
         `)
-        .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`);
+        .or(`created_by.eq.${user.id},property_manager_id.eq.${user.id}`, { referencedTable: 'property' });
 
       if (propertyId) {
         query = query.eq("property_id", propertyId);

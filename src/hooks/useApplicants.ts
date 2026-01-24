@@ -59,7 +59,7 @@ export function useApplicants(filters: ApplicantsFilters = {}) {
           property:properties!inner(id, name, address, created_by, property_manager_id),
           unit:units(id, unit_number)
         `)
-        .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`)
+        .or(`created_by.eq.${user.id},property_manager_id.eq.${user.id}`, { referencedTable: 'property' })
         .order("created_at", { ascending: false });
 
       if (filters.propertyId) {
@@ -259,7 +259,7 @@ export function useApplicantCounts(propertyId?: string) {
           status,
           property:properties!inner(created_by, property_manager_id)
         `)
-        .or(`property.created_by.eq.${user.id},property.property_manager_id.eq.${user.id}`);
+        .or(`created_by.eq.${user.id},property_manager_id.eq.${user.id}`, { referencedTable: 'property' });
 
       if (propertyId) {
         query = query.eq("property_id", propertyId);
