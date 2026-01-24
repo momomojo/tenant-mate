@@ -45,6 +45,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
         // Cache strategies
         runtimeCaching: [
           {

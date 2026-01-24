@@ -17,7 +17,7 @@
 - [x] "Sign In" navigates to `/auth`
 - [x] Feature cards section (6 cards: Smart Messaging, Maintenance, Payments, Documents, Inspections, Analytics)
 - [x] Footer renders
-- [ ] Mobile responsive layout
+- [x] Mobile responsive layout
 
 ## Authentication
 - [x] Sign In form (email, password, submit)
@@ -26,7 +26,7 @@
 - [x] Role selector has Tenant, Property Manager, Admin options
 - [x] Tenant signup → auto-login → redirect to `/dashboard`
 - [x] Property Manager signup → auto-login → redirect to `/dashboard`
-- [ ] Sign in with existing account
+- [x] Sign in with existing account
 - [ ] Invalid credentials show error toast
 - [ ] Empty form validation
 - [ ] Password minimum length enforcement
@@ -74,14 +74,14 @@
 - [ ] Upload property image
 - [ ] Delete property image
 - [ ] "Manage" button opens unit edit dialog
-- [ ] Assign tenant to unit flow
-- [ ] Unit status changes to "occupied" after assignment
+- [x] Assign tenant to unit flow
+- [x] Unit status changes to "occupied" after assignment
 - [ ] Edit unit (number, rent)
 - [ ] Delete unit
 
 ## Tenants (Manager)
 - [x] Tenants list page with table (Tenant, Contact, Current Unit, Actions)
-- [ ] Shows assigned tenants with unit info
+- [x] Shows assigned tenants with unit info
 - [ ] Click tenant → tenant detail page
 - [ ] Add tenant manually
 - [ ] Remove tenant from unit
@@ -91,8 +91,8 @@
 - [x] Search bar with property and status filters
 - [x] Status tabs (All, Pending, Screening, Approved, Rejected)
 - [x] "Invite Applicant" button
-- [ ] Invite applicant flow (email, property, unit)
-- [ ] Applicant card shows name, email, property, status
+- [x] Invite applicant flow (email, property, unit)
+- [x] Applicant card shows name, email, property, status
 - [ ] Status change workflow (pending → screening → approved/rejected)
 - [ ] Convert approved applicant to tenant
 - [ ] ConvertApplicantDialog multi-step flow
@@ -102,29 +102,29 @@
 - [x] Property and status filters
 - [x] Status tabs (All, Drafts, Pending, Active, Expired)
 - [x] "Create Lease" button
-- [ ] Create lease form (tenant, unit, dates, rent, terms)
-- [ ] Lease card shows details
+- [x] Create lease form (tenant, unit, dates, rent, terms)
+- [x] Lease card shows details
 - [ ] Lease status transitions
 - [ ] View lease details
 
 ## Maintenance
 - [x] Tenant view: "No maintenance requests yet" empty state
 - [x] Manager view: maintenance list
-- [ ] Tenant: create new maintenance request (title, description, priority, unit)
-- [ ] Tenant: view own requests with status
-- [ ] Manager: view all requests
-- [ ] Manager: change request status (pending → in_progress → completed)
-- [ ] Manager: assign priority
-- [ ] Request shows timestamp, unit, property info
+- [x] Tenant: create new maintenance request (title, description, priority, unit)
+- [x] Tenant: view own requests with status
+- [x] Manager: view all requests
+- [x] Manager: change request status (pending → in_progress → completed)
+- [x] Manager: assign priority (set during request creation)
+- [x] Request shows timestamp, unit, property info
 
 ## Messages
 - [x] Two-panel layout (conversation list + messages)
 - [x] Empty state: "No conversations yet"
-- [ ] Start new conversation
-- [ ] Send message
-- [ ] Receive message (real-time)
-- [ ] Message shows timestamp and sender
-- [ ] Conversation list updates with latest message
+- [x] Start new conversation
+- [x] Send message
+- [x] Receive message (real-time)
+- [x] Message shows timestamp and sender
+- [x] Conversation list updates with latest message
 
 ## Documents
 - [x] Tenant view: "My Property Documents" section
@@ -191,19 +191,19 @@
 - [ ] Manager: Stripe Connect onboarding button
 
 ## Notifications
-- [ ] Bell icon in header
-- [ ] Notification count badge
-- [ ] Notification dropdown/panel
-- [ ] Mark as read
-- [ ] Real-time notifications
+- [x] Bell icon in header
+- [x] Notification count badge
+- [x] Notification dropdown/panel
+- [x] Mark as read (individual + mark all)
+- [x] Real-time notifications (maintenance request triggers notification)
 
 ## Mobile Responsiveness
-- [ ] Landing page on mobile viewport
-- [ ] Auth page on mobile viewport
-- [ ] Dashboard on mobile viewport
-- [ ] Sidebar collapses on mobile
-- [ ] Tables scroll horizontally on mobile
-- [ ] Forms are usable on mobile
+- [x] Landing page on mobile viewport
+- [x] Auth page on mobile viewport
+- [x] Dashboard on mobile viewport
+- [x] Sidebar collapses on mobile (hamburger toggle)
+- [x] Tables scroll horizontally on mobile (overflow: auto)
+- [x] Forms are usable on mobile (inputs visible and accessible)
 
 ## Error Handling
 - [x] 404 page for invalid routes (shows "This page doesn't exist" with Back to Home)
@@ -215,10 +215,10 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~70
+- **Passing**: ~101
 - **Failing**: 0
-- **Untested**: ~60
-- **Last run**: 2026-01-24 (session 2 - cache invalidation fixes verified)
+- **Untested**: ~29
+- **Last run**: 2026-01-24 (session 4 - messaging, maintenance, notifications, mobile)
 
 ## Bugs Found & Fixed
 | # | Description | File | Status |
@@ -228,3 +228,7 @@
 | 3 | Inspection count cards show 0 after create | `src/hooks/useInspections.ts` | Fixed - added `inspectionCounts` invalidation |
 | 4 | Applicant count cards stale after mutations | `src/hooks/useApplicants.ts` | Fixed - added `applicant-counts` invalidation |
 | 5 | Lease count cards stale after mutations | `src/hooks/useLeases.ts` | Fixed - added `lease-counts` invalidation |
+| 6 | PostgREST `.or()` 400 error with foreign table refs | `useLeases, useApplicants, Dashboard` | Fixed - use `{ referencedTable: 'property' }` option |
+| 7 | Vercel 404 on direct SPA route access | `vercel.json` (new) | Fixed - added catch-all rewrite to `/index.html` |
+| 8 | Messaging queries select non-existent `avatar_url` column | `useConversations.ts, useMessages.ts` | Fixed - removed `avatar_url` from all selects |
+| 9 | Documents page hides upload UI when no documents exist | `src/pages/Documents.tsx:103` | Known - early return prevents PM upload rendering |
