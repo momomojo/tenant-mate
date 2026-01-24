@@ -22,7 +22,6 @@ export interface Conversation {
     first_name: string | null;
     last_name: string | null;
     email: string | null;
-    avatar_url: string | null;
   };
   property?: {
     name: string;
@@ -47,8 +46,8 @@ export function useConversations() {
           *,
           property:properties(name, address),
           unit:units(unit_number),
-          landlord:profiles!conversations_landlord_id_fkey(id, first_name, last_name, email, avatar_url),
-          tenant:profiles!conversations_tenant_id_fkey(id, first_name, last_name, email, avatar_url)
+          landlord:profiles!conversations_landlord_id_fkey(id, first_name, last_name, email),
+          tenant:profiles!conversations_tenant_id_fkey(id, first_name, last_name, email)
         `)
         .or(`landlord_id.eq.${user.id},tenant_id.eq.${user.id}`)
         .eq("is_archived", false)
@@ -82,8 +81,8 @@ export function useConversation(conversationId: string | undefined) {
           *,
           property:properties(name, address),
           unit:units(unit_number),
-          landlord:profiles!conversations_landlord_id_fkey(id, first_name, last_name, email, avatar_url),
-          tenant:profiles!conversations_tenant_id_fkey(id, first_name, last_name, email, avatar_url)
+          landlord:profiles!conversations_landlord_id_fkey(id, first_name, last_name, email),
+          tenant:profiles!conversations_tenant_id_fkey(id, first_name, last_name, email)
         `)
         .eq("id", conversationId)
         .single();

@@ -69,11 +69,6 @@ export interface JoinedTenant {
   email: string | null;
 }
 
-/** Extended tenant shape with avatar (used in messaging) */
-export interface JoinedTenantWithAvatar extends JoinedTenant {
-  avatar_url: string | null;
-}
-
 // ---------- Tenant Profile Type ----------
 
 /** Profile shape used in property/unit management contexts */

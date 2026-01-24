@@ -18,7 +18,6 @@ export interface Message {
     id: string;
     first_name: string | null;
     last_name: string | null;
-    avatar_url: string | null;
   };
 }
 
@@ -36,7 +35,7 @@ export function useMessages(conversationId: string | undefined) {
         .from("messages")
         .select(`
           *,
-          sender:profiles!messages_sender_id_fkey(id, first_name, last_name, avatar_url)
+          sender:profiles!messages_sender_id_fkey(id, first_name, last_name)
         `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
@@ -70,7 +69,7 @@ export function useMessages(conversationId: string | undefined) {
             .from("messages")
             .select(`
               *,
-              sender:profiles!messages_sender_id_fkey(id, first_name, last_name, avatar_url)
+              sender:profiles!messages_sender_id_fkey(id, first_name, last_name)
             `)
             .eq("id", payload.new.id)
             .single();
@@ -121,7 +120,7 @@ export function useSendMessage() {
         })
         .select(`
           *,
-          sender:profiles!messages_sender_id_fkey(id, first_name, last_name, avatar_url)
+          sender:profiles!messages_sender_id_fkey(id, first_name, last_name)
         `)
         .single();
 
