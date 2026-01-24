@@ -228,6 +228,7 @@ export function useCreateInspection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspections"] });
+      queryClient.invalidateQueries({ queryKey: ["inspectionCounts"] });
     },
   });
 }
@@ -250,6 +251,7 @@ export function useUpdateInspection() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["inspections"] });
       queryClient.invalidateQueries({ queryKey: ["inspection", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["inspectionCounts"] });
     },
   });
 }
@@ -268,6 +270,7 @@ export function useDeleteInspection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspections"] });
+      queryClient.invalidateQueries({ queryKey: ["inspectionCounts"] });
     },
   });
 }

@@ -176,6 +176,7 @@ export function useCreateExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["expenseSummary"] });
     },
   });
 }
@@ -198,6 +199,7 @@ export function useUpdateExpense() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expense", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["expenseSummary"] });
     },
   });
 }
@@ -216,6 +218,7 @@ export function useDeleteExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["expenseSummary"] });
     },
   });
 }

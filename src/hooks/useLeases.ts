@@ -208,6 +208,7 @@ export function useCreateLease() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leases"] });
+      queryClient.invalidateQueries({ queryKey: ["lease-counts"] });
     },
   });
 }
@@ -255,6 +256,7 @@ export function useUpdateLease() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["leases"] });
       queryClient.invalidateQueries({ queryKey: ["lease", variables.leaseId] });
+      queryClient.invalidateQueries({ queryKey: ["lease-counts"] });
     },
   });
 }
@@ -275,6 +277,7 @@ export function useSendForSignature() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["leases"] });
       queryClient.invalidateQueries({ queryKey: ["lease", variables.leaseId] });
+      queryClient.invalidateQueries({ queryKey: ["lease-counts"] });
     },
   });
 }
@@ -309,6 +312,7 @@ export function useDeleteLease() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leases"] });
+      queryClient.invalidateQueries({ queryKey: ["lease-counts"] });
     },
   });
 }

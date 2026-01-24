@@ -158,6 +158,7 @@ export function useInviteApplicant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["applicant-counts"] });
     },
   });
 }
@@ -217,6 +218,7 @@ export function useUpdateApplicant() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["applicants"] });
       queryClient.invalidateQueries({ queryKey: ["applicant", variables.applicantId] });
+      queryClient.invalidateQueries({ queryKey: ["applicant-counts"] });
     },
   });
 }
@@ -237,6 +239,7 @@ export function useDeleteApplicant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["applicant-counts"] });
     },
   });
 }
