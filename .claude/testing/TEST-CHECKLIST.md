@@ -232,4 +232,4 @@
 | 6 | PostgREST `.or()` 400 error with foreign table refs | `useLeases, useApplicants, Dashboard` | Fixed - use `{ referencedTable: 'property' }` option |
 | 7 | Vercel 404 on direct SPA route access | `vercel.json` (new) | Fixed - added catch-all rewrite to `/index.html` |
 | 8 | Messaging queries select non-existent `avatar_url` column | `useConversations.ts, useMessages.ts` | Fixed - removed `avatar_url` from all selects |
-| 9 | Documents page hides upload UI when no documents exist | `src/pages/Documents.tsx:103` | Known - early return prevents PM upload rendering |
+| 9 | Documents page hides upload UI when no documents exist | `src/pages/Documents.tsx:103` | Fixed - moved PM rendering before empty check |
