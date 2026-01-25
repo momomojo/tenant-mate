@@ -34,3 +34,4 @@ supabase/.temp/
 yarn-debug.log*
 yarn-error.log*
 .vercel
+playwright-report/
