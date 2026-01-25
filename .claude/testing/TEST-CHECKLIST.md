@@ -28,8 +28,8 @@
 - [x] Property Manager signup → auto-login → redirect to `/dashboard`
 - [x] Sign in with existing account
 - [x] Invalid credentials show error toast
-- [ ] Empty form validation
-- [ ] Password minimum length enforcement
+- [x] Empty form validation
+- [x] Password minimum length enforcement
 - [x] Sign out clears session and redirects to `/auth`
 
 ## Tenant Dashboard
@@ -73,10 +73,10 @@
 - [x] "Assign Tenant" button on vacant units
 - [ ] Upload property image
 - [ ] Delete property image
-- [ ] "Manage" button opens unit edit dialog
+- [x] "Manage" button opens unit edit dialog
 - [x] Assign tenant to unit flow
 - [x] Unit status changes to "occupied" after assignment
-- [ ] Edit unit (number, rent)
+- [x] Edit unit (number, rent)
 - [ ] Delete unit
 
 ## Tenants (Manager)
@@ -151,8 +151,8 @@
 - [x] Empty state: "No expenses found"
 - [x] Add expense form (property, category, amount, date, description)
 - [x] Expense table shows all fields
-- [ ] Edit expense
-- [ ] Delete expense
+- [x] Edit expense
+- [ ] Delete expense (needs confirmation dialog testing)
 - [x] Filter by property
 - [x] Filter by category (13 categories)
 - [ ] Tax deductible flag
@@ -165,8 +165,8 @@
 - [x] Empty state
 - [x] Schedule inspection form (property, unit, type, date)
 - [x] Inspection types: move_in, move_out, routine, maintenance, annual
-- [ ] Inspection card shows details
-- [ ] Status transitions (scheduled → in_progress → completed)
+- [x] Inspection card shows details
+- [x] Status transitions (scheduled → in_progress → completed)
 - [ ] Add inspection items
 - [ ] Add inspection photos
 - [ ] View inspection report
@@ -215,11 +215,11 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~107
+- **Passing**: ~115
 - **Failing**: 0
-- **Not implemented**: ~15 (edit/delete CRUD, Stripe flows, file uploads)
-- **Untested**: ~8
-- **Last run**: 2026-01-24 (session 5 - invalid credentials, Documents fix verification)
+- **Not implemented**: ~10 (Stripe flows, file uploads, some CRUD operations)
+- **Untested**: ~5
+- **Last run**: 2026-01-25 (session 6 - form validation, unit edit, expense edit, inspection status workflow)
 
 ## Bugs Found & Fixed
 | # | Description | File | Status |
