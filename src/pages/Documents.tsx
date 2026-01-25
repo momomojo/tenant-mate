@@ -100,10 +100,7 @@ const Documents = () => {
       return <div className="text-gray-400">Loading documents...</div>;
     }
 
-    if (!documents?.length) {
-      return <div className="text-gray-400">No documents found.</div>;
-    }
-
+    // Property managers need to see the property selector and upload UI even with no documents
     if (userRole === "property_manager") {
       return (
         <div className="space-y-4">
@@ -127,15 +124,23 @@ const Documents = () => {
                   queryClient.invalidateQueries({ queryKey: ["documents"] });
                 }}
               />
-              <DocumentList
-                documents={documents}
-                showPropertyName={false}
-                showUploaderInfo={true}
-              />
+              {documents?.length ? (
+                <DocumentList
+                  documents={documents}
+                  showPropertyName={false}
+                  showUploaderInfo={true}
+                />
+              ) : (
+                <div className="text-gray-400">No documents found for this property.</div>
+              )}
             </>
           )}
         </div>
       );
+    }
+
+    if (!documents?.length) {
+      return <div className="text-gray-400">No documents found.</div>;
     }
 
     return (
