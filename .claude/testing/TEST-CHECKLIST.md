@@ -27,7 +27,7 @@
 - [x] Tenant signup → auto-login → redirect to `/dashboard`
 - [x] Property Manager signup → auto-login → redirect to `/dashboard`
 - [x] Sign in with existing account
-- [ ] Invalid credentials show error toast
+- [x] Invalid credentials show error toast
 - [ ] Empty form validation
 - [ ] Password minimum length enforcement
 - [x] Sign out clears session and redirects to `/auth`
@@ -215,11 +215,11 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~105
+- **Passing**: ~107
 - **Failing**: 0
 - **Not implemented**: ~15 (edit/delete CRUD, Stripe flows, file uploads)
-- **Untested**: ~10
-- **Last run**: 2026-01-24 (session 4 - messaging, maintenance, notifications, mobile, filters)
+- **Untested**: ~8
+- **Last run**: 2026-01-24 (session 5 - invalid credentials, Documents fix verification)
 
 ## Bugs Found & Fixed
 | # | Description | File | Status |
