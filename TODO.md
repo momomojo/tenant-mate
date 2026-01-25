@@ -57,12 +57,13 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 
 ## What's Left To Do
 
-### Ready to Deploy (Backend Complete)
-- [ ] Dwolla ACH payments - Edge Functions created, need to deploy and wire up UI
-- [ ] E-Signatures - Need to select provider (DocuSign/HelloSign) and integrate
-
 ### Future Features
 - [ ] Marketing syndication (Zillow, Apartments.com)
+- [ ] Tenant screening (TransUnion/Experian integration)
+
+### Completed (January 2026)
+- [x] Dwolla ACH payments - Edge Functions deployed, UI wired up in Settings
+- [x] E-Signatures - Dropbox Sign integrated (send-request, get-sign-url, webhook Edge Functions)
 
 ---
 
@@ -109,8 +110,11 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 
 ## Notes
 
-### Third-Party APIs Needed
+### Third-Party APIs Integrated
+- ✅ Dropbox Sign (e-signatures) - Embedded signing for leases
+- ✅ Dwolla (ACH payments) - Low-fee bank transfers ($0.25/transaction)
+- ✅ Stripe Connect - Credit/debit card payments
+
+### Third-Party APIs Needed (Future)
 - TransUnion or Experian (screening) - for `feature/tenant-screening`
-- DocuSign or HelloSign (e-signatures) - for lease signing
-- Dwolla (ACH payments) - Edge Functions ready, need API keys
 - Zillow API (marketing syndication) - future feature
