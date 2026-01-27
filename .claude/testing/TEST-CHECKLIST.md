@@ -74,7 +74,7 @@
 - [ ] Upload property image
 - [ ] Delete property image
 - [x] "Manage" button opens unit edit dialog
-- [x] Assign tenant to unit flow
+- [x] Assign tenant to unit flow (Bug #10 fixed - commit 3901f29)
 - [x] Unit status changes to "occupied" after assignment
 - [x] Edit unit (number, rent)
 - [ ] Delete unit
@@ -137,9 +137,12 @@
 ## Payments
 - [x] Tenant view: search, status filter, date filter
 - [x] Empty state: "No payments found"
+- [x] Tenant: Dwolla ACH payment option visible when landlord has Dwolla active (Bug #11 fixed)
+- [x] Tenant: Shows correct fee ($0.25 for Dwolla ACH)
 - [ ] Manager: payment list with all tenant payments
 - [ ] Manager: Stripe Connect onboarding
 - [ ] Tenant: make payment (Stripe Checkout flow)
+- [ ] Tenant: make payment (Dwolla ACH flow)
 - [ ] Payment status tracking (pending → completed)
 - [ ] Payment receipt generation
 - [ ] Payment history filtering
@@ -189,6 +192,7 @@
 - [ ] Phone number formatting
 - [ ] Address fields save correctly
 - [ ] Manager: Stripe Connect onboarding button
+- [x] Manager: Payment processor selection persists (Bug #11 fixed - improved fallback logic)
 
 ## Notifications
 - [x] Bell icon in header
@@ -215,11 +219,11 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~115
+- **Passing**: ~118
 - **Failing**: 0
 - **Not implemented**: ~10 (Stripe flows, file uploads, some CRUD operations)
 - **Untested**: ~5
-- **Last run**: 2026-01-25 (session 6 - form validation, unit edit, expense edit, inspection status workflow)
+- **Last run**: 2026-01-26 (session 10 - Bug #11 fixed, Dwolla payment option now visible to tenants)
 
 ## Bugs Found & Fixed
 | # | Description | File | Status |
@@ -233,3 +237,5 @@
 | 7 | Vercel 404 on direct SPA route access | `vercel.json` (new) | Fixed - added catch-all rewrite to `/index.html` |
 | 8 | Messaging queries select non-existent `avatar_url` column | `useConversations.ts, useMessages.ts` | Fixed - removed `avatar_url` from all selects |
 | 9 | Documents page hides upload UI when no documents exist | `src/pages/Documents.tsx:103` | Fixed - moved PM rendering before empty check |
+| 10 | Assign Tenant dialog form doesn't submit | Property Detail → Assign Tenant dialog | Fixed - commit 3901f29 |
+| 11 | Payment processor selection doesn't save is_primary | `src/pages/Payments.tsx` | Fixed - improved fallback logic to use Dwolla when active even without is_primary |
