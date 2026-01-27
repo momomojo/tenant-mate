@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AddUnitDialog } from "@/components/property/AddUnitDialog";
 import { ManageUnitDialog } from "@/components/property/ManageUnitDialog";
@@ -13,6 +13,8 @@ import { AssignTenantDialog } from "@/components/property/AssignTenantDialog";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { PropertyImageUpload } from "@/components/property/PropertyImageUpload";
 import { UnitsTable } from "@/components/property/UnitsTable";
+import { EditPropertyDialog } from "@/components/property/EditPropertyDialog";
+import { DeletePropertyDialog } from "@/components/property/DeletePropertyDialog";
 import type { UnitWithTenant, TenantProfile } from "@/types";
 import { formatTenantLabel } from "@/types";
 
@@ -22,6 +24,8 @@ const PropertyDetails = () => {
   const [selectedUnit, setSelectedUnit] = useState<UnitWithTenant | null>(null);
   const [isManagingUnit, setIsManagingUnit] = useState(false);
   const [isAssigningTenant, setIsAssigningTenant] = useState(false);
+  const [isEditingProperty, setIsEditingProperty] = useState(false);
+  const [isDeletingProperty, setIsDeletingProperty] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -135,6 +139,25 @@ const PropertyDetails = () => {
                   <p className="text-xs sm:text-sm text-gray-400">{property.address}</p>
                 </div>
               </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingProperty(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  onClick={() => setIsDeletingProperty(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
             </div>
 
             <PropertyOverview property={property} />
@@ -180,6 +203,21 @@ const PropertyDetails = () => {
                 />
               </>
             )}
+
+            <EditPropertyDialog
+              property={property}
+              isOpen={isEditingProperty}
+              onClose={() => setIsEditingProperty(false)}
+              onPropertyUpdated={refetch}
+            />
+
+            <DeletePropertyDialog
+              propertyId={property.id}
+              propertyName={property.name}
+              isOpen={isDeletingProperty}
+              onClose={() => setIsDeletingProperty(false)}
+              onPropertyDeleted={() => navigate("/properties")}
+            />
           </div>
         </main>
       </div>

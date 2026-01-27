@@ -58,8 +58,8 @@
 - [x] Add Property dialog: name, address, type selector
 - [x] Property card shows name, address, type badge, unit count, occupancy
 - [x] Click property card → property detail page
-- [ ] Edit property (name, address, type)
-- [ ] Delete property
+- [x] Edit property (name, address, type) - EditPropertyDialog implemented
+- [x] Delete property - DeletePropertyDialog with confirmation implemented
 - [x] Search filters properties by name
 
 ## Property Details (Manager)
@@ -77,7 +77,7 @@
 - [x] Assign tenant to unit flow (Bug #10 fixed - commit 3901f29)
 - [x] Unit status changes to "occupied" after assignment
 - [x] Edit unit (number, rent)
-- [ ] Delete unit
+- [x] Delete unit - Delete button with confirmation dialog implemented
 
 ## Tenants (Manager)
 - [x] Tenants list page with table (Tenant, Contact, Current Unit, Actions)
@@ -155,10 +155,10 @@
 - [x] Add expense form (property, category, amount, date, description)
 - [x] Expense table shows all fields
 - [x] Edit expense
-- [ ] Delete expense (needs confirmation dialog testing)
+- [x] Delete expense (confirmation dialog working)
 - [x] Filter by property
 - [x] Filter by category (13 categories)
-- [ ] Tax deductible flag
+- [x] Tax deductible flag (checkbox in add/edit form)
 - [ ] Receipt upload
 
 ## Inspections (Manager)
@@ -219,11 +219,11 @@
 
 ## Test Statistics
 - **Total items**: 130+
-- **Passing**: ~118
+- **Passing**: ~124
 - **Failing**: 0
-- **Not implemented**: ~10 (Stripe flows, file uploads, some CRUD operations)
-- **Untested**: ~5
-- **Last run**: 2026-01-26 (session 10 - Bug #11 fixed, Dwolla payment option now visible to tenants)
+- **Not implemented**: ~6 (Stripe flows, file uploads, receipt upload)
+- **Untested**: ~3
+- **Last run**: 2026-01-27 (session 11 - Edit/Delete Property, Delete Unit, Delete Expense verified)
 
 ## Bugs Found & Fixed
 | # | Description | File | Status |
