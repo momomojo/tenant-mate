@@ -43,9 +43,8 @@ export const useAuthenticatedUser = () => {
       setUser(session?.user || null);
 
       // Reset loading state if we were waiting for initial auth
-      if (isLoading) {
-        setIsLoading(false);
-      }
+      // Using functional update to avoid stale closure
+      setIsLoading((currentLoading) => currentLoading ? false : currentLoading);
     });
 
     return () => {

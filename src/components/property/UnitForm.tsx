@@ -66,7 +66,7 @@ export function UnitForm({ control }: UnitFormProps) {
           render={({ field }) => (
             <Select
               onValueChange={field.onChange}
-              defaultValue={field.value}
+              value={field.value}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />

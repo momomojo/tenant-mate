@@ -1,13 +1,20 @@
 // Shared CORS configuration for Edge Functions
 // SEC-04: Restrict CORS to allowed origins only
 
-export const ALLOWED_ORIGINS = [
+// Default allowed origins - can be overridden via ALLOWED_ORIGINS env var
+const DEFAULT_ORIGINS = [
   'https://tenant-mate.vercel.app',
   'https://momomojo.github.io',
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:4173',
 ]
+
+// Load origins from env var (comma-separated) or use defaults
+const envOrigins = Deno.env.get('ALLOWED_ORIGINS')
+export const ALLOWED_ORIGINS = envOrigins
+  ? envOrigins.split(',').map(o => o.trim()).filter(Boolean)
+  : DEFAULT_ORIGINS
 
 /**
  * Returns a safe, validated origin from the request.
