@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { useConversations, Conversation } from "@/hooks/useConversations";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,7 +83,6 @@ export function ConversationList({ selectedId, onSelect }: ConversationListProps
               )}
             >
               <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={conversation.other_user?.avatar_url || undefined} />
                 <AvatarFallback>{getInitials(conversation)}</AvatarFallback>
               </Avatar>
 

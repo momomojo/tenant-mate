@@ -6,7 +6,7 @@ import { ConversationList } from "@/components/messaging/ConversationList";
 import { MessageThread } from "@/components/messaging/MessageThread";
 import { MessageInput } from "@/components/messaging/MessageInput";
 import { NewConversationDialog } from "@/components/messaging/NewConversationDialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -117,7 +117,6 @@ export default function Messages() {
               </Button>
 
               <Avatar className="h-9 w-9">
-                <AvatarImage src={selectedConversation?.other_user?.avatar_url || undefined} />
                 <AvatarFallback>{getInitials(selectedConversation)}</AvatarFallback>
               </Avatar>
 
@@ -198,7 +197,6 @@ export default function Messages() {
                   {/* Header */}
                   <div className="flex items-center gap-3 p-4 border-b">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={selectedConversation.other_user?.avatar_url || undefined} />
                       <AvatarFallback>{getInitials(selectedConversation)}</AvatarFallback>
                     </Avatar>
 

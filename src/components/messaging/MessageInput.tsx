@@ -82,15 +82,15 @@ export function MessageInput({ conversationId, disabled }: MessageInputProps) {
   };
 
   return (
-    <div className="border-t p-4 bg-background">
+    <div className="border-t bg-background">
       {/* Attachment preview */}
       {attachment && (
-        <div className="mb-3 flex items-center gap-2 p-2 bg-muted rounded-lg">
+        <div className="mx-4 mt-3 flex items-center gap-3 p-3 bg-muted rounded-lg">
           {previewUrl ? (
-            <img src={previewUrl} alt="Preview" className="h-12 w-12 rounded object-cover" />
+            <img src={previewUrl} alt="Preview" className="h-14 w-14 rounded-md object-cover" />
           ) : (
-            <div className="h-12 w-12 rounded bg-muted-foreground/20 flex items-center justify-center">
-              <Paperclip className="h-5 w-5" />
+            <div className="h-14 w-14 rounded-md bg-muted-foreground/20 flex items-center justify-center">
+              <Paperclip className="h-6 w-6" />
             </div>
           )}
           <div className="flex-1 min-w-0">
@@ -110,7 +110,7 @@ export function MessageInput({ conversationId, disabled }: MessageInputProps) {
         </div>
       )}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-3 p-4">
         <input
           ref={fileInputRef}
           type="file"
@@ -120,9 +120,9 @@ export function MessageInput({ conversationId, disabled }: MessageInputProps) {
         />
 
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-10 w-10 shrink-0"
+          className="h-11 w-11 shrink-0 rounded-full"
           disabled={disabled || isLoading}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -137,8 +137,8 @@ export function MessageInput({ conversationId, disabled }: MessageInputProps) {
             placeholder="Type a message..."
             disabled={disabled || isLoading}
             className={cn(
-              "min-h-[2.5rem] max-h-32 resize-none pr-12",
-              "focus-visible:ring-1"
+              "min-h-[44px] max-h-40 resize-none py-3 px-4 text-base rounded-2xl",
+              "focus-visible:ring-2 focus-visible:ring-primary"
             )}
             rows={1}
           />
@@ -146,7 +146,7 @@ export function MessageInput({ conversationId, disabled }: MessageInputProps) {
 
         <Button
           size="icon"
-          className="h-10 w-10 shrink-0"
+          className="h-11 w-11 shrink-0 rounded-full"
           disabled={disabled || isLoading || (!content.trim() && !attachment)}
           onClick={handleSend}
         >
@@ -158,7 +158,7 @@ export function MessageInput({ conversationId, disabled }: MessageInputProps) {
         </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground mt-2">
+      <p className="text-xs text-muted-foreground text-center pb-3">
         Press Enter to send, Shift+Enter for new line
       </p>
     </div>

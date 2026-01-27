@@ -3,7 +3,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { useMessages, Message } from "@/hooks/useMessages";
 import { useMarkMessagesRead } from "@/hooks/useMessages";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileIcon, ImageIcon, Check, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -138,7 +138,6 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
             <div className={cn("flex gap-3", isOwn && "flex-row-reverse")}>
               {!isOwn && (
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={message.sender?.avatar_url || undefined} />
                   <AvatarFallback className="text-xs">{getInitials(message)}</AvatarFallback>
                 </Avatar>
               )}
