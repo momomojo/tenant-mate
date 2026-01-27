@@ -1,6 +1,6 @@
 # TenantMate - Master TODO
 
-**Last Updated:** January 12, 2026
+**Last Updated:** January 25, 2026
 
 This is the master TODO file. Each folder has its own TODO.md for granular tracking.
 
@@ -28,7 +28,7 @@ This is the master TODO file. Each folder has its own TODO.md for granular track
 4. **Applicant Pipeline** - ✅ DONE (Applicants page with workflow)
 
 ### P1 - High (Customer Requested)
-5. **Lower Payment Fees** - ✅ Dwolla Edge Functions created + Payment settings UI (deploy when ready)
+5. **Lower Payment Fees** - ✅ COMPLETE - Dwolla ACH fully wired into tenant payment flow
 6. **Commercial Property Support** - ✅ DONE (Property type selector with icons)
 7. **Property Images** - ✅ DONE (PropertyImageUpload component)
 

@@ -1,5 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.ts'
 
 const DWOLLA_ENV = Deno.env.get("DWOLLA_ENV") || "sandbox";

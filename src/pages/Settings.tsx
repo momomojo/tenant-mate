@@ -61,21 +61,35 @@ const Settings = () => {
     enabled: !!user,
   });
 
-  // Query Dwolla payment processor status
-  const { data: dwollaProcessor, isLoading: dwollaLoading } = useQuery({
-    queryKey: ["dwollaProcessor", user?.id],
+  // Query all payment processors for user (to determine preference)
+  const { data: paymentProcessors, isLoading: processorsLoading } = useQuery({
+    queryKey: ["paymentProcessors", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_processors")
         .select("*")
-        .eq("user_id", user?.id)
-        .eq("processor", "dwolla")
-        .maybeSingle();
+        .eq("user_id", user?.id);
       if (error) throw error;
       return data;
     },
     enabled: !!user && userProfile?.role === "property_manager",
   });
+
+  // Extract Dwolla processor for existing UI
+  const dwollaProcessor = paymentProcessors?.find(p => p.processor === "dwolla") || null;
+
+  // Initialize payment processor preference from database
+  useEffect(() => {
+    if (paymentProcessors && paymentProcessors.length > 0) {
+      const primaryProcessor = paymentProcessors.find(p => p.is_primary);
+      if (primaryProcessor) {
+        setPaymentProcessor(primaryProcessor.processor as "stripe" | "dwolla");
+      } else if (dwollaProcessor?.status === "active") {
+        // If Dwolla is set up and active, default to it
+        setPaymentProcessor("dwolla");
+      }
+    }
+  }, [paymentProcessors, dwollaProcessor]);
 
   // Create Dwolla customer mutation
   const createDwollaCustomerMutation = useMutation({
@@ -96,7 +110,7 @@ const Settings = () => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dwollaProcessor"] });
+      queryClient.invalidateQueries({ queryKey: ["paymentProcessors"] });
       toast({ title: "Success", description: "Dwolla customer created. Now add your bank account." });
     },
     onError: (error: Error) => {
@@ -118,7 +132,7 @@ const Settings = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["dwollaProcessor"] });
+      queryClient.invalidateQueries({ queryKey: ["paymentProcessors"] });
       setShowDwollaSetup(false);
       setDwollaBankForm({ routingNumber: "", accountNumber: "", bankAccountType: "checking", name: "" });
       toast({
@@ -126,6 +140,78 @@ const Settings = () => {
         description: data.verified
           ? "Your bank account has been verified and is ready to receive payments."
           : "Your bank account has been added. Please verify via micro-deposits.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Update payment processor preference mutation
+  const updateProcessorPreferenceMutation = useMutation({
+    mutationFn: async (processor: "stripe" | "dwolla") => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      console.log(`Setting ${processor} as primary payment processor for user ${user.id}`);
+
+      // Check if the selected processor exists for this user
+      const { data: existingProcessor, error: selectError } = await supabase
+        .from("payment_processors")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("processor", processor)
+        .maybeSingle();
+
+      if (selectError) {
+        console.error("Error checking existing processor:", selectError);
+        throw selectError;
+      }
+
+      if (existingProcessor) {
+        console.log(`Updating existing ${processor} processor (id: ${existingProcessor.id}) to primary`);
+        // Update existing to be primary
+        // The database trigger will automatically set other processors to not primary
+        const { data: updateResult, error: updateError } = await supabase
+          .from("payment_processors")
+          .update({ is_primary: true })
+          .eq("id", existingProcessor.id)
+          .select();
+
+        if (updateError) {
+          console.error("Error updating processor:", updateError);
+          throw updateError;
+        }
+        console.log("Update result:", updateResult);
+      } else {
+        console.log(`Creating new ${processor} processor as primary`);
+        // Create new processor entry as primary
+        // The database trigger will automatically set other processors to not primary
+        const { data: insertResult, error: insertError } = await supabase
+          .from("payment_processors")
+          .insert({
+            user_id: user.id,
+            processor: processor,
+            is_primary: true,
+            status: "pending",
+          })
+          .select();
+
+        if (insertError) {
+          console.error("Error inserting processor:", insertError);
+          throw insertError;
+        }
+        console.log("Insert result:", insertResult);
+      }
+
+      return processor;
+    },
+    onSuccess: (processor) => {
+      queryClient.invalidateQueries({ queryKey: ["paymentProcessors"] });
+      setPaymentProcessor(processor);
+      toast({
+        title: "Payment processor updated",
+        description: `Your tenants will now pay via ${processor === "stripe" ? "Stripe (Credit Cards)" : "Dwolla (ACH Bank Transfer)"}`,
       });
     },
     onError: (error: Error) => {
@@ -345,11 +431,16 @@ const Settings = () => {
                     <RadioGroup
                       value={paymentProcessor}
                       onValueChange={(v: "stripe" | "dwolla") => {
-                        setPaymentProcessor(v);
-                        toast({
-                          title: "Payment processor updated",
-                          description: `Switched to ${v === "stripe" ? "Stripe (Credit Cards)" : "Dwolla (ACH Bank Transfer)"}`,
-                        });
+                        // Validate: Don't allow switching to Dwolla if not set up
+                        if (v === "dwolla" && (!dwollaProcessor?.status || dwollaProcessor.status !== "active")) {
+                          toast({
+                            title: "Dwolla not ready",
+                            description: "Please complete Dwolla setup below before selecting it as your payment processor.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        updateProcessorPreferenceMutation.mutate(v);
                       }}
                       className="space-y-3"
                     >
