@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ArrowLeft, Shield, Zap, Users } from "lucide-react";
+import { Building2, ArrowLeft, Shield, Zap, Users, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 
 const formSchema = z.object({
@@ -36,6 +37,7 @@ const formSchema = z.object({
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [mode, setMode] = useState<"signin" | "signup">(
     searchParams.get("mode") === "signup" ? "signup" : "signin"
   );
@@ -68,29 +70,44 @@ const Auth = () => {
   }, [navigate]);
 
   const handleAuthError = (error: { message: string }) => {
+    let errorMessage = error.message;
+
     if (error.message.includes('Database error saving new user')) {
+      errorMessage = "There was a problem with the database. Please try again later or contact support.";
       toast({
         variant: "destructive",
         title: "Registration Error",
-        description: "There was a problem with the database. Please try again later or contact support.",
+        description: errorMessage,
       });
     } else if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
+      errorMessage = "Please check your email and click the verification link before signing in.";
       toast({
         variant: "destructive",
         title: "Email Not Verified",
-        description: "Please check your email and click the verification link before signing in.",
+        description: errorMessage,
+      });
+    } else if (error.message.includes('Invalid login credentials')) {
+      errorMessage = "Invalid email or password. Please check your credentials and try again.";
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
       });
     } else {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: errorMessage,
       });
     }
+
+    // Also set inline error for better visibility
+    setFormError(errorMessage);
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    setFormError(null); // Clear any previous errors
     try {
       if (mode === "signup") {
         const cleanedData = {
@@ -327,6 +344,15 @@ const Auth = () => {
                     </FormItem>
                   )}
                 />
+
+                {formError && (
+                  <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-red-400">
+                      {formError}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <Button
                   type="submit"

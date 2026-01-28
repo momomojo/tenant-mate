@@ -31,7 +31,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wrench } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Plus, Wrench, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
@@ -274,6 +275,18 @@ const Maintenance = () => {
                 </Dialog>
               )}
             </div>
+
+            {/* Show helpful message for tenants without assigned units */}
+            {!isPropertyManager && (!units || units.length === 0) && userProfile !== undefined && (
+              <Alert className="bg-blue-500/10 border-blue-500/30">
+                <Info className="h-4 w-4 text-blue-400" />
+                <AlertTitle className="text-blue-400">No Units Assigned</AlertTitle>
+                <AlertDescription className="text-gray-300">
+                  You need to be assigned to a unit before you can submit maintenance requests.
+                  Please contact your property manager to get assigned to your unit.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <Card className="glass-card overflow-x-auto">
               {isLoading ? (
