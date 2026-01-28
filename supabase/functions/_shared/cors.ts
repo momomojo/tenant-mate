@@ -25,6 +25,20 @@ export function getSafeOrigin(req: Request): string {
   return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
 }
 
+/**
+ * Returns the base URL with the correct base path for the deployment.
+ * GitHub Pages uses /tenant-mate/ base path, Vercel uses / base path.
+ */
+export function getBaseUrl(req: Request): string {
+  const origin = getSafeOrigin(req)
+  // GitHub Pages uses /tenant-mate base path
+  if (origin.includes('github.io')) {
+    return `${origin}/tenant-mate`
+  }
+  // All other deployments (Vercel, localhost) use root
+  return origin
+}
+
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? ''
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]

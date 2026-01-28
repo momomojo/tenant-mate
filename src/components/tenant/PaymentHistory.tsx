@@ -19,6 +19,34 @@ interface PaymentHistoryProps {
   }>;
 }
 
+// Helper function to get badge variant based on payment status
+function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status.toLowerCase()) {
+    case "paid":
+      return "default";
+    case "pending":
+    case "processing":
+      return "secondary";
+    case "failed":
+      return "destructive";
+    default:
+      return "outline";
+  }
+}
+
+// Helper function to format payment method display
+function formatPaymentMethod(method: string | null): string {
+  if (!method) return "N/A";
+  switch (method.toLowerCase()) {
+    case "card":
+      return "Credit/Debit Card";
+    case "ach":
+      return "Bank Transfer (ACH)";
+    default:
+      return method.charAt(0).toUpperCase() + method.slice(1);
+  }
+}
+
 export function PaymentHistory({ payments }: PaymentHistoryProps) {
   return (
     <Card>
@@ -44,7 +72,7 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                     {new Date(payment.payment_date).toLocaleDateString()}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Method: {payment.payment_method || "N/A"}
+                    Method: {formatPaymentMethod(payment.payment_method)}
                   </p>
                   {payment.invoice_number && (
                     <p className="text-sm text-muted-foreground">
@@ -56,10 +84,8 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                   <p className="text-lg font-semibold text-white">
                     ${payment.amount}
                   </p>
-                  <Badge
-                    variant={payment.status === "paid" ? "default" : "secondary"}
-                  >
-                    {payment.status}
+                  <Badge variant={getStatusBadgeVariant(payment.status)}>
+                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                   </Badge>
                 </div>
               </div>

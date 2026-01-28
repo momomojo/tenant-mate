@@ -5,7 +5,7 @@ import { PaymentHistory } from "@/components/tenant/PaymentHistory";
 import { PaymentForm } from "@/components/payment/PaymentForm";
 import { DwollaPaymentForm } from "@/components/payments/DwollaPaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search, CreditCard, Building2 } from "lucide-react";
+import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search, CreditCard, Building2, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ const Payments = () => {
   const [dateFilter, setDateFilter] = useState("all");
 
   // Get user role, active unit, and property manager's payment processor preference
-  const { data: userInfo } = useQuery({
+  const { data: userInfo, isLoading: isLoadingUserInfo, error: userInfoError } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -200,8 +200,38 @@ const Payments = () => {
     payment.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoadingPayments) {
-    return <div>Loading...</div>;
+  if (isLoadingPayments || isLoadingUserInfo) {
+    return (
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full bg-background">
+          <AppSidebar />
+          <div className="flex-1 p-4 sm:p-6 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-muted-foreground">Loading payments...</p>
+            </div>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (userInfoError) {
+    return (
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full bg-background">
+          <AppSidebar />
+          <div className="flex-1 p-4 sm:p-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Failed to load user information. Please try refreshing the page.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
   }
 
   return (
@@ -223,6 +253,16 @@ const Payments = () => {
               <XCircle className="h-4 w-4" />
               <AlertDescription>
                 Payment was canceled. Please try again if you wish to complete the payment.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Show message for tenants without an active unit */}
+          {userInfo?.role === 'tenant' && !userInfo.activeUnit && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You are not currently assigned to any unit. Please contact your property manager to be assigned to a unit before making payments.
               </AlertDescription>
             </Alert>
           )}
@@ -307,6 +347,7 @@ const Payments = () => {
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
                       <SelectItem value="paid">Paid</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
                     </SelectContent>
