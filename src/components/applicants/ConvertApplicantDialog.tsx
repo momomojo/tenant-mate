@@ -124,11 +124,15 @@ export function ConvertApplicantDialog({
         .eq("id", data.unitId);
 
       // Step 3: Create tenant_unit assignment
+      const leaseStart = data.leaseStart || format(new Date(), "yyyy-MM-dd");
+      const leaseEnd = data.leaseEnd || format(addYears(new Date(), 1), "yyyy-MM-dd");
+
       const { error: assignError } = await supabase.from("tenant_units").insert({
         tenant_id: tenantId,
         unit_id: data.unitId,
         status: "active",
-        move_in_date: data.leaseStart || new Date().toISOString(),
+        lease_start_date: leaseStart,
+        lease_end_date: leaseEnd,
       });
 
       if (assignError) {
@@ -170,9 +174,11 @@ export function ConvertApplicantDialog({
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["applicant-counts"] });
       queryClient.invalidateQueries({ queryKey: ["tenants"] });
       queryClient.invalidateQueries({ queryKey: ["units"] });
       queryClient.invalidateQueries({ queryKey: ["leases"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant_units"] });
 
       toast({
         title: "Applicant converted",
