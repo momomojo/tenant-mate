@@ -18,6 +18,8 @@ import {
 } from "@/hooks/useExpenses";
 import { useProperties } from "@/hooks/useProperties";
 import { useUnits } from "@/hooks/useUnits";
+import { useUploadExpenseReceipt } from "@/hooks/useExpenseReceipts";
+import { ExpenseReceiptUpload } from "@/components/expenses/ExpenseReceiptUpload";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -73,6 +75,8 @@ import {
   Building2,
   Calendar,
   Filter,
+  Paperclip,
+  ExternalLink,
 } from "lucide-react";
 
 const formSchema = z.object({
@@ -100,6 +104,7 @@ export default function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [pendingReceiptFile, setPendingReceiptFile] = useState<File | null>(null);
 
   const { data: expenses, isLoading } = useExpenses(filters);
   const { data: properties } = useProperties();
@@ -107,6 +112,7 @@ export default function Expenses() {
   const { mutate: createExpense, isPending: isCreating } = useCreateExpense();
   const { mutate: updateExpense, isPending: isUpdating } = useUpdateExpense();
   const { mutate: deleteExpense } = useDeleteExpense();
+  const { mutate: uploadReceipt } = useUploadExpenseReceipt();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -135,6 +141,7 @@ export default function Expenses() {
   }, [navigate]);
 
   const handleOpenDialog = (expense?: Expense) => {
+    setPendingReceiptFile(null);
     if (expense) {
       setEditingExpense(expense);
       form.reset({
@@ -192,8 +199,24 @@ export default function Expenses() {
           unit_id: data.unit_id || null,
         },
         {
-          onSuccess: () => {
-            toast({ title: "Expense created" });
+          onSuccess: (newExpense) => {
+            // Upload pending receipt if any
+            if (pendingReceiptFile && newExpense?.id) {
+              uploadReceipt(
+                { expenseId: newExpense.id, file: pendingReceiptFile },
+                {
+                  onSuccess: () => {
+                    toast({ title: "Expense created with receipt" });
+                  },
+                  onError: () => {
+                    toast({ title: "Expense created but receipt upload failed", variant: "destructive" });
+                  },
+                }
+              );
+            } else {
+              toast({ title: "Expense created" });
+            }
+            setPendingReceiptFile(null);
             setDialogOpen(false);
           },
           onError: () => {
@@ -364,6 +387,15 @@ export default function Expenses() {
                         {...form.register("description")}
                       />
                     </div>
+
+                    {/* Receipt Upload */}
+                    <ExpenseReceiptUpload
+                      expenseId={editingExpense?.id}
+                      currentReceiptUrl={editingExpense?.receipt_url}
+                      currentReceiptPath={editingExpense?.receipt_path}
+                      onFileSelect={setPendingReceiptFile}
+                      pendingFile={pendingReceiptFile}
+                    />
 
                     {/* Checkboxes */}
                     <div className="flex gap-6">
@@ -546,6 +578,7 @@ export default function Expenses() {
                       <TableHead>Vendor</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="w-[50px]">Receipt</TableHead>
                       <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -584,6 +617,20 @@ export default function Expenses() {
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             ${expense.amount.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            {expense.receipt_url ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => window.open(expense.receipt_url!, '_blank')}
+                                title="View receipt"
+                              >
+                                <Paperclip className="h-4 w-4 text-green-500" />
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">

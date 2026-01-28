@@ -2,15 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PaymentHistory } from "@/components/tenant/PaymentHistory";
-import { PaymentForm } from "@/components/payment/PaymentForm";
 import { DwollaPaymentForm } from "@/components/payments/DwollaPaymentForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search, CreditCard, Building2, Loader2, AlertCircle } from "lucide-react";
+import { DollarSign, CheckCircle2, XCircle, Filter, Calendar, Search, Building2, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -40,7 +37,7 @@ const Payments = () => {
       // If user is a tenant, get their active unit and property manager info
       let activeUnit = null;
       let landlordId = null;
-      let paymentProcessor = "stripe"; // Default to Stripe
+      let dwollaReady = false;
 
       if (profile?.role === 'tenant') {
         const { data: tenantUnit } = await supabase
@@ -64,57 +61,17 @@ const Payments = () => {
         activeUnit = tenantUnit?.unit;
         landlordId = tenantUnit?.unit?.property?.created_by;
 
-        // Check property manager's payment processor preference
+        // Check if landlord has Dwolla set up
         if (landlordId) {
-          console.log('[Payments] Checking payment processors for landlord:', landlordId);
-
-          // First, get ALL processors for this landlord
-          const { data: allProcessors, error: allProcessorsError } = await supabase
+          const { data: dwollaProcessor } = await supabase
             .from('payment_processors')
-            .select('processor, is_primary, status')
-            .eq('user_id', landlordId);
+            .select('status')
+            .eq('user_id', landlordId)
+            .eq('processor', 'dwolla')
+            .eq('status', 'active')
+            .maybeSingle();
 
-          console.log('[Payments] All landlord processors:', allProcessors);
-          console.log('[Payments] All processors error:', allProcessorsError);
-
-          if (allProcessors && allProcessors.length > 0) {
-            // Check for active processors
-            const hasActiveStripe = allProcessors.some(p => p.processor === 'stripe' && p.status === 'active');
-            const hasActiveDwolla = allProcessors.some(p => p.processor === 'dwolla' && p.status === 'active');
-
-            console.log('[Payments] hasActiveStripe:', hasActiveStripe, 'hasActiveDwolla:', hasActiveDwolla);
-
-            // Find the primary processor (if explicitly set)
-            const primaryProcessor = allProcessors.find(p => p.is_primary === true);
-            console.log('[Payments] Primary processor:', primaryProcessor);
-
-            // Determine which processor to use
-            if (primaryProcessor) {
-              // Use explicitly set primary processor
-              if (primaryProcessor.processor === 'dwolla' && primaryProcessor.status === 'active') {
-                paymentProcessor = 'dwolla';
-              } else if (primaryProcessor.processor === 'stripe') {
-                paymentProcessor = 'stripe';
-              }
-            } else {
-              // No explicit primary set - use active Dwolla if available (lower fees)
-              // This handles the case where landlord set up Dwolla but is_primary wasn't properly saved
-              if (hasActiveDwolla) {
-                console.log('[Payments] No primary set, defaulting to active Dwolla');
-                paymentProcessor = 'dwolla';
-              }
-            }
-
-            // If landlord has BOTH active processors, show tabs
-            if (hasActiveStripe && hasActiveDwolla) {
-              // Determine which should be default in tabs
-              const dwollaIsPrimary = primaryProcessor?.processor === 'dwolla' || (!primaryProcessor && hasActiveDwolla);
-              paymentProcessor = dwollaIsPrimary ? 'both_dwolla_default' : 'both_stripe_default';
-              console.log('[Payments] Both processors available, showing tabs. Default:', paymentProcessor);
-            }
-          }
-
-          console.log('[Payments] Final paymentProcessor decision:', paymentProcessor);
+          dwollaReady = !!dwollaProcessor;
         }
       }
 
@@ -122,7 +79,7 @@ const Payments = () => {
         role: profile?.role,
         activeUnit,
         landlordId,
-        paymentProcessor
+        dwollaReady
       };
     },
   });
@@ -270,50 +227,19 @@ const Payments = () => {
           {/* Show payment form only for tenants with active units */}
           {userInfo?.role === 'tenant' && userInfo.activeUnit && (
             <>
-              {/* Stripe only */}
-              {userInfo.paymentProcessor === 'stripe' && (
-                <PaymentForm
-                  unitId={userInfo.activeUnit.id}
-                  amount={userInfo.activeUnit.monthly_rent}
-                />
-              )}
-
-              {/* Dwolla only */}
-              {userInfo.paymentProcessor === 'dwolla' && userInfo.landlordId && (
+              {userInfo.dwollaReady && userInfo.landlordId ? (
                 <DwollaPaymentForm
                   unitId={userInfo.activeUnit.id}
                   amount={userInfo.activeUnit.monthly_rent}
                   landlordId={userInfo.landlordId}
                 />
-              )}
-
-              {/* Both payment methods available - show tabs */}
-              {(userInfo.paymentProcessor === 'both_stripe_default' || userInfo.paymentProcessor === 'both_dwolla_default') && userInfo.landlordId && (
-                <Tabs defaultValue={userInfo.paymentProcessor === 'both_dwolla_default' ? 'dwolla' : 'stripe'} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="stripe" className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      Card Payment
-                    </TabsTrigger>
-                    <TabsTrigger value="dwolla" className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      Bank Transfer (ACH)
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="stripe">
-                    <PaymentForm
-                      unitId={userInfo.activeUnit.id}
-                      amount={userInfo.activeUnit.monthly_rent}
-                    />
-                  </TabsContent>
-                  <TabsContent value="dwolla">
-                    <DwollaPaymentForm
-                      unitId={userInfo.activeUnit.id}
-                      amount={userInfo.activeUnit.monthly_rent}
-                      landlordId={userInfo.landlordId}
-                    />
-                  </TabsContent>
-                </Tabs>
+              ) : (
+                <Alert>
+                  <Building2 className="h-4 w-4" />
+                  <AlertDescription>
+                    Your property manager has not yet set up ACH bank transfers. Please contact them to enable online rent payments.
+                  </AlertDescription>
+                </Alert>
               )}
             </>
           )}

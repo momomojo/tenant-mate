@@ -21,7 +21,7 @@ const features = [
   {
     icon: CreditCard,
     title: "Secure Payments",
-    description: "Process rent payments securely with Stripe integration and auto-receipts.",
+    description: "Process rent payments with low-fee ACH bank transfers and auto-receipts.",
     gradient: "from-status-success/20 to-status-success/5",
     iconColor: "text-status-success",
   },

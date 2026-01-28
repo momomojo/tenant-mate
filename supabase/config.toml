@@ -1,19 +1,11 @@
 # Supabase project configuration
 project_id = "jjwrzarqegbswrndjpup"
 
-[functions.create-checkout-session]
-verify_jwt = true
-
 [functions.generate-receipt]
 verify_jwt = true
 
 [functions.send-notification-email]
 verify_jwt = true
-
-# Stripe webhooks must have verify_jwt = false
-# Stripe does not send Supabase auth tokens
-[functions.stripe-webhook]
-verify_jwt = false
 
 # Database webhooks must have verify_jwt = false
 # Called from pg_net with service_role key

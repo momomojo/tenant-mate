@@ -4,7 +4,7 @@ import { getCorsHeaders, handleCorsPreflightOrRestrict } from '../_shared/cors.t
 import { escapeHtml } from '../_shared/security.ts'
 
 interface EmailPayload {
-  type: 'maintenance_created' | 'maintenance_status_changed' | 'payment_received' | 'tenant_assigned'
+  type: 'maintenance_created' | 'maintenance_status_changed' | 'payment_received' | 'tenant_assigned' | 'applicant_invited'
   recipientEmail: string
   recipientName: string
   data: Record<string, unknown>
@@ -78,6 +78,28 @@ const emailTemplates = {
         <li>Make rent payments</li>
         <li>Access important documents</li>
       </ul>
+    `,
+  }),
+
+  applicant_invited: (data: Record<string, unknown>) => ({
+    subject: `You're Invited to Apply at ${escapeHtml(String(data.propertyName || ''))}`,
+    html: `
+      <h2>You're Invited to Apply!</h2>
+      <p>Great news! You've been invited to apply for a rental property.</p>
+      <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <p><strong>Property:</strong> ${escapeHtml(String(data.propertyName || ''))}</p>
+        <p><strong>Address:</strong> ${escapeHtml(String(data.propertyAddress || ''))}</p>
+        ${data.unitNumber ? `<p><strong>Unit:</strong> ${escapeHtml(String(data.unitNumber))}</p>` : ''}
+      </div>
+      <p>Click the button below to complete your application:</p>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${escapeHtml(String(data.applicationUrl || '#'))}"
+           style="display: inline-block; background: linear-gradient(135deg, #9b87f5 0%, #7c3aed 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+          Start Application
+        </a>
+      </div>
+      <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all; color: #6b7280; font-size: 14px;">${escapeHtml(String(data.applicationUrl || ''))}</p>
     `,
   }),
 }

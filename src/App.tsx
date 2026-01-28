@@ -20,13 +20,13 @@ const Tenants = lazy(() => import("@/pages/Tenants"));
 const TenantProfile = lazy(() => import("@/pages/TenantProfile"));
 const Documents = lazy(() => import("@/pages/Documents"));
 const Payments = lazy(() => import("@/pages/Payments"));
-const StripeOnboarding = lazy(() => import("@/pages/StripeOnboarding"));
 const Maintenance = lazy(() => import("@/pages/Maintenance"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Messages = lazy(() => import("@/pages/Messages"));
 const Applicants = lazy(() => import("@/pages/Applicants"));
 const Leases = lazy(() => import("@/pages/Leases"));
+const LeaseDetails = lazy(() => import("@/pages/LeaseDetails"));
 const Expenses = lazy(() => import("@/pages/Expenses"));
 const Inspections = lazy(() => import("@/pages/Inspections"));
 
@@ -55,9 +55,9 @@ function App() {
               <Route path="/tenants/:id" element={<TenantProfile />} />
               <Route path="/applicants" element={<Applicants />} />
               <Route path="/leases" element={<Leases />} />
+              <Route path="/leases/:id" element={<LeaseDetails />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/payments" element={<Payments />} />
-              <Route path="/stripe-onboarding" element={<StripeOnboarding />} />
               <Route path="/maintenance" element={<Maintenance />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/reports" element={<Reports />} />

@@ -152,9 +152,31 @@ export function useInviteApplicant() {
         throw error;
       }
 
-      // TODO: Send invitation email via Edge Function
+      // Send invitation email via Edge Function
+      const applicant = data as Applicant;
+      const appUrl = window.location.origin;
+      const applicationUrl = `${appUrl}/auth?mode=signup&applicant=${applicant.id}`;
 
-      return data as Applicant;
+      try {
+        await supabase.functions.invoke('send-notification-email', {
+          body: {
+            type: 'applicant_invited',
+            recipientEmail: applicant.email,
+            recipientName: applicant.first_name || 'Applicant',
+            data: {
+              propertyName: applicant.property?.name || 'the property',
+              propertyAddress: applicant.property?.address || '',
+              unitNumber: applicant.unit?.unit_number || null,
+              applicationUrl,
+            },
+          },
+        });
+      } catch (emailError) {
+        // Log but don't fail the mutation - applicant was created successfully
+        console.error('Failed to send invitation email:', emailError);
+      }
+
+      return applicant;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applicants"] });

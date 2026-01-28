@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 import { TopBar } from "@/components/layout/TopBar";
 import { useState, useEffect } from "react";
-import { User, Shield, CreditCard, Building2, Check, ExternalLink, Loader2, Landmark, PenTool } from "lucide-react";
+import { User, Shield, Building2, Check, Loader2, Landmark, PenTool } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,6 @@ const Settings = () => {
     state: "",
     postal_code: "",
   });
-  const [paymentProcessor, setPaymentProcessor] = useState<"stripe" | "dwolla">("stripe");
   const [showDwollaSetup, setShowDwollaSetup] = useState(false);
   const [dwollaBankForm, setDwollaBankForm] = useState({
     routingNumber: "",
@@ -78,18 +77,6 @@ const Settings = () => {
   // Extract Dwolla processor for existing UI
   const dwollaProcessor = paymentProcessors?.find(p => p.processor === "dwolla") || null;
 
-  // Initialize payment processor preference from database
-  useEffect(() => {
-    if (paymentProcessors && paymentProcessors.length > 0) {
-      const primaryProcessor = paymentProcessors.find(p => p.is_primary);
-      if (primaryProcessor) {
-        setPaymentProcessor(primaryProcessor.processor as "stripe" | "dwolla");
-      } else if (dwollaProcessor?.status === "active") {
-        // If Dwolla is set up and active, default to it
-        setPaymentProcessor("dwolla");
-      }
-    }
-  }, [paymentProcessors, dwollaProcessor]);
 
   // Create Dwolla customer mutation
   const createDwollaCustomerMutation = useMutation({
@@ -147,77 +134,6 @@ const Settings = () => {
     },
   });
 
-  // Update payment processor preference mutation
-  const updateProcessorPreferenceMutation = useMutation({
-    mutationFn: async (processor: "stripe" | "dwolla") => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      console.log(`Setting ${processor} as primary payment processor for user ${user.id}`);
-
-      // Check if the selected processor exists for this user
-      const { data: existingProcessor, error: selectError } = await supabase
-        .from("payment_processors")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("processor", processor)
-        .maybeSingle();
-
-      if (selectError) {
-        console.error("Error checking existing processor:", selectError);
-        throw selectError;
-      }
-
-      if (existingProcessor) {
-        console.log(`Updating existing ${processor} processor (id: ${existingProcessor.id}) to primary`);
-        // Update existing to be primary
-        // The database trigger will automatically set other processors to not primary
-        const { data: updateResult, error: updateError } = await supabase
-          .from("payment_processors")
-          .update({ is_primary: true })
-          .eq("id", existingProcessor.id)
-          .select();
-
-        if (updateError) {
-          console.error("Error updating processor:", updateError);
-          throw updateError;
-        }
-        console.log("Update result:", updateResult);
-      } else {
-        console.log(`Creating new ${processor} processor as primary`);
-        // Create new processor entry as primary
-        // The database trigger will automatically set other processors to not primary
-        const { data: insertResult, error: insertError } = await supabase
-          .from("payment_processors")
-          .insert({
-            user_id: user.id,
-            processor: processor,
-            is_primary: true,
-            status: "pending",
-          })
-          .select();
-
-        if (insertError) {
-          console.error("Error inserting processor:", insertError);
-          throw insertError;
-        }
-        console.log("Insert result:", insertResult);
-      }
-
-      return processor;
-    },
-    onSuccess: (processor) => {
-      queryClient.invalidateQueries({ queryKey: ["paymentProcessors"] });
-      setPaymentProcessor(processor);
-      toast({
-        title: "Payment processor updated",
-        description: `Your tenants will now pay via ${processor === "stripe" ? "Stripe (Credit Cards)" : "Dwolla (ACH Bank Transfer)"}`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
 
   useEffect(() => {
     if (userProfile) {
@@ -417,141 +333,50 @@ const Settings = () => {
               <Card className="glass-card">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-gray-400" />
+                    <Building2 className="h-5 w-5 text-gray-400" />
                     <CardTitle className="text-white">Payment Settings</CardTitle>
                   </div>
                   <CardDescription className="text-gray-400">
-                    Configure how you receive rent payments from tenants
+                    Configure ACH bank transfers to receive rent payments from tenants
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Payment Processor Selection */}
-                  <div className="space-y-4">
-                    <Label className="text-gray-300">Payment Processor</Label>
-                    <RadioGroup
-                      value={paymentProcessor}
-                      onValueChange={(v: "stripe" | "dwolla") => {
-                        // Validate: Don't allow switching to Dwolla if not set up
-                        if (v === "dwolla" && (!dwollaProcessor?.status || dwollaProcessor.status !== "active")) {
-                          toast({
-                            title: "Dwolla not ready",
-                            description: "Please complete Dwolla setup below before selecting it as your payment processor.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        updateProcessorPreferenceMutation.mutate(v);
-                      }}
-                      className="space-y-3"
-                    >
-                      {/* Stripe Option */}
-                      <div className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
-                        paymentProcessor === "stripe"
-                          ? "border-brand-indigo bg-brand-indigo/10"
-                          : "border-white/[0.08] bg-white/[0.04]"
-                      }`}>
-                        <RadioGroupItem value="stripe" id="stripe" className="mt-1" />
-                        <Label htmlFor="stripe" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CreditCard className="h-4 w-4 text-brand-indigo-light" />
-                            <span className="text-white font-medium">Stripe</span>
-                            <Badge variant="secondary" className="text-xs">Active</Badge>
-                          </div>
-                          <p className="text-sm text-gray-400 mb-2">
-                            Accept credit/debit cards with fast payouts
-                          </p>
-                          <div className="flex items-center gap-4 text-xs">
-                            <span className="text-gray-500">
-                              <span className="text-yellow-500">2.9% + $0.30</span> per transaction
-                            </span>
-                            <span className="text-gray-500">2-day payouts</span>
-                          </div>
-                        </Label>
+                  {/* Dwolla ACH Info */}
+                  <div className="flex items-start space-x-3 p-4 rounded-lg border border-green-500/30 bg-green-500/10">
+                    <Building2 className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white font-medium">Dwolla ACH Bank Transfers</span>
+                        {dwollaProcessor?.status === "active" ? (
+                          <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                            <Check className="h-3 w-3 mr-1" /> Active
+                          </Badge>
+                        ) : dwollaProcessor ? (
+                          <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/50">
+                            Setup Required
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-blue-400 border-blue-400/50">
+                            Not Configured
+                          </Badge>
+                        )}
                       </div>
-
-                      {/* Dwolla/ACH Option */}
-                      <div className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
-                        paymentProcessor === "dwolla"
-                          ? "border-brand-indigo bg-brand-indigo/10"
-                          : "border-white/[0.08] bg-white/[0.04]"
-                      }`}>
-                        <RadioGroupItem value="dwolla" id="dwolla" className="mt-1" />
-                        <Label htmlFor="dwolla" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Building2 className="h-4 w-4 text-green-500" />
-                            <span className="text-white font-medium">Dwolla ACH</span>
-                            {dwollaProcessor?.status === "active" ? (
-                              <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
-                                <Check className="h-3 w-3 mr-1" /> Active
-                              </Badge>
-                            ) : dwollaProcessor ? (
-                              <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/50">
-                                Setup Required
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs text-blue-400 border-blue-400/50">
-                                Available
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-400 mb-2">
-                            Bank transfers with lower fees for large payments
-                          </p>
-                          <div className="flex items-center gap-4 text-xs">
-                            <span className="text-gray-500">
-                              <span className="text-green-500">$0.25 flat</span> per transaction (up to $10,000)
-                            </span>
-                            <span className="text-gray-500">3-5 day transfers</span>
-                          </div>
-                          {dwollaProcessor?.dwolla_funding_source_name && (
-                            <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
-                              <Landmark className="h-3 w-3" />
-                              {dwollaProcessor.dwolla_funding_source_name}
-                            </div>
-                          )}
-                        </Label>
+                      <p className="text-sm text-gray-400 mb-2">
+                        Low-fee bank transfers for rent payments
+                      </p>
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-gray-500">
+                          <span className="text-green-500">$0.25 flat</span> per transaction (up to $10,000)
+                        </span>
+                        <span className="text-gray-500">3-5 day transfers</span>
                       </div>
-                    </RadioGroup>
-                  </div>
-
-                  <Separator className="bg-gray-600" />
-
-                  {/* Fee Comparison */}
-                  <div className="space-y-3">
-                    <Label className="text-gray-300">Fee Comparison (on $1,500 rent)</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 rounded-lg bg-white/[0.04]">
-                        <div className="text-sm text-gray-400">Stripe</div>
-                        <div className="text-lg font-medium text-yellow-500">$43.80</div>
-                        <div className="text-xs text-gray-500">2.9% + $0.30</div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-white/[0.04]">
-                        <div className="text-sm text-gray-400">Dwolla ACH</div>
-                        <div className="text-lg font-medium text-green-500">$0.25</div>
-                        <div className="text-xs text-gray-500">Flat fee</div>
-                      </div>
+                      {dwollaProcessor?.dwolla_funding_source_name && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
+                          <Landmark className="h-3 w-3" />
+                          {dwollaProcessor.dwolla_funding_source_name}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500">
-                      * Dwolla ACH saves up to $43.55 per payment on typical rent amounts
-                    </p>
-                  </div>
-
-                  <Separator className="bg-gray-600" />
-
-                  {/* Stripe Connect Management */}
-                  <div className="space-y-3">
-                    <Label className="text-gray-300">Stripe Connect Account</Label>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.location.href = "/stripe-onboarding"}
-                      className="gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Manage Stripe Connect
-                    </Button>
-                    <p className="text-xs text-gray-500">
-                      Set up or manage your Stripe account to receive payments
-                    </p>
                   </div>
 
                   <Separator className="bg-gray-600" />

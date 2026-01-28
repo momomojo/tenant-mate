@@ -34,7 +34,7 @@ bun run dev              # Must be running on port 8080 first
 
 **Vercel (Primary)**: https://tenant-mate.vercel.app
 - Deploy: `vercel --prod` or push to main (auto-deploy via GitHub integration)
-- Env vars configured: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`
+- Env vars configured: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
 - Base path: `/` (auto-detected via `process.env.VERCEL` in vite.config.ts)
 
 **GitHub Pages (Legacy)**: https://momomojo.github.io/tenant-mate/
@@ -65,7 +65,7 @@ The checklist covers: Landing, Auth, Dashboard (both roles), Properties, Units, 
 - **Backend**: Supabase (PostgreSQL + Auth + Edge Functions)
 - **UI**: shadcn/ui + Tailwind CSS + Radix UI
 - **State**: TanStack React Query v5
-- **Payments**: Stripe Connect + Stripe Elements
+- **Payments**: Dwolla ACH (low-fee bank transfers)
 - **Forms**: React Hook Form + Zod validation
 
 ### Data Flow Architecture
@@ -73,7 +73,7 @@ The checklist covers: Landing, Auth, Dashboard (both roles), Properties, Units, 
 ```
 User Action → React Component → TanStack Query Hook → Supabase Client → PostgreSQL
                                                    ↓
-                                            Edge Functions (for Stripe)
+                                            Edge Functions (for Dwolla, emails)
 ```
 
 **State Management Pattern**: All server state uses TanStack Query. No Redux/Zustand. Queries have 5-minute staleTime by default (configured in `App.tsx`).
@@ -88,12 +88,12 @@ User Action → React Component → TanStack Query Hook → Supabase Client → 
 
 4. **Path Alias**: `@/` maps to `./src/` (configured in tsconfig.json and vite.config.ts).
 
-### Stripe Connect Flow
+### Dwolla ACH Payment Flow
 
-1. Landlord signs up → `stripe_accounts` record created
-2. Landlord completes onboarding → `StripeOnboarding.tsx`
-3. Tenant makes payment → `create-checkout-session` Edge Function creates Stripe Checkout session
-4. Payment completed → `stripe-webhook` Edge Function processes event, updates `rent_payments` and `payment_transactions`
+1. Landlord sets up Dwolla account in Settings → `dwolla-create-customer` Edge Function
+2. Landlord adds bank account → `dwolla-add-funding-source` Edge Function
+3. Tenant initiates payment → `dwolla-initiate-transfer` Edge Function creates ACH transfer
+4. Payment completed → Updates `rent_payments` and `payment_transactions`
 5. Receipt generated → `generate-receipt` Edge Function
 
 Edge Functions are in `supabase/functions/`. They use Deno and import from esm.sh.
@@ -108,7 +108,7 @@ Edge Functions are in `supabase/functions/`. They use Deno and import from esm.s
 - `inspections` → `inspection_items` → `inspection_photos` (property condition reports)
 - `rent_payments` → `payment_transactions` (payment tracking)
 - `conversations` → `messages` (messaging system)
-- `company_stripe_accounts` / `automatic_payments` (Stripe integration)
+- `payment_processors` / `automatic_payments` (Dwolla ACH integration)
 - `maintenance_requests`, `documents` (operational data)
 
 ### Routes
@@ -119,12 +119,12 @@ Defined in `App.tsx`:
 - `/dashboard` - Main dashboard (role-based with dynamic stats)
 - `/properties`, `/properties/:id` - Property management
 - `/tenants`, `/tenants/:id` - Tenant management
-- `/payments` - Payment processing (Stripe Checkout)
+- `/payments` - Payment processing (Dwolla ACH)
 - `/documents` - Document management
 - `/maintenance` - Maintenance request system
 - `/reports` - Financial reports (Rent Roll, Income, Property Summary)
-- `/settings` - User profile and settings
-- `/stripe-onboarding` - Stripe Connect setup
+- `/settings` - User profile and Dwolla payment settings
+- `/leases/:id` - Lease detail view
 
 ## Environment Variables
 
@@ -132,15 +132,15 @@ Required in `.env` (see `.env.example`):
 ```
 VITE_SUPABASE_URL=https://xbtuztzcgxhzvsvfcjvk.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable_key>
-VITE_STRIPE_PUBLISHABLE_KEY=<stripe_key>
 ```
 
 Edge Functions require (set in Supabase dashboard):
 ```
-STRIPE_SECRET_KEY=sk_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-RESEND_API_KEY=re_...           # For email notifications (optional)
-FROM_EMAIL=noreply@yourdomain   # Sender email (optional)
+DWOLLA_KEY=<dwolla_key>
+DWOLLA_SECRET=<dwolla_secret>
+DWOLLA_ENVIRONMENT=sandbox      # or 'production'
+RESEND_API_KEY=re_...           # For email notifications
+FROM_EMAIL=noreply@yourdomain   # Sender email
 ```
 
 ## TypeScript Configuration
@@ -165,22 +165,25 @@ When testing components that use the App's providers (Router, QueryClient), use 
 - Property management (CRUD for properties and units)
 - Tenant management (assignment, lease tracking)
 - Maintenance request system (create, track, status updates)
-- Payment system (Stripe Checkout integration via Edge Functions)
+- Payment system (Dwolla ACH bank transfers via Edge Functions)
 - Reports page (Rent Roll, Income Report, Property Summary)
-- Settings page (profile management, Stripe Connect for managers)
+- Settings page (profile management, Dwolla ACH setup for managers)
 - Dashboard with dynamic analytics per role
 - Comprehensive RLS policies on all tables
 - In-app notifications system with database triggers
 - Real-time updates via Supabase Realtime
 - Mobile responsive design (all pages)
-- Email notifications via Edge Functions (payment confirmations, maintenance updates)
+- Email notifications via Edge Functions (payment confirmations, maintenance updates, applicant invitations)
 - Offline support via PWA service worker (vite-plugin-pwa)
+- Expense receipt upload with storage integration
+- Lease detail view with payment history and documents
 
 ### Edge Functions
-- `create-checkout-session` - Creates Stripe Checkout session
-- `stripe-webhook` - Handles Stripe events, sends payment confirmation emails
+- `dwolla-create-customer` - Creates Dwolla customer for landlords
+- `dwolla-add-funding-source` - Adds bank account to Dwolla customer
+- `dwolla-initiate-transfer` - Initiates ACH transfer for rent payment
 - `generate-receipt` - Generates payment receipts
-- `send-notification-email` - Email notifications via Resend API
+- `send-notification-email` - Email notifications via Resend API (includes applicant invitations)
 - `database-webhook` - Handles database trigger events for auto-notifications
 
 ### Database Webhooks (Auto Email Notifications)

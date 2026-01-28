@@ -61,11 +61,7 @@ export default function Leases() {
   }, [navigate]);
 
   const handleView = (leaseId: string) => {
-    // TODO: Implement lease detail view
-    toast({
-      title: "Coming soon",
-      description: "Lease detail view will be available soon.",
-    });
+    navigate(`/leases/${leaseId}`);
   };
 
   const handleEdit = (leaseId: string) => {
